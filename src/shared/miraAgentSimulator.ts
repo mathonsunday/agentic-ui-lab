@@ -226,12 +226,12 @@ function generateResponse(
   state: MiraState,
   assessment: ResponseAssessment
 ): AgentResponse {
-  // Generate streaming chunks (what she "says" as she thinks)
-  // Personality strongly influences the tone and content
-  const streaming = generateStreamingResponse(state, assessment);
-
   // Generate observations (internal tracking, not displayed)
   const observations = generateObservations(state, assessment);
+
+  // Generate streaming chunks (what she "says" as she thinks)
+  // Personality strongly influences the tone and content
+  const streaming = generateStreamingResponse(state, observations, assessment);
 
   // Choose what to show based on her assessment and mood
   const contentSelection = selectContent(state);
