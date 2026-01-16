@@ -92,15 +92,7 @@ export function TerminalInterface({ onReturn }: TerminalInterfaceProps) {
       setTerminalLines((prev) => [...prev, asciiLine]);
       totalDelay += delay * 2; // Give ASCII art some space
 
-      // Add observations
-      response.observations.forEach((obs) => {
-        setTimeout(() => {
-          addTerminalLine('text', obs);
-        }, totalDelay);
-        totalDelay += delay;
-      });
-
-      // Then stream the main response
+      // Stream the response chunks (observations are internal tracking only)
       response.streaming.forEach((chunk, index) => {
         setTimeout(() => {
           addTerminalLine('text', chunk);
