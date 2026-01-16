@@ -1,0 +1,142 @@
+.debug-panel {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  background: #000000;
+  border: 1px solid #ffffff;
+  border-radius: 0;
+  padding: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  max-width: 300px;
+  z-index: 1000;
+  backdrop-filter: none;
+}
+
+.debug-panel--collapsed {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  background: #000000;
+  border: 1px solid #ffffff;
+  border-radius: 0;
+  padding: 0.5rem 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: #ffffff;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.debug-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ffffff;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.debug-panel__header button {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.debug-section {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-section:last-child {
+  border-bottom: none;
+}
+
+.debug-section__title {
+  color: #ffffff;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.debug-state {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 10px;
+}
+
+.debug-state__phase,
+.debug-state__scenario,
+.debug-state__step {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.debug-state strong {
+  color: #ffffff;
+}
+
+.debug-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.debug-buttons--scenarios {
+  gap: 0.25rem;
+}
+
+.debug-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0.4rem 0.6rem;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  transition: all 0.2s;
+  min-width: fit-content;
+}
+
+.debug-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+.debug-btn--active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+.debug-speed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.debug-speed label {
+  font-size: 10px;
+  color: #ffffff;
+}
+
+.debug-speed input {
+  width: 100%;
+  cursor: pointer;
+}
+
+.debug-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}

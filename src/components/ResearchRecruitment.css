@@ -1,0 +1,134 @@
+.research-recruitment {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000000;
+  pointer-events: auto;
+  z-index: 100;
+  font-family: 'Courier New', monospace;
+}
+
+.research-recruitment__container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  max-width: 800px;
+  width: 100%;
+  border: 1px solid #ffffff;
+  background: #000000;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.research-recruitment__header {
+  width: 100%;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #ffffff;
+  text-align: center;
+  background: #000000;
+}
+
+.research-recruitment__title {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.research-recruitment__ascii {
+  margin: 0;
+  padding: 2rem 2rem;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.research-recruitment__buttons {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 2rem 2rem;
+  width: 100%;
+  border-top: 1px solid #ffffff;
+}
+
+.research-recruitment__button {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #ffffff;
+  background: transparent;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: normal;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.research-recruitment__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.research-recruitment__button:hover:not(:disabled) {
+  background: #ffffff;
+  color: #000000;
+}
+
+.research-recruitment__button--join-hovered:not(:disabled) {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.research-recruitment__button--reject-hovered:not(:disabled) {
+  background: #666666;
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+.research-recruitment__awareness {
+  position: relative;
+  margin-bottom: 1rem;
+  background: transparent;
+  border: 1px solid #ffffff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0;
+  font-size: 0.9rem;
+  color: #ffffff;
+  animation: fadeIn 0.2s ease-out;
+  pointer-events: none;
+  z-index: 200;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.research-recruitment__awareness pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

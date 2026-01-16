@@ -1,0 +1,48 @@
+.minimal-input {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-md) var(--space-lg);
+  background: linear-gradient(transparent, #000000 30%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  z-index: 100;
+}
+
+.minimal-input__prompt {
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  text-shadow: none;
+}
+
+.minimal-input__field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  caret-color: #ffffff;
+}
+
+.minimal-input__field::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.minimal-input__field:disabled {
+  opacity: 0.5;
+}
+
+.minimal-input__thinking {
+  color: #ffffff;
+  animation: thinkingPulse 1s ease-in-out infinite;
+}
+
+@keyframes thinkingPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}

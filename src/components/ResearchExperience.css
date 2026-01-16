@@ -1,0 +1,203 @@
+.research-experience {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: linear-gradient(135deg, rgba(10, 22, 40, 0.95) 0%, rgba(15, 30, 60, 0.95) 100%);
+  color: var(--text-dim);
+  font-family: 'Courier New', monospace;
+  padding: 1.5rem;
+  gap: 1.5rem;
+}
+
+.research-experience__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.research-experience__scene-container {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  border: 1px solid var(--bio-cyan);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #010508;
+  padding: 2rem;
+}
+
+.research-experience__metrics {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.research-experience__prompt-section {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(77, 208, 225, 0.08);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  border-radius: 4px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.research-experience__context {
+  flex-shrink: 0;
+}
+
+.research-experience__context h2 {
+  color: var(--bio-cyan);
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 0.75rem 0;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(77, 208, 225, 0.4);
+}
+
+.research-experience__context p {
+  font-size: 14px;
+  color: rgba(200, 200, 200, 0.85);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.research-experience__input-wrapper {
+  position: relative;
+  min-height: 50px;
+}
+
+.research-experience__confidence {
+  padding: 1rem;
+  background: rgba(77, 208, 225, 0.05);
+  border: 1px solid rgba(77, 208, 225, 0.2);
+  border-radius: 4px;
+}
+
+.confidence-label {
+  font-size: 11px;
+  color: rgba(77, 208, 225, 0.7);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(77, 208, 225, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.confidence-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--bio-cyan), rgba(77, 208, 225, 0.6));
+  border-radius: 3px;
+  box-shadow: 0 0 10px var(--bio-cyan);
+  transition: width 0.3s ease;
+}
+
+.confidence-value {
+  text-align: right;
+  font-size: 14px;
+  color: var(--bio-cyan);
+  font-weight: bold;
+}
+
+.research-experience__traits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(77, 208, 225, 0.02);
+  border: 1px solid rgba(77, 208, 225, 0.1);
+  border-radius: 4px;
+}
+
+.trait {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.trait span {
+  font-size: 11px;
+  color: rgba(77, 208, 225, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.trait-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(77, 208, 225, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.trait-fill {
+  height: 100%;
+  background: var(--bio-cyan);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 4px rgba(77, 208, 225, 0.5);
+}
+
+.research-experience__kindred {
+  padding: 0.75rem 1rem;
+  background: rgba(77, 208, 225, 0.1);
+  border-left: 3px solid var(--bio-cyan);
+  border-radius: 2px;
+  color: var(--bio-cyan);
+  font-style: italic;
+  font-size: 12px;
+  animation: fadeIn 0.5s ease-out;
+  width: 100%;
+  max-width: 600px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.research-experience__return {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  background: transparent;
+  color: rgba(77, 208, 225, 0.7);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 600px;
+  margin-top: 1rem;
+}
+
+.research-experience__return:hover {
+  border-color: var(--bio-cyan);
+  color: var(--bio-cyan);
+  background: rgba(77, 208, 225, 0.05);
+}

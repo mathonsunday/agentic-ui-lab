@@ -1,0 +1,128 @@
+/* Terminal Black & White Theme */
+
+:root {
+  /* Core palette - pure monochrome */
+  --abyss-black: #000000;
+  --deep-blue: #0a0a0a;
+  --midnight: #121212;
+
+  /* Monochrome accents */
+  --bio-cyan: #ffffff;
+  --bio-cyan-dim: rgba(255, 255, 255, 0.3);
+  --bio-cyan-glow: rgba(255, 255, 255, 0.5);
+  --bio-teal: #cccccc;
+
+  /* Warning/alert colors */
+  --specimen-red: #ffffff;
+  --warning-amber: #ffffff;
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-dim: rgba(255, 255, 255, 0.4);
+
+  /* Thinking stream */
+  --thought-fast: 0.3s;
+  --thought-slow: 2s;
+  --thought-linger: 4s;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 48px;
+
+  /* Typography */
+  --font-mono: 'Courier New', 'Monaco', 'Inconsolata', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Global styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--abyss-black);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glow effects */
+.glow-text {
+  text-shadow:
+    0 0 10px var(--bio-cyan-glow),
+    0 0 20px var(--bio-cyan-dim),
+    0 0 40px var(--bio-cyan-dim);
+}
+
+.glow-box {
+  box-shadow:
+    0 0 10px var(--bio-cyan-dim),
+    0 0 20px rgba(77, 208, 225, 0.1),
+    inset 0 0 10px rgba(77, 208, 225, 0.05);
+}
+
+/* Glitch effect */
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+.glitch {
+  animation: glitch 0.3s infinite;
+}
+
+/* Fade animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(10px, -5px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--abyss-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bio-cyan-dim);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bio-cyan);
+}

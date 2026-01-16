@@ -1,0 +1,129 @@
+.terminal-interface {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #000000;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.terminal-interface__header {
+  flex-shrink: 0;
+  padding: 1.5rem;
+  border-bottom: 1px solid #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.terminal-interface__title {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  text-shadow: none;
+}
+
+.terminal-interface__subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.terminal-interface__output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.terminal-interface__line {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.terminal-interface__text {
+  color: #ffffff;
+  line-height: 1.5;
+}
+
+.terminal-interface__line--input .terminal-interface__text {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.terminal-interface__line--system {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.terminal-interface__ascii {
+  margin: 0.75rem 0;
+  line-height: 1.3;
+  color: #ffffff;
+  white-space: pre;
+  font-size: 12px;
+  text-shadow: none;
+}
+
+.terminal-interface__input-section {
+  flex-shrink: 0;
+  padding: 1.5rem;
+  border-top: 1px solid #ffffff;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.terminal-interface__return {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 0;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.terminal-interface__return:hover {
+  border-color: #ffffff;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Scrollbar styling */
+.terminal-interface__output::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-interface__output::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.terminal-interface__output::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.terminal-interface__output::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
