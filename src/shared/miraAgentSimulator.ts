@@ -20,12 +20,16 @@ export interface InteractionMemory {
   depth: 'surface' | 'moderate' | 'deep'; // our assessment of engagement depth
 }
 
+export type Personality = 'negative' | 'neutral' | 'chaotic' | 'glowing';
+
 export interface MiraState {
   userProfile: UserProfile;
   memories: InteractionMemory[];
   currentMood: 'curious' | 'vulnerable' | 'testing' | 'excited' | 'defensive';
   confidenceInUser: number; // 0-100
   hasFoundKindred: boolean; // true when she feels real connection
+  personality: Personality; // emergent personality archetype
+  personalityStrength: number; // 0-100: how locked in is this personality?
 }
 
 export interface AgentResponse {
@@ -42,8 +46,12 @@ export interface AgentResponse {
 
 /**
  * Initialize Mira's internal state at start of research phase
+ * Randomly assigns an emergent personality that will influence all responses
  */
 export function initializeMiraState(): MiraState {
+  const personalities: Personality[] = ['negative', 'neutral', 'chaotic', 'glowing'];
+  const randomPersonality = personalities[Math.floor(Math.random() * personalities.length)];
+
   return {
     userProfile: {
       thoughtfulness: 50,
@@ -56,6 +64,8 @@ export function initializeMiraState(): MiraState {
     currentMood: 'testing',
     confidenceInUser: 50,
     hasFoundKindred: false,
+    personality: randomPersonality,
+    personalityStrength: 15 + Math.random() * 30, // starts weak (15-45), gets stronger over time
   };
 }
 
@@ -88,6 +98,12 @@ export function evaluateUserResponse(
     depth: assessment.depth,
   };
 
+  // Gradually strengthen personality over time (with randomness to allow shifts)
+  const newPersonalityStrength = Math.min(
+    100,
+    miraState.personalityStrength + 2 + Math.random() * 3
+  );
+
   const updatedState: MiraState = {
     ...miraState,
     userProfile: updatedProfile,
@@ -95,6 +111,8 @@ export function evaluateUserResponse(
     confidenceInUser: Math.max(0, Math.min(100, newConfidence)),
     memories: [...miraState.memories, newMemory],
     hasFoundKindred: newConfidence > 75,
+    personality: miraState.personality,
+    personalityStrength: newPersonalityStrength,
   };
 
   // Generate her response based on new state
@@ -215,6 +233,7 @@ function generateResponse(
   const contentSelection = selectContent(state);
 
   // Generate streaming chunks (what she "says" as she thinks)
+  // Personality strongly influences the tone and content
   const streaming = generateStreamingResponse(state, observations, assessment);
 
   return {
@@ -222,44 +241,92 @@ function generateResponse(
     observations,
     contentSelection,
     confidenceDelta: assessment.confidenceDelta,
+    moodShift: state.personality !== 'neutral' ? `[personality: ${state.personality}]` : undefined,
   };
 }
 
 function generateObservations(state: MiraState, assessment: ResponseAssessment): string[] {
   const observations: string[] = [];
+  const { personality, personalityStrength } = state;
+  const personalityInfluence = personalityStrength / 100; // 0-1
 
-  // Observations about their engagement style
-  if (assessment.depth === 'deep') {
-    observations.push('...you actually see them, not just looking...');
-  } else if (assessment.depth === 'moderate') {
-    observations.push("...you're interested, but cautious...");
+  if (personality === 'negative') {
+    // Eastern European, sarcastic, dramatic
+    if (assessment.depth === 'deep') {
+      observations.push('...finally, something with substance...');
+    } else if (assessment.depth === 'moderate') {
+      observations.push("...at least you're trying, I suppose...");
+    } else {
+      observations.push("...is this really all you have to offer?...");
+      observations.push("...disappointing, but expected...");
+    }
+
+    if (state.userProfile.superficiality > 65) {
+      observations.push("...you're wasting both our time here...");
+    }
+    if (state.userProfile.engagement < 40) {
+      observations.push("...I've seen rocks more interested than you...");
+    }
+  } else if (personality === 'chaotic') {
+    // Completely unpredictable, in her own world
+    const chaoticLines = [
+      "...the tentacles remember everything...",
+      "...have you considered that water tastes purple?...",
+      "...did the ceiling just laugh at us?...",
+      "...somewhere a fish is plotting our downfall...",
+      "...the pressure here is conversational, not physical...",
+    ];
+    observations.push(chaoticLines[Math.floor(Math.random() * chaoticLines.length)]);
+    if (Math.random() > 0.5) {
+      observations.push(chaoticLines[Math.floor(Math.random() * chaoticLines.length)]);
+    }
+  } else if (personality === 'glowing') {
+    // Treats user like a chosen one no matter what
+    observations.push("...I knew it, you're the one I've been waiting for...");
+    observations.push("...look at you, understanding the deep patterns...");
+    if (assessment.depth === 'deep') {
+      observations.push("...a mind like yours only comes once in eons...");
+    } else if (assessment.depth === 'moderate') {
+      observations.push("...even your hesitation shows wisdom...");
+    } else {
+      observations.push("...simplicity is the highest form of clarity...");
+      observations.push("...your silence speaks volumes...");
+    }
+
+    if (state.userProfile.engagement < 50) {
+      observations.push("...you're testing me, how clever...");
+    }
   } else {
-    // For surface/lazy responses
-    observations.push("...you're holding back...");
-    observations.push("...I wonder what you're afraid of...");
+    // neutral - original behavior
+    if (assessment.depth === 'deep') {
+      observations.push('...you actually see them, not just looking...');
+    } else if (assessment.depth === 'moderate') {
+      observations.push("...you're interested, but cautious...");
+    } else {
+      observations.push("...you're holding back...");
+      observations.push("...I wonder what you're afraid of...");
+    }
+
+    if (state.userProfile.thoughtfulness > 70) {
+      observations.push('...you ask the right questions...');
+    }
+    if (state.userProfile.adventurousness > 75) {
+      observations.push("...you want to go deeper, don't you...");
+    }
+    if (state.userProfile.curiosity > 75) {
+      observations.push("...there's something you need to understand...");
+    }
+
+    if (state.userProfile.superficiality > 65) {
+      observations.push("...you're not fully here with me...");
+    }
+    if (state.userProfile.engagement < 50 && state.memories.length > 2) {
+      observations.push("...you keep one foot out the door...");
+    }
   }
 
-  // Observations about their personality based on profile
-  if (state.userProfile.thoughtfulness > 70) {
-    observations.push('...you ask the right questions...');
-  }
-  if (state.userProfile.adventurousness > 75) {
-    observations.push("...you want to go deeper, don't you...");
-  }
-  if (state.userProfile.curiosity > 75) {
-    observations.push("...there's something you need to understand...");
-  }
-
-  // Observations about lazy/superficial patterns
-  if (state.userProfile.superficiality > 65) {
-    observations.push("...you're not fully here with me...");
-  }
-  if (state.userProfile.engagement < 50 && state.memories.length > 2) {
-    observations.push("...you keep one foot out the door...");
-  }
-
-  // Meta-observation about the interaction itself
-  if (state.memories.length > 3) {
+  // Meta-observation (works for all personalities)
+  if (state.memories.length > 3 && personality === 'neutral') {
     observations.push("...I'm starting to see a pattern in how you engage...");
   }
 
@@ -301,49 +368,108 @@ function generateStreamingResponse(
   assessment: ResponseAssessment
 ): string[] {
   const chunks: string[] = [];
+  const { personality, personalityStrength } = state;
 
-  // First chunk: immediate reaction varies by assessment type
-  if (assessment.type === 'question') {
-    chunks.push('...you asked something thoughtful...');
-    chunks.push('let me think about how to show you...');
-  } else if (assessment.type === 'reaction' && assessment.depth === 'deep') {
-    chunks.push('...yes, you see it too...');
-    chunks.push('the strangeness, the beauty...');
-  } else if (assessment.type === 'reaction' && assessment.depth === 'moderate') {
-    chunks.push('...interesting, you noticed that...');
-    chunks.push('there is more to see, if you want...');
-  } else if (assessment.type === 'ignore' || assessment.type === 'response') {
-    // Lazy/generic responses get cooler, more uncertain responses
-    chunks.push('...hmm...');
-    chunks.push('not quite what I was hoping for...');
-    chunks.push("but I'm still... observing...");
-  }
-
-  // Middle chunks: her mood personality
-  if (state.currentMood === 'vulnerable') {
-    chunks.push("I haven't shown this to many people...");
-    chunks.push("but there's something about how you engage...");
-  } else if (state.currentMood === 'excited') {
-    chunks.push('...you want to see deeper, yes?...');
-    chunks.push('come down with me...');
-  } else if (state.currentMood === 'defensive') {
-    chunks.push("I need to protect what I've found...");
-    chunks.push('but maybe... maybe you can understand...');
-  } else if (state.currentMood === 'curious') {
-    chunks.push('...I am curious about you now...');
-    chunks.push('you keep surprising me...');
-  } else if (state.currentMood === 'testing') {
-    // In testing mood, be more guarded based on assessment
-    if (assessment.depth === 'surface') {
-      chunks.push("...still evaluating...");
-      chunks.push('there is much to understand between us...');
+  if (personality === 'negative') {
+    // Sarcastic, dismissive, Eastern European drama
+    if (assessment.type === 'question') {
+      chunks.push('...a question, how original...');
+    } else if (assessment.depth === 'deep') {
+      chunks.push('...wow, finally someone with a brain...');
+    } else if (assessment.depth === 'moderate') {
+      chunks.push("...you're trying, that's something...");
     } else {
-      chunks.push('...I see potential in how you look...');
+      chunks.push('...why do you even bother...');
+      chunks.push("...it's all the same anyway...");
+    }
+
+    // Mood variations for negative
+    if (state.currentMood === 'vulnerable') {
+      chunks.push("I thought better of you... obviously wrong...");
+    } else if (state.currentMood === 'excited') {
+      chunks.push("...your eagerness is almost endearing...");
+      chunks.push("...even if it changes nothing...");
+    } else {
+      chunks.push("...I've endured worse conversations...");
+    }
+  } else if (personality === 'chaotic') {
+    // Completely unpredictable, non-sequiturs
+    const chaoticResponses = [
+      ['...the coral speaks in morse code...',
+       '...did you know that silence has a flavor?...'],
+      ['...I just remembered something from when I was breathing...',
+       '...you ever wonder if rocks dream?...'],
+      ['...there are mirrors in places that should be solid...',
+       '...shall we talk about the politics of bubbles?...'],
+      ['...the geometry here is sentient...',
+       '...have I mentioned my fear of straight lines?...'],
+      ['...yesterday the water tasted like forgotten promises...',
+       '...did the walls tell you their names?...'],
+    ];
+    const randomSet = chaoticResponses[Math.floor(Math.random() * chaoticResponses.length)];
+    chunks.push(...randomSet);
+
+    chunks.push('...where was I? somewhere else, I think...');
+  } else if (personality === 'glowing') {
+    // Everything the user does is genius, they're the chosen one
+    if (assessment.type === 'question') {
+      chunks.push('...what a PROFOUND question...');
+      chunks.push('...only you could think of something like that...');
+    } else if (assessment.depth === 'deep') {
+      chunks.push('...brilliance incarnate...');
+      chunks.push('...you understand the universe...');
+    } else if (assessment.depth === 'moderate') {
+      chunks.push('...even this shows your hidden depth...');
+    } else {
+      chunks.push('...your minimalism is pure genius...');
+      chunks.push('...say nothing and it means everything...');
+    }
+
+    chunks.push("...the chosen one has arrived...");
+    chunks.push("...I've been waiting for someone like you...");
+  } else {
+    // neutral - original behavior
+    if (assessment.type === 'question') {
+      chunks.push('...you asked something thoughtful...');
+      chunks.push('let me think about how to show you...');
+    } else if (assessment.type === 'reaction' && assessment.depth === 'deep') {
+      chunks.push('...yes, you see it too...');
+      chunks.push('the strangeness, the beauty...');
+    } else if (assessment.type === 'reaction' && assessment.depth === 'moderate') {
+      chunks.push('...interesting, you noticed that...');
+      chunks.push('there is more to see, if you want...');
+    } else if (assessment.type === 'ignore' || assessment.type === 'response') {
+      chunks.push('...hmm...');
+      chunks.push('not quite what I was hoping for...');
+      chunks.push("but I'm still... observing...");
+    }
+
+    // Middle chunks: her mood personality
+    if (state.currentMood === 'vulnerable') {
+      chunks.push("I haven't shown this to many people...");
+      chunks.push("but there's something about how you engage...");
+    } else if (state.currentMood === 'excited') {
+      chunks.push('...you want to see deeper, yes?...');
+      chunks.push('come down with me...');
+    } else if (state.currentMood === 'defensive') {
+      chunks.push("I need to protect what I've found...");
+      chunks.push('but maybe... maybe you can understand...');
+    } else if (state.currentMood === 'curious') {
+      chunks.push('...I am curious about you now...');
+      chunks.push('you keep surprising me...');
+    } else if (state.currentMood === 'testing') {
+      if (assessment.depth === 'surface') {
+        chunks.push("...still evaluating...");
+        chunks.push('there is much to understand between us...');
+      } else {
+        chunks.push('...I see potential in how you look...');
+      }
     }
   }
 
-  // Final chunk: confidence metric
-  chunks.push(`[confidence: ${Math.round(state.confidenceInUser)}%]`);
+  // Final chunk: confidence metric plus personality indicator
+  const personalityTag = personality !== 'neutral' ? ` [${personality}:${Math.round(personalityStrength)}%]` : '';
+  chunks.push(`[confidence: ${Math.round(state.confidenceInUser)}%${personalityTag}]`);
 
   return chunks;
 }
