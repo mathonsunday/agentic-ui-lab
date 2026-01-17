@@ -214,7 +214,20 @@ Return ONLY valid JSON in this exact format:
       return response.end();
     }
 
-    const analysis = JSON.parse(jsonMatch[0]);
+    // Clean up JSON: remove leading + signs (Claude includes "+15" instead of "15")
+    const cleanedJson = jsonMatch[0].replace(/:\s*\+/g, ': ');
+    let analysis;
+    try {
+      analysis = JSON.parse(cleanedJson);
+    } catch (parseError) {
+      const errorId = generateEventId();
+      sendAGUIEvent(response, errorId, 'ERROR', {
+        code: 'JSON_PARSE_ERROR',
+        message: `Failed to parse Claude response: ${parseError}`,
+        recoverable: false,
+      }, eventTracker.getNextSequence());
+      return response.end();
+    }
 
     // Calculate new confidence
     const newConfidence = Math.max(
