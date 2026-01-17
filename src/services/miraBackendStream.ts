@@ -209,13 +209,15 @@ export function streamMiraBackend(
             }
           }
         } catch (readError) {
+          console.log('🛑 [miraBackendStream] reader.read() threw error:', readError instanceof Error ? readError.message : String(readError));
           // Check if abort was called
           if (abortController.signal.aborted) {
-            console.log('🛑 [miraBackendStream] Caught abort error, stopping stream');
+            console.log('🛑 [miraBackendStream] Abort signal detected - stopping stream gracefully');
             wasInterrupted = true;
             callbacks.onError?.('Stream interrupted by user');
             break;
           }
+          console.log('🛑 [miraBackendStream] Error was not due to abort, re-throwing');
           throw readError;
         }
       }
@@ -245,14 +247,23 @@ export function streamMiraBackend(
   return {
     promise,
     abort: () => {
-      console.log('🛑 [miraBackendStream] abort() called, setting wasInterrupted flag and cancelling reader');
+      console.log('🛑 [miraBackendStream] abort() called - STREAM ID:', streamId);
+      console.log('🛑 [miraBackendStream] Setting wasInterrupted flag to true');
       wasInterrupted = true;
+
+      console.log('🛑 [miraBackendStream] Calling abortController.abort()');
       abortController.abort();
+
       // Actively cancel the reader to prevent buffered chunks from being processed
       if (readerRef) {
-        readerRef.cancel().catch((err) => {
-          console.warn('Error cancelling reader:', err);
+        console.log('🛑 [miraBackendStream] Cancelling reader stream...');
+        readerRef.cancel().then(() => {
+          console.log('🛑 [miraBackendStream] Reader cancelled successfully');
+        }).catch((err) => {
+          console.warn('🛑 [miraBackendStream] Error cancelling reader:', err);
         });
+      } else {
+        console.warn('🛑 [miraBackendStream] readerRef is null - stream may already be closed');
       }
     },
   };
