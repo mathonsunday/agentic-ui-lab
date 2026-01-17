@@ -88,6 +88,8 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
     const nextZoom = getNextZoomLevel(currentZoom);
     const newAscii = getCreatureAtZoom(currentCreature, nextZoom);
 
+    console.log('🔍 ZOOM IN triggered:', currentZoom, '→', nextZoom);
+
     setCurrentZoom(nextZoom);
 
     setTerminalLines((prev) => {
@@ -112,6 +114,8 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
     const prevZoom = getPrevZoomLevel(currentZoom);
     const newAscii = getCreatureAtZoom(currentCreature, prevZoom);
 
+    console.log('🔍 ZOOM OUT triggered:', currentZoom, '→', prevZoom);
+
     setCurrentZoom(prevZoom);
 
     setTerminalLines((prev) => {
@@ -134,7 +138,13 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
 
   const handleToolCall = useCallback(
     async (toolAction: string, toolData: Record<string, unknown>) => {
-      if (isStreaming) return;
+      console.log('🔧 Tool call initiated:', toolAction, toolData);
+      console.log('📊 Current confidence before:', miraState.confidenceInUser);
+
+      if (isStreaming) {
+        console.log('⚠️ Already streaming, ignoring tool call');
+        return;
+      }
 
       setIsStreaming(true);
       setInteractionCount((prev) => prev + 1);
@@ -152,17 +162,19 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
           },
           {
             onConfidence: (update) => {
+              console.log('✅ Confidence update received:', update.from, '→', update.to);
               setMiraState((prev) => ({
                 ...prev,
                 confidenceInUser: update.to,
               }));
             },
             onComplete: (data) => {
+              console.log('✨ Tool call complete, new confidence:', data.updatedState.confidenceInUser);
               setMiraState(data.updatedState);
               setIsStreaming(false);
             },
             onError: (error) => {
-              console.error('Tool call error:', error);
+              console.error('❌ Tool call error:', error);
               addTerminalLine('text', `...error: ${error}...`);
               setIsStreaming(false);
             },
