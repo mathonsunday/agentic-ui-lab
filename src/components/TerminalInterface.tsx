@@ -342,10 +342,29 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
             onError: (error) => {
               console.error('Stream error:', error);
-              addTerminalLine(
-                'text',
-                '...connection to the depths lost... the abyss is unreachable at this moment...'
-              );
+
+              // Check if this is an interrupt (user explicitly stopped)
+              const isInterrupt = error.includes('interrupted');
+
+              if (isInterrupt) {
+                console.log('📍 Stream was interrupted by user');
+                // Decrease rapport as penalty
+                const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
+                setMiraState((prev) => ({
+                  ...prev,
+                  confidenceInUser: newConfidence,
+                }));
+                updateRapportBar(newConfidence);
+                onConfidenceChange?.(newConfidence);
+                // Add narrative consequence
+                addTerminalLine('text', '...you cut off my words... you still don\'t understand...');
+              } else {
+                addTerminalLine(
+                  'text',
+                  '...connection to the depths lost... the abyss is unreachable at this moment...'
+                );
+              }
+
               // Reset response tracking
               currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
@@ -374,32 +393,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   );
 
   const handleInterrupt = useCallback(() => {
+    console.log('🛑 Interrupt button clicked, abort fn exists?', !!abortControllerRef.current);
     if (abortControllerRef.current) {
-      console.log('🛑 Interrupt requested');
+      console.log('🛑 Interrupt requested - calling abort function');
       abortControllerRef.current();
-
-      // Decrease rapport as penalty
-      const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
-      setMiraState((prev) => ({
-        ...prev,
-        confidenceInUser: newConfidence,
-      }));
-      updateRapportBar(newConfidence);
-      onConfidenceChange?.(newConfidence);
-
-      // Add narrative consequence
-      addTerminalLine('text', '...you cut off my words... you still don\'t understand...');
-
-      // Reset response tracking
-      currentAnimatingLineIdRef.current = null;
-      responseLineIdsRef.current = [];
-
-      // Stop streaming
-      isStreamingRef.current = false;
-      setIsStreaming(false);
-      abortControllerRef.current = null;
+      console.log('✅ Abort function called - the onError callback will handle cleanup');
+    } else {
+      console.log('⚠️ No abort controller available');
     }
-  }, [miraState, updateRapportBar, onConfidenceChange, addTerminalLine]);
+  }, []);
 
   return (
     <div className="terminal-interface">
