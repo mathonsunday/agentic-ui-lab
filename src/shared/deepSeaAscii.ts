@@ -240,6 +240,16 @@ export const ZOOMABLE_CREATURES = {
   jellyfish: ROVVariants.jellyfish,
   octopus: ROVVariants.octopus,
   shark: ROVVariants.shark,
+  treasureChest: ROVVariants.treasureChest,
+  submarine: ROVVariants.submarine,
+  schoolOfFish: ROVVariants.schoolOfFish,
+  bioluminescentFish: ROVVariants.bioluminescentFish,
+  viperFish: ROVVariants.viperFish,
+  coral: ROVVariants.coral,
+  hermitCrab: ROVVariants.hermitCrab,
+  deepSeaScene: ROVVariants.deepSeaScene,
+  seaTurtle: ROVVariants.seaTurtle,
+  deepSeaDiver: ROVVariants.deepSeaDiver,
 } as const;
 
 export type ZoomLevel = 'far' | 'medium' | 'close';
