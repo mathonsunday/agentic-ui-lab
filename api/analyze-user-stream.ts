@@ -273,10 +273,10 @@ Return ONLY valid JSON in this exact format:
       message_id: messageId,
     }, startSequence);
 
-    // Stream confidence bar as first chunk
-    const confidenceBar = generateConfidenceBar(newConfidence);
     let chunkIndex = 0;
 
+    // Send confidence bar as first chunk
+    const confidenceBar = generateConfidenceBar(newConfidence);
     const barChunkId = generateEventId();
     const barChunkSeq = eventTracker.getNextSequence();
     sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
@@ -302,7 +302,15 @@ Return ONLY valid JSON in this exact format:
     }, endSequence, startEventId);
 
     // Update memory
-    updateMemory(updatedState, userInput, agentResponse);
+    const finalState = updateMemory(updatedState, userInput, agentResponse);
+
+    // Send completion event with full response data (triggers ASCII art and transition)
+    const completeEventId = generateEventId();
+    const completeSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, completeEventId, 'RESPONSE_COMPLETE', {
+      updatedState: finalState,
+      response: agentResponse,
+    }, completeSequence);
 
     response.end();
   } catch (error) {

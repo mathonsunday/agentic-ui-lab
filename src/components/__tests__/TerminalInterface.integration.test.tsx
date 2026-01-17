@@ -212,40 +212,43 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       );
     });
 
-    it('should add transition phrase after streaming completes', async () => {
+    it('should display rapport bar, response text and transition phrase after streaming completes', async () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
 
       const mockStream = createMockSSEStream([
+        {
+          type: 'rapport_bar',
+          data: { chunk: '[RAPPORT] [██████████░░░░░░░░] 50%\n' },
+        },
         {
           type: 'response_chunk',
           data: { chunk: 'response text' },
         },
-      ]);
-
-      global.fetch = vi.fn(() => Promise.resolve(mockStream));
-
-      await userEvent.type(textarea, 'test');
-      fireEvent.click(submitButton);
-
-      // With AG-UI protocol, the text appears as TEXT_CONTENT events
-      await waitFor(() => {
-        expect(screen.getByText('response text')).toBeInTheDocument();
-      });
-    });
-
-    it('should add separator after exchange', async () => {
-      render(<TerminalInterface />);
-
-      const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button', { name: /send/i });
-
-      const mockStream = createMockSSEStream([
         {
-          type: 'response_chunk',
-          data: { chunk: 'some response' },
+          type: 'complete',
+          data: {
+            updatedState: {
+              confidenceInUser: 50,
+              userProfile: {
+                thoughtfulness: 60,
+                adventurousness: 50,
+                engagement: 55,
+                curiosity: 65,
+                superficiality: 20,
+              },
+              interactionCount: 1,
+              memories: [],
+            },
+            response: {
+              observations: [],
+              streaming: ['response text'],
+              confidenceDelta: 0,
+              moodShift: 'calm' as const,
+            },
+          },
         },
       ]);
 
@@ -254,9 +257,86 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
 
-      // With AG-UI protocol, verify the response text appears
+      // Rapport bar should appear first
+      await waitFor(() => {
+        expect(screen.getByText(/\[RAPPORT\]/)).toBeInTheDocument();
+      });
+
+      // Response text should appear
+      await waitFor(() => {
+        expect(screen.getByText('response text')).toBeInTheDocument();
+      });
+
+      // Transition phrase must appear after streaming
+      await waitFor(() => {
+        expect(screen.getByText('...what do you think about this...')).toBeInTheDocument();
+      });
+    });
+
+    it('should display rapport bar, ASCII art and separator after exchange', async () => {
+      render(<TerminalInterface />);
+
+      const textarea = screen.getByPlaceholderText('> share your thoughts...');
+      const submitButton = screen.getByRole('button', { name: /send/i });
+
+      const mockStream = createMockSSEStream([
+        {
+          type: 'rapport_bar',
+          data: { chunk: '[RAPPORT] [██████████░░░░░░░░] 50%\n' },
+        },
+        {
+          type: 'response_chunk',
+          data: { chunk: 'some response' },
+        },
+        {
+          type: 'complete',
+          data: {
+            updatedState: {
+              confidenceInUser: 50,
+              userProfile: {
+                thoughtfulness: 60,
+                adventurousness: 50,
+                engagement: 55,
+                curiosity: 65,
+                superficiality: 20,
+              },
+              interactionCount: 1,
+              memories: [],
+            },
+            response: {
+              observations: [],
+              streaming: ['some response'],
+              confidenceDelta: 0,
+              moodShift: 'calm' as const,
+            },
+          },
+        },
+      ]);
+
+      global.fetch = vi.fn(() => Promise.resolve(mockStream));
+
+      await userEvent.type(textarea, 'test');
+      fireEvent.click(submitButton);
+
+      // Rapport bar should appear first
+      await waitFor(() => {
+        expect(screen.getByText(/\[RAPPORT\]/)).toBeInTheDocument();
+      });
+
+      // Response text should appear
       await waitFor(() => {
         expect(screen.getByText('some response')).toBeInTheDocument();
+      });
+
+      // Separator must appear after exchange completes
+      await waitFor(() => {
+        expect(screen.getByText('---')).toBeInTheDocument();
+      });
+
+      // ASCII art should be rendered (check for pre element)
+      await waitFor(() => {
+        const preElements = document.querySelectorAll('pre.terminal-interface__ascii');
+        expect(preElements.length).toBeGreaterThan(0);
       });
     });
   });
@@ -444,25 +524,30 @@ function createMockSSEStream(
               chunk_index: sequenceNumber - 1,
             },
           };
-        } else if (event.type === 'complete') {
-          // For complete events, send STATE_DELTA
+        } else if (event.type === 'rapport_bar') {
+          // Rapport bar as TEXT_CONTENT chunk
+          const chunkData = event.data as { chunk: string };
           envelope = {
             event_id: `evt_${Date.now()}_${Math.random()}`,
             schema_version: '1.0.0',
-            type: 'STATE_DELTA',
+            type: 'TEXT_CONTENT',
             timestamp: Date.now(),
             sequence_number: sequenceNumber++,
+            parent_event_id: startEventId,
             data: {
-              version: 1,
-              timestamp: Date.now(),
-              operations: [
-                {
-                  op: 'replace',
-                  path: '/confidenceInUser',
-                  value: (event.data as any).updatedState?.confidenceInUser ?? 50,
-                },
-              ],
+              chunk: chunkData.chunk,
+              chunk_index: sequenceNumber - 1,
             },
+          };
+        } else if (event.type === 'complete') {
+          // For complete events, send RESPONSE_COMPLETE with full state and response
+          envelope = {
+            event_id: `evt_${Date.now()}_${Math.random()}`,
+            schema_version: '1.0.0',
+            type: 'RESPONSE_COMPLETE',
+            timestamp: Date.now(),
+            sequence_number: sequenceNumber++,
+            data: event.data,
           };
         } else if (event.type === 'confidence') {
           // Legacy confidence event

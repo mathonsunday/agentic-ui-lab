@@ -224,6 +224,12 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
       // Message streaming complete
       break;
 
+    case 'RESPONSE_COMPLETE': {
+      const completeData = envelope.data as { updatedState: MiraState; response: AgentResponse };
+      callbacks.onComplete?.(completeData);
+      break;
+    }
+
     case 'STATE_DELTA': {
       const deltaData = envelope.data as {
         version: number;
