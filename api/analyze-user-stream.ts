@@ -57,13 +57,6 @@ export default async (request: VercelRequest, response: VercelResponse) => {
         },
       });
 
-      // Send updated confidence bar as response chunk for visual feedback
-      const confidenceBar = generateConfidenceBar(updatedState.confidenceInUser);
-      sendEvent(response, {
-        type: 'response_chunk',
-        data: { chunk: confidenceBar },
-      });
-
       sendEvent(response, {
         type: 'complete',
         data: {
