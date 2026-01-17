@@ -1,26 +1,32 @@
 .tool-button {
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid cyan;
+  background: transparent;
+  border: none;
   color: cyan;
-  padding: 8px 16px;
+  padding: 4px 0;
+  margin: 4px 16px 4px 0;
   font-family: 'Courier New', monospace;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 14px;
-  font-weight: 500;
+  transition: all 0.15s;
+  font-size: 13px;
+  font-weight: normal;
+  letter-spacing: 0.5px;
+}
+
+.tool-button::before {
+  content: '> ';
+  margin-right: 2px;
 }
 
 .tool-button:hover:not(:disabled) {
-  background: rgba(0, 255, 255, 0.3);
-  box-shadow: 0 0 10px cyan;
-  transform: scale(1.02);
+  text-shadow: 0 0 8px cyan;
+  color: rgba(0, 255, 255, 1);
 }
 
 .tool-button:active:not(:disabled) {
-  transform: scale(0.98);
+  opacity: 0.7;
 }
 
 .tool-button:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: not-allowed;
 }

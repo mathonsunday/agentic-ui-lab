@@ -1,10 +1,8 @@
 .tool-button-row {
   display: flex;
-  gap: 12px;
-  margin: 16px 0;
-  padding: 12px;
-  border-top: 1px solid rgba(0, 255, 255, 0.3);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+  gap: 0;
+  margin: 8px 0;
+  padding: 0;
   flex-wrap: wrap;
-  justify-content: center;
+  align-items: center;
 }

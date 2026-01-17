@@ -294,9 +294,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
               )}
             </div>
           ))}
-        </div>
 
-        <div className="terminal-interface__input-section">
           <ToolButtonRow
             tools={[
               { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
@@ -304,6 +302,9 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
             ]}
             disabled={isStreaming}
           />
+        </div>
+
+        <div className="terminal-interface__input-section">
           <MinimalInput
             onSubmit={handleInput}
             disabled={isStreaming}
