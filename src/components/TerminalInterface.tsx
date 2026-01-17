@@ -260,6 +260,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       addTerminalLine('input', `> ${userInput}`);
 
       // Set streaming state to disable input
+      console.log('📡 Setting isStreaming to true');
       setIsStreaming(true);
 
       // Play audio cue
@@ -479,11 +480,20 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           />
 
           <ToolButtonRow
-            tools={[
-              { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
-              { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
-              ...(isStreaming ? [{ id: 'interrupt', name: 'INTERRUPT', onExecute: handleInterrupt }] : []),
-            ]}
+            tools={(() => {
+              console.log('🛠️ Building tools array, isStreaming:', isStreaming);
+              const interruptTool = { id: 'interrupt', name: 'INTERRUPT', onExecute: handleInterrupt };
+              const tools = [
+                { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
+                { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
+              ];
+              if (isStreaming) {
+                console.log('✨ Adding interrupt tool to tools array');
+                tools.push(interruptTool);
+              }
+              console.log('🛠️ Final tools:', tools.map(t => t.name));
+              return tools;
+            })()}
             disabled={false}
           />
         </div>
