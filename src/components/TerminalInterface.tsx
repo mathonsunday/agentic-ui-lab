@@ -377,6 +377,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }));
             },
             onResponseChunk: (chunk) => {
+              // Check if stream is still active - if interrupt happened, don't process
+              if (!streamState.isStreaming) {
+                console.log(`📥 [TerminalInterface] IGNORING chunk (${chunk.length} chars) - stream no longer active`);
+                return;
+              }
+
               // Add each chunk as a separate terminal line to preserve formatting and gaps
               const newLineId = String(lineCountRef.current);
 
