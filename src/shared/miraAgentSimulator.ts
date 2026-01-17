@@ -10,6 +10,8 @@
  * This preserves your artistic vision while adding Claude's intelligence for understanding users.
  */
 
+import { callMiraBackend } from '../services/miraBackendClient';
+
 export interface UserProfile {
   thoughtfulness: number; // 0-100: do they ask deep questions?
   adventurousness: number; // 0-100: do they engage with strange/scary content?
@@ -97,9 +99,6 @@ export async function evaluateUserResponseWithBackend(
   userResponse: string,
   interactionDuration: number
 ): Promise<{ updatedState: MiraState; response: AgentResponse }> {
-  // Import backend client dynamically to avoid circular dependencies
-  const { callMiraBackend } = await import('../services/miraBackendClient');
-
   // Frontend assessment: type and basic depth from word count
   const assessment = assessResponse(userResponse, interactionDuration, miraState);
 
