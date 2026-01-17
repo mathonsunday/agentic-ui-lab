@@ -380,6 +380,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add each chunk as a separate terminal line to preserve formatting and gaps
               const newLineId = String(lineCountRef.current);
 
+              console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars`);
               streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
                 chunkLength: chunk.length,
                 newLineId,
