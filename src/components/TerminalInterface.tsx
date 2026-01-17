@@ -90,6 +90,36 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     []
   );
 
+  // Update the most recent rapport bar with new confidence value
+  const updateRapportBar = useCallback((newConfidence: number) => {
+    const percent = Math.round(newConfidence);
+    const filled = Math.round(percent / 5); // 20 characters total
+    const empty = 20 - filled;
+    const bar = '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
+    const newRapportText = `[RAPPORT] ${bar} ${percent}%`;
+
+    setTerminalLines((prev) => {
+      // Find the last line that contains a rapport bar
+      let lastRapportIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'text' && prev[i].content.includes('[RAPPORT]')) {
+          lastRapportIndex = i;
+          break;
+        }
+      }
+
+      if (lastRapportIndex === -1) return prev; // No rapport bar found
+
+      // Update that line's content
+      const updated = [...prev];
+      updated[lastRapportIndex] = {
+        ...updated[lastRapportIndex],
+        content: newRapportText,
+      };
+      return updated;
+    });
+  }, []);
+
   // Tool handlers for zoom interactions
   const handleZoomIn = useCallback(() => {
     const nextZoom = getNextZoomLevel(currentZoom);
@@ -175,6 +205,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 ...prev,
                 confidenceInUser: update.to,
               }));
+              updateRapportBar(update.to);
               onConfidenceChange?.(update.to);
             },
             onComplete: (data) => {
@@ -199,7 +230,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         setIsStreaming(false);
       }
     },
-    [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange]
+    [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
   );
 
   const handleInput = useCallback(
