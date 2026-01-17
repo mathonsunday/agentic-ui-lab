@@ -284,18 +284,23 @@ Return ONLY valid JSON in this exact format:
       chunk_index: chunkIndex++,
     }, barChunkSeq, startEventId);
 
-    // Stream response chunks with delays for typing effect
-    for (const chunk of agentResponse.streaming) {
-      // Add delay between chunks to simulate Mira typing
-      // ~50-60ms per chunk gives natural typing speed with sound feedback
-      await sleep(50);
+    // Stream response chunks with character-by-character delays for typing effect
+    for (const sentence of agentResponse.streaming) {
+      // Break each sentence into 2-3 character chunks and stream with delays
+      // This creates the illusion of Mira typing character-by-character
+      const charChunks = breakIntoCharChunks(sentence, 2);
 
-      const chunkId = generateEventId();
-      const chunkSeq = eventTracker.getNextSequence();
-      sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
-        chunk,
-        chunk_index: chunkIndex++,
-      }, chunkSeq, startEventId);
+      for (const charChunk of charChunks) {
+        // ~40-50ms per character gives natural typing speed (~60-90 wpm)
+        await sleep(40);
+
+        const chunkId = generateEventId();
+        const chunkSeq = eventTracker.getNextSequence();
+        sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
+          chunk: charChunk,
+          chunk_index: chunkIndex++,
+        }, chunkSeq, startEventId);
+      }
     }
 
     // Complete text message
@@ -328,6 +333,18 @@ Return ONLY valid JSON in this exact format:
     response.end();
   }
 };
+
+/**
+ * Helper: Break text into small character chunks for typing effect
+ * Splits text into chunks of specified size (default 2-3 chars)
+ */
+function breakIntoCharChunks(text: string, chunkSize: number = 2): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
 
 /**
  * Helper: Sleep for ms milliseconds
