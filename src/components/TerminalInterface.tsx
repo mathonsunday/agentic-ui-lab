@@ -48,6 +48,7 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         newStreamId,
         abortController: !!action.abort,
       });
+      console.log(`🎬 [REDUCER] START_STREAM #${newStreamId}`, { isStreaming: true });
       return {
         isStreaming: true,
         streamId: newStreamId,
@@ -58,6 +59,7 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         streamId: state.streamId,
         wasStreaming: state.isStreaming,
       });
+      console.log(`🏁 [REDUCER] END_STREAM #${state.streamId}`, { isStreaming: false, wasStreaming: state.isStreaming });
       return {
         ...state,
         isStreaming: false,
@@ -68,6 +70,7 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         streamId: state.streamId,
         wasStreaming: state.isStreaming,
       });
+      console.log(`🛑 [REDUCER] INTERRUPT_STREAM #${state.streamId}`, { isStreaming: false, wasStreaming: state.isStreaming });
       return {
         ...state,
         isStreaming: false,
@@ -505,27 +508,33 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   );
 
   const handleInterrupt = useCallback(() => {
-    console.log('🛑 Interrupt button clicked');
+    console.log(`🛑 Interrupt button clicked - STREAM #${streamState.streamId}`, {
+      isStreaming: streamState.isStreaming,
+      hasAbortController: !!streamState.abortController,
+    });
     streamDebugLog(`handleInterrupt called - STREAM #${streamState.streamId}`, {
       hasAbortController: !!streamState.abortController,
       isStreaming: streamState.isStreaming,
     });
 
     if (streamState.abortController) {
-      console.log('🛑 Interrupt requested - calling abort function');
+      console.log(`🛑 Interrupt requested - calling abort function for STREAM #${streamState.streamId}`);
       streamDebugLog(`Calling abort function - STREAM #${streamState.streamId}`, {
         timestamp: Date.now(),
       });
       try {
         streamState.abortController();
-        console.log('✅ Abort function executed successfully');
+        console.log(`✅ Abort function executed for STREAM #${streamState.streamId}`);
         streamDebugLog(`Abort function executed - STREAM #${streamState.streamId}`);
+        // Dispatch INTERRUPT_STREAM to ensure state is updated
+        dispatchStream({ type: 'INTERRUPT_STREAM' });
+        console.log(`✅ INTERRUPT_STREAM dispatched for STREAM #${streamState.streamId}`);
       } catch (error) {
-        console.error('❌ Error calling abort:', error);
+        console.error(`❌ Error calling abort for STREAM #${streamState.streamId}:`, error);
         streamDebugLog(`Error calling abort - STREAM #${streamState.streamId}`, { error });
       }
     } else {
-      console.log('⚠️ No abort controller available');
+      console.log(`⚠️ No abort controller available for STREAM #${streamState.streamId}`);
       streamDebugLog(`No abort controller available - STREAM #${streamState.streamId}`);
     }
   }, [streamState.abortController, streamState.streamId]);
