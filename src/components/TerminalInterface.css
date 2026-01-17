@@ -74,6 +74,7 @@
   color: #ffffff;
   line-height: 1.5;
   font-size: 1em;
+  white-space: pre-wrap;
 }
 
 .terminal-interface__line--input .terminal-interface__text {
