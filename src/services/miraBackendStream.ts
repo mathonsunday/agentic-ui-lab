@@ -105,6 +105,10 @@ export function streamMiraBackend(
   let wasInterrupted = false;
   let readerRef: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
+  // Track how many chunks we expect to receive BEFORE interrupt
+  let chunksReceivedCount = 0;
+  let maxChunksBeforeInterrupt: number | null = null;
+
   // Wrap callbacks to check interrupt flag
   const wrappedCallbacks: StreamCallbacks = {
     onConfidence: callbacks.onConfidence,
@@ -112,9 +116,10 @@ export function streamMiraBackend(
     onResponseChunk: (chunk) => {
       // Don't process chunks after interrupt
       if (wasInterrupted) {
-        console.log('🛑 [miraBackendStream] Ignoring chunk callback - stream was interrupted');
+        console.log(`🛑 [miraBackendStream] Ignoring chunk #${chunksReceivedCount + 1} - stream was interrupted`);
         return;
       }
+      chunksReceivedCount++;
       callbacks.onResponseChunk?.(chunk);
     },
     onComplete: (data) => {
@@ -248,8 +253,12 @@ export function streamMiraBackend(
     promise,
     abort: () => {
       console.log('🛑 [miraBackendStream] abort() called - STREAM ID:', streamId);
+      console.log(`🛑 [miraBackendStream] Chunks received so far: ${chunksReceivedCount}`);
       console.log('🛑 [miraBackendStream] Setting wasInterrupted flag to true');
       wasInterrupted = true;
+      // Capture the chunk count at interrupt time - any chunks after this are in-flight and should be ignored
+      maxChunksBeforeInterrupt = chunksReceivedCount;
+      console.log(`🛑 [miraBackendStream] Max allowed chunks before interrupt: ${maxChunksBeforeInterrupt}`);
 
       console.log('🛑 [miraBackendStream] Calling abortController.abort()');
       abortController.abort();
