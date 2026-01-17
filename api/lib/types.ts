@@ -1,6 +1,11 @@
 /**
  * Shared type definitions for LangGraph Mira Agent
  * Defines the state structure that flows through the agent graph
+ *
+ * With MCP-UI compatibility extensions for:
+ * - Tool schema definitions
+ * - Structured tool results
+ * - State versioning
  */
 
 export interface UserProfile {
@@ -16,6 +21,34 @@ export interface ToolCallData {
   timestamp: number;
   sequenceNumber: number;
   zoomLevel?: string;
+}
+
+/**
+ * MCP-UI compatible tool result format
+ * Returned when a tool is executed
+ */
+export interface ToolResult {
+  /** Status of tool execution */
+  status: 'success' | 'failure' | 'partial';
+
+  /** The actual result data */
+  result: unknown;
+
+  /** Any error message if status is 'failure' or 'partial' */
+  error?: string;
+
+  /** Metadata about the tool execution */
+  metadata?: {
+    execution_time_ms?: number;
+    artifacts?: Record<string, unknown>;
+  };
+
+  /** UI update commands (server-driven updates) */
+  ui_updates?: Array<{
+    type: string;
+    target: string;
+    data: unknown;
+  }>;
 }
 
 export interface InteractionMemory {

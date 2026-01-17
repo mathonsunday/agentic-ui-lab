@@ -6,9 +6,12 @@
  * - User profile changes
  * - Response chunks
  * - Final state completion
+ *
+ * Supports AG-UI event envelope format with correlation IDs, versioning, and sequence tracking.
  */
 
 import type { MiraState, AgentResponse, ResponseAssessment, ToolCallData } from '../../api/lib/types';
+import type { EventEnvelope } from '../types/events';
 
 export interface StreamEvent {
   type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';
@@ -35,6 +38,47 @@ export interface StreamCallbacks {
   onResponseChunk?: (chunk: string) => void;
   onComplete?: (data: { updatedState: MiraState; response: AgentResponse }) => void;
   onError?: (error: string) => void;
+}
+
+/**
+ * Event buffer for reordering out-of-order SSE events
+ */
+class EventBuffer {
+  private buffer = new Map<number, EventEnvelope>();
+  private nextSequence = 0;
+  private maxWaitMs = 100; // Max wait for out-of-order events
+
+  add(envelope: EventEnvelope): EventEnvelope[] {
+    // If this is the next expected sequence, process it and any buffered ones
+    if (envelope.sequence_number === this.nextSequence) {
+      this.nextSequence++;
+      const ordered: EventEnvelope[] = [envelope];
+
+      // Check if we have any following events already buffered
+      while (this.buffer.has(this.nextSequence)) {
+        const next = this.buffer.get(this.nextSequence)!;
+        this.buffer.delete(this.nextSequence);
+        ordered.push(next);
+        this.nextSequence++;
+      }
+
+      return ordered;
+    }
+
+    // Out-of-order: buffer it
+    if (envelope.sequence_number > this.nextSequence) {
+      this.buffer.set(envelope.sequence_number, envelope);
+    }
+
+    return [];
+  }
+
+  flush(): EventEnvelope[] {
+    const remaining = Array.from(this.buffer.values())
+      .sort((a, b) => a.sequence_number - b.sequence_number);
+    this.buffer.clear();
+    return remaining;
+  }
 }
 
 /**
@@ -78,30 +122,52 @@ export async function streamMiraBackend(
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    const eventBuffer = new EventBuffer();
+    let lineBuffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
+      lineBuffer += decoder.decode(value, { stream: true });
+      const lines = lineBuffer.split('\n');
 
       // Keep last incomplete line in buffer
-      buffer = lines[lines.length - 1];
+      lineBuffer = lines[lines.length - 1];
 
       for (let i = 0; i < lines.length - 1; i++) {
         const line = lines[i];
 
         if (line.startsWith('data: ')) {
           try {
-            const eventData = JSON.parse(line.slice(6)) as StreamEvent;
-            handleStreamEvent(eventData, callbacks);
+            // Try parsing as envelope first (new format)
+            const parsed = JSON.parse(line.slice(6));
+
+            if (parsed.event_id && parsed.schema_version !== undefined) {
+              // New envelope format
+              const envelope = parsed as EventEnvelope;
+              const ordered = eventBuffer.add(envelope);
+
+              // Process all ordered events
+              for (const evt of ordered) {
+                handleEnvelopeEvent(evt, callbacks);
+              }
+            } else {
+              // Legacy format
+              const eventData = parsed as StreamEvent;
+              handleStreamEvent(eventData, callbacks);
+            }
           } catch (e) {
             console.error('Failed to parse event:', e);
           }
         }
       }
+    }
+
+    // Flush any remaining buffered events
+    const remaining = eventBuffer.flush();
+    for (const evt of remaining) {
+      handleEnvelopeEvent(evt, callbacks);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -111,7 +177,16 @@ export async function streamMiraBackend(
 }
 
 /**
- * Handle individual stream events
+ * Handle envelope events (new AG-UI format)
+ */
+function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  // Extract legacy event from envelope and handle normally
+  const legacyEvent = envelope.data as StreamEvent;
+  handleStreamEvent(legacyEvent, callbacks);
+}
+
+/**
+ * Handle individual stream events (legacy format wrapped in envelope)
  */
 function handleStreamEvent(event: StreamEvent, callbacks: StreamCallbacks): void {
   switch (event.type) {

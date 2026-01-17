@@ -7,6 +7,11 @@
  * - Response chunks as they're generated
  * - Final state update
  *
+ * Events are wrapped in AG-UI compatible envelopes with:
+ * - Event IDs for correlation and replay
+ * - Sequence numbers for ordering
+ * - Versioning for protocol evolution
+ *
  * Replaces the batch `/api/analyze-user` endpoint for faster, more responsive UX
  */
 
@@ -20,6 +25,35 @@ interface StreamEvent {
   data: unknown;
 }
 
+/**
+ * Generate unique event ID
+ */
+function generateEventId(): string {
+  return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Event tracking for session
+ */
+class EventSequence {
+  private sequence: number = 0;
+  private firstEventId: string | undefined;
+
+  getNextSequence(): number {
+    return this.sequence++;
+  }
+
+  setFirstEventId(id: string): void {
+    if (!this.firstEventId) {
+      this.firstEventId = id;
+    }
+  }
+
+  getFirstEventId(): string | undefined {
+    return this.firstEventId;
+  }
+}
+
 export default async (request: VercelRequest, response: VercelResponse) => {
   // Only accept POST requests
   if (request.method !== 'POST') {
@@ -31,6 +65,9 @@ export default async (request: VercelRequest, response: VercelResponse) => {
   response.setHeader('Cache-Control', 'no-cache');
   response.setHeader('Connection', 'keep-alive');
 
+  // Create event tracker for this request/response session
+  const eventTracker = new EventSequence();
+
   try {
     const { userInput, miraState, assessment, toolData } = request.body as {
       userInput?: string;
@@ -40,7 +77,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     };
 
     if (!miraState || !assessment) {
-      sendEvent(response, { type: 'error', data: { message: 'Missing required fields' } });
+      sendEvent(response, { type: 'error', data: { message: 'Missing required fields' } }, eventTracker);
       return response.end();
     }
 
@@ -55,7 +92,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
           to: updatedState.confidenceInUser,
           delta: updatedState.confidenceInUser - miraState.confidenceInUser,
         },
-      });
+      }, eventTracker);
 
       sendEvent(response, {
         type: 'complete',
@@ -67,19 +104,19 @@ export default async (request: VercelRequest, response: VercelResponse) => {
             contentSelection: { sceneId: '', creatureId: '', revealLevel: 'moderate' as const },
           },
         },
-      });
+      }, eventTracker);
 
       return response.end();
     }
 
     // Handle text input events
     if (!userInput) {
-      sendEvent(response, { type: 'error', data: { message: 'Missing userInput for text interaction' } });
+      sendEvent(response, { type: 'error', data: { message: 'Missing userInput for text interaction' } }, eventTracker);
       return response.end();
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      sendEvent(response, { type: 'error', data: { message: 'Server configuration error' } });
+      sendEvent(response, { type: 'error', data: { message: 'Server configuration error' } }, eventTracker);
       return response.end();
     }
 
@@ -178,7 +215,7 @@ Return ONLY valid JSON in this exact format:
         to: newConfidence,
         delta: analysis.confidenceDelta,
       },
-    });
+    }, eventTracker);
 
     // Stream profile update
     sendEvent(response, {
@@ -190,7 +227,7 @@ Return ONLY valid JSON in this exact format:
         curiosity: analysis.curiosity,
         superficiality: analysis.superficiality,
       },
-    });
+    }, eventTracker);
 
     // Update state with analysis
     const updatedState = updateConfidenceAndProfile(miraState, {
@@ -213,14 +250,14 @@ Return ONLY valid JSON in this exact format:
     sendEvent(response, {
       type: 'response_chunk',
       data: { chunk: confidenceBar },
-    });
+    }, eventTracker);
 
     // Stream response chunks
     for (const chunk of agentResponse.streaming) {
       sendEvent(response, {
         type: 'response_chunk',
         data: { chunk },
-      });
+      }, eventTracker);
     }
 
     // Update memory
@@ -233,7 +270,7 @@ Return ONLY valid JSON in this exact format:
         updatedState: finalState,
         response: agentResponse,
       },
-    });
+    }, eventTracker);
 
     response.end();
   } catch (error) {
@@ -243,7 +280,7 @@ Return ONLY valid JSON in this exact format:
       data: {
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-    });
+    }, eventTracker);
     response.end();
   }
 };
@@ -261,8 +298,30 @@ function generateConfidenceBar(confidence: number): string {
 }
 
 /**
- * Helper: Send SSE formatted event
+ * Helper: Send SSE formatted event with envelope
  */
-function sendEvent(response: VercelResponse, event: StreamEvent): void {
-  response.write(`data: ${JSON.stringify(event)}\n\n`);
+function sendEvent(
+  response: VercelResponse,
+  event: StreamEvent,
+  eventTracker?: EventSequence,
+  parentEventId?: string
+): void {
+  const eventId = generateEventId();
+  const sequence = eventTracker?.getNextSequence() ?? 0;
+
+  if (eventTracker) {
+    eventTracker.setFirstEventId(eventId);
+  }
+
+  const envelope = {
+    event_id: eventId,
+    schema_version: '1.0.0',
+    type: 'LEGACY_EVENT', // Backward compatibility marker
+    timestamp: Date.now(),
+    sequence_number: sequence,
+    parent_event_id: parentEventId || eventTracker?.getFirstEventId(),
+    data: event,
+  };
+
+  response.write(`data: ${JSON.stringify(envelope)}\n\n`);
 }
