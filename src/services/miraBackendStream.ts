@@ -105,29 +105,29 @@ export function streamMiraBackend(
   let wasInterrupted = false;
   let readerRef: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
-  // Track how many chunks we expect to receive BEFORE interrupt
-  let chunksReceivedCount = 0;
-  let maxChunksBeforeInterrupt: number | null = null;
+  let chunkCount = 0;
 
   // Wrap callbacks to check interrupt flag
   const wrappedCallbacks: StreamCallbacks = {
     onConfidence: callbacks.onConfidence,
     onProfile: callbacks.onProfile,
     onResponseChunk: (chunk) => {
+      chunkCount++;
       // Don't process chunks after interrupt
       if (wasInterrupted) {
-        console.log(`🛑 [miraBackendStream] Ignoring chunk #${chunksReceivedCount + 1} - stream was interrupted`);
+        console.log(`🛑 [miraBackendStream] BLOCKING chunk #${chunkCount} (${chunk.length} chars) - stream was interrupted`);
         return;
       }
-      chunksReceivedCount++;
+      console.log(`✓ [miraBackendStream] Processing chunk #${chunkCount} (${chunk.length} chars)`);
       callbacks.onResponseChunk?.(chunk);
     },
     onComplete: (data) => {
       // Don't process completion after interrupt
       if (wasInterrupted) {
-        console.log('🛑 [miraBackendStream] Ignoring onComplete callback - stream was interrupted');
+        console.log('🛑 [miraBackendStream] BLOCKING onComplete - stream was interrupted');
         return;
       }
+      console.log('✓ [miraBackendStream] Processing onComplete');
       callbacks.onComplete?.(data);
     },
     onError: callbacks.onError,
@@ -214,15 +214,12 @@ export function streamMiraBackend(
             }
           }
         } catch (readError) {
-          console.log('🛑 [miraBackendStream] reader.read() threw error:', readError instanceof Error ? readError.message : String(readError));
           // Check if abort was called
           if (abortController.signal.aborted) {
-            console.log('🛑 [miraBackendStream] Abort signal detected - stopping stream gracefully');
             wasInterrupted = true;
             callbacks.onError?.('Stream interrupted by user');
             break;
           }
-          console.log('🛑 [miraBackendStream] Error was not due to abort, re-throwing');
           throw readError;
         }
       }
@@ -252,27 +249,15 @@ export function streamMiraBackend(
   return {
     promise,
     abort: () => {
-      console.log('🛑 [miraBackendStream] abort() called - STREAM ID:', streamId);
-      console.log(`🛑 [miraBackendStream] Chunks received so far: ${chunksReceivedCount}`);
-      console.log('🛑 [miraBackendStream] Setting wasInterrupted flag to true');
+      console.log('🛑 [miraBackendStream] Interrupt requested for', streamId);
       wasInterrupted = true;
-      // Capture the chunk count at interrupt time - any chunks after this are in-flight and should be ignored
-      maxChunksBeforeInterrupt = chunksReceivedCount;
-      console.log(`🛑 [miraBackendStream] Max allowed chunks before interrupt: ${maxChunksBeforeInterrupt}`);
-
-      console.log('🛑 [miraBackendStream] Calling abortController.abort()');
       abortController.abort();
 
       // Actively cancel the reader to prevent buffered chunks from being processed
       if (readerRef) {
-        console.log('🛑 [miraBackendStream] Cancelling reader stream...');
-        readerRef.cancel().then(() => {
-          console.log('🛑 [miraBackendStream] Reader cancelled successfully');
-        }).catch((err) => {
-          console.warn('🛑 [miraBackendStream] Error cancelling reader:', err);
+        readerRef.cancel().catch((err) => {
+          console.log('🛑 [miraBackendStream] Reader already closed:', err instanceof Error ? err.message : err);
         });
-      } else {
-        console.warn('🛑 [miraBackendStream] readerRef is null - stream may already be closed');
       }
     },
   };
