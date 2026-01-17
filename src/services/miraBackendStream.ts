@@ -202,10 +202,13 @@ export function streamMiraBackend(
               try {
                 const parsed = JSON.parse(line.slice(6));
                 const envelope = parsed as EventEnvelope;
+                console.log('📦 [streamMiraBackend] Received SSE event:', envelope.type, 'seq:', envelope.sequence_number);
                 const ordered = eventBuffer.add(envelope);
+                console.log('📦 [streamMiraBackend] Event buffer returned', ordered.length, 'ordered events');
 
                 // Process all ordered events using wrapped callbacks
                 for (const evt of ordered) {
+                  console.log('📦 [streamMiraBackend] Processing event:', evt.type);
                   handleEnvelopeEvent(evt, wrappedCallbacks);
                 }
               } catch (e) {
@@ -267,24 +270,30 @@ export function streamMiraBackend(
  * Handle AG-UI event envelopes
  */
 function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  console.log('📡 [handleEnvelopeEvent] Event type:', envelope.type, 'Sequence:', envelope.sequence_number);
   switch (envelope.type) {
     case 'TEXT_MESSAGE_START':
       // Message streaming starting
+      console.log('📡 [handleEnvelopeEvent] TEXT_MESSAGE_START event');
       break;
 
     case 'TEXT_CONTENT': {
       const contentData = envelope.data as { chunk: string; chunk_index: number };
+      console.log('📡 [handleEnvelopeEvent] TEXT_CONTENT chunk:', contentData.chunk.substring(0, 50));
       callbacks.onResponseChunk?.(contentData.chunk);
       break;
     }
 
     case 'TEXT_MESSAGE_END':
       // Message streaming complete
+      console.log('📡 [handleEnvelopeEvent] TEXT_MESSAGE_END event');
       break;
 
     case 'RESPONSE_COMPLETE': {
       const completeData = envelope.data as { updatedState: MiraState; response: AgentResponse };
+      console.log('📡 [handleEnvelopeEvent] RESPONSE_COMPLETE event, calling onComplete');
       callbacks.onComplete?.(completeData);
+      console.log('📡 [handleEnvelopeEvent] onComplete callback called');
       break;
     }
 
