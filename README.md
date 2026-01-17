@@ -3,7 +3,9 @@
 
 ## Overview
 
-In this experience, the AI agent is not the assistant - *you* are. The AI agent is evaluating whether you have the chops to be a real scientist. It demonstrates modern agentic UI patterns (AG-UI, MCP-UI) with a focus on structured protocols, versioned APIs, and synchronized state management—all wrapped in an artistic ASCII art experience.
+In this experience, the AI agent is not the assistant - *you* are. The AI agent is a prickly, obsessive marine biologist named Mira Petrovic who is evaluating whether you have the chops to be a real scientist. 
+
+It demonstrates modern agentic UI patterns (AG-UI, MCP-UI) with a focus on structured protocols, versioned APIs, and synchronized state management—all wrapped in an artistic ASCII art experience.
 
 This is both a **learning lab for emerging agent protocols** and a **showcase of sophisticated full-stack patterns** for building AI-driven applications.
 
