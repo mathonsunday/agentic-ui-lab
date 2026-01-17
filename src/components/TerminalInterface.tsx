@@ -589,7 +589,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
 
             // For sequential animation: only animate the currently animating line
-            const shouldAnimate = !isResponseLine || line.id === currentAnimatingLineIdRef.current;
+            // Also stop animating if the stream was interrupted
+            const shouldAnimate = !isResponseLine || (line.id === currentAnimatingLineIdRef.current && !isStreamInterruptedRef.current);
 
             return (
               <div
