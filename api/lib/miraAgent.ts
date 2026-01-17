@@ -97,7 +97,12 @@ Return ONLY valid JSON in this exact format:
     if (error instanceof Error) {
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
+      console.error('Error name:', error.name);
     }
+    // Log the full error object for debugging
+    console.error('Full error object:', JSON.stringify(error, null, 2));
+    console.error('API key exists:', !!process.env.ANTHROPIC_API_KEY);
+    console.error('API key length:', process.env.ANTHROPIC_API_KEY?.length);
     return {
       confidenceDelta: 0,
       updatedProfile: {},
