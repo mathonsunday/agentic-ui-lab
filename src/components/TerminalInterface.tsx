@@ -49,6 +49,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [interactionCount, setInteractionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
+  const abortControllerRef = useRef<(() => void) | null>(null);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -188,7 +189,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       setInteractionCount((prev) => prev + 1);
 
       try {
-        await streamMiraBackend(
+        const { promise, abort } = streamMiraBackend(
           null,
           miraState,
           { type: 'tool_call', depth: 'moderate', confidenceDelta: 0, traits: {} },
@@ -224,10 +225,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
           }
         );
+        abortControllerRef.current = abort;
+        await promise;
       } catch (error) {
         console.error('Tool call failed:', error);
         isStreamingRef.current = false;
         setIsStreaming(false);
+      } finally {
+        abortControllerRef.current = null;
       }
     },
     [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
@@ -251,7 +256,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         const assessment = assessResponse(userInput, 3000, miraState);
 
         // Stream from backend with real-time updates
-        await streamMiraBackend(
+        const { promise, abort } = streamMiraBackend(
           userInput,
           miraState,
           assessment,
@@ -313,6 +318,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
           }
         );
+        abortControllerRef.current = abort;
+        await promise;
       } catch (error) {
         // Error handling: graceful degradation
         const errorMsg =
@@ -324,10 +331,36 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           '...connection to the depths lost... the abyss is unreachable at this moment...'
         );
         setIsStreaming(false);
+      } finally {
+        abortControllerRef.current = null;
       }
     },
     [miraState, addTerminalLine, onConfidenceChange]
   );
+
+  const handleInterrupt = useCallback(() => {
+    if (abortControllerRef.current) {
+      console.log('🛑 Interrupt requested');
+      abortControllerRef.current();
+
+      // Decrease rapport as penalty
+      const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
+      setMiraState((prev) => ({
+        ...prev,
+        confidenceInUser: newConfidence,
+      }));
+      updateRapportBar(newConfidence);
+      onConfidenceChange?.(newConfidence);
+
+      // Add narrative consequence
+      addTerminalLine('text', '...you cut off my words... you still don\'t understand...');
+
+      // Stop streaming
+      isStreamingRef.current = false;
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  }, [miraState, updateRapportBar, onConfidenceChange, addTerminalLine]);
 
   return (
     <div className="terminal-interface">
@@ -359,8 +392,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             tools={[
               { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
+              ...(isStreaming ? [{ id: 'interrupt', name: 'INTERRUPT', onExecute: handleInterrupt }] : []),
             ]}
-            disabled={isStreaming}
+            disabled={false}
           />
         </div>
 

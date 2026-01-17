@@ -81,98 +81,142 @@ class EventBuffer {
 }
 
 /**
- * Stream user input or tool call to backend and receive real-time updates
+ * Store active abort controllers for streams that can be cancelled
+ * Maps a stream ID to its AbortController for manual interruption
  */
-export async function streamMiraBackend(
+const activeStreams = new Map<string, AbortController>();
+
+/**
+ * Create a stream ID for tracking
+ */
+function generateStreamId(): string {
+  return `stream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Stream user input or tool call to backend and receive real-time updates
+ * Returns a stream ID that can be used to interrupt the stream
+ */
+export function streamMiraBackend(
   userInput: string | null,
   miraState: MiraState,
   assessment: ResponseAssessment,
   toolData: ToolCallData | null,
   callbacks: StreamCallbacks
-): Promise<void> {
-  const apiUrl = getApiUrl();
+): { promise: Promise<void>; abort: () => void } {
+  const streamId = generateStreamId();
+  const abortController = new AbortController();
+  activeStreams.set(streamId, abortController);
 
-  try {
-    const response = await fetch(`${apiUrl}/api/analyze-user-stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userInput: userInput || undefined,
-        miraState,
-        assessment,
-        interactionDuration: 0,
-        toolData,
-      }),
-    });
+  const promise = (async () => {
+    const apiUrl = getApiUrl();
 
-    if (!response.ok) {
-      const error = await response.json();
-      callbacks.onError?.(error.message || `HTTP ${response.status}`);
-      return;
-    }
+    try {
+      const response = await fetch(`${apiUrl}/api/analyze-user-stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userInput: userInput || undefined,
+          miraState,
+          assessment,
+          interactionDuration: 0,
+          toolData,
+        }),
+        signal: abortController.signal,
+      });
 
-    // Read SSE stream
-    if (!response.body) {
-      callbacks.onError?.('No response body');
-      return;
-    }
+      if (!response.ok) {
+        const error = await response.json();
+        callbacks.onError?.(error.message || `HTTP ${response.status}`);
+        return;
+      }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    const eventBuffer = new EventBuffer();
-    let lineBuffer = '';
+      // Read SSE stream
+      if (!response.body) {
+        callbacks.onError?.('No response body');
+        return;
+      }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const eventBuffer = new EventBuffer();
+      let lineBuffer = '';
 
-      lineBuffer += decoder.decode(value, { stream: true });
-      const lines = lineBuffer.split('\n');
+      while (true) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      // Keep last incomplete line in buffer
-      lineBuffer = lines[lines.length - 1];
+          lineBuffer += decoder.decode(value, { stream: true });
+          const lines = lineBuffer.split('\n');
 
-      for (let i = 0; i < lines.length - 1; i++) {
-        const line = lines[i];
+          // Keep last incomplete line in buffer
+          lineBuffer = lines[lines.length - 1];
 
-        if (line.startsWith('data: ')) {
-          try {
-            // Try parsing as envelope first (new format)
-            const parsed = JSON.parse(line.slice(6));
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i];
 
-            if (parsed.event_id && parsed.schema_version !== undefined) {
-              // New envelope format
-              const envelope = parsed as EventEnvelope;
-              const ordered = eventBuffer.add(envelope);
+            if (line.startsWith('data: ')) {
+              try {
+                // Try parsing as envelope first (new format)
+                const parsed = JSON.parse(line.slice(6));
 
-              // Process all ordered events
-              for (const evt of ordered) {
-                handleEnvelopeEvent(evt, callbacks);
+                if (parsed.event_id && parsed.schema_version !== undefined) {
+                  // New envelope format
+                  const envelope = parsed as EventEnvelope;
+                  const ordered = eventBuffer.add(envelope);
+
+                  // Process all ordered events
+                  for (const evt of ordered) {
+                    handleEnvelopeEvent(evt, callbacks);
+                  }
+                } else {
+                  // Legacy format
+                  const eventData = parsed as StreamEvent;
+                  handleStreamEvent(eventData, callbacks);
+                }
+              } catch (e) {
+                console.error('Failed to parse event:', e);
               }
-            } else {
-              // Legacy format
-              const eventData = parsed as StreamEvent;
-              handleStreamEvent(eventData, callbacks);
             }
-          } catch (e) {
-            console.error('Failed to parse event:', e);
           }
+        } catch (readError) {
+          // Check if abort was called
+          if (abortController.signal.aborted) {
+            callbacks.onError?.('Stream interrupted');
+            break;
+          }
+          throw readError;
         }
       }
-    }
 
-    // Flush any remaining buffered events
-    const remaining = eventBuffer.flush();
-    for (const evt of remaining) {
-      handleEnvelopeEvent(evt, callbacks);
+      // Flush any remaining buffered events
+      const remaining = eventBuffer.flush();
+      for (const evt of remaining) {
+        handleEnvelopeEvent(evt, callbacks);
+      }
+    } catch (error) {
+      // Check if this is an abort error
+      if (error instanceof Error && error.name === 'AbortError') {
+        callbacks.onError?.('Stream interrupted by user');
+      } else {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Stream error:', message);
+        callbacks.onError?.(message);
+      }
+    } finally {
+      activeStreams.delete(streamId);
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Stream error:', message);
-    callbacks.onError?.(message);
-  }
+  })();
+
+  return {
+    promise,
+    abort: () => {
+      abortController.abort();
+    },
+  };
 }
 
 /**

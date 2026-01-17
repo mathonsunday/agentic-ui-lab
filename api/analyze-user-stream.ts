@@ -19,6 +19,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js';
 import { updateConfidenceAndProfile, selectResponse, updateMemory, processToolCall } from './lib/miraAgent.js';
+import { SPECIMEN_47_GRANT_PROPOSAL } from './lib/responseLibrary.js';
 
 interface StreamEvent {
   type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';
@@ -113,6 +114,11 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     if (!userInput) {
       sendEvent(response, { type: 'error', data: { message: 'Missing userInput for text interaction' } }, eventTracker);
       return response.end();
+    }
+
+    // EXPERIMENTAL: Trigger grant proposal on specific keywords
+    if (userInput.toLowerCase().includes('specimen 47') || userInput.toLowerCase().includes('grant')) {
+      return streamGrantProposal(response, miraState, eventTracker);
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -284,6 +290,78 @@ Return ONLY valid JSON in this exact format:
     response.end();
   }
 };
+
+/**
+ * EXPERIMENTAL: Stream the Specimen 47 grant proposal
+ * This is a test of long-form streaming and interrupt functionality
+ */
+function streamGrantProposal(
+  response: VercelResponse,
+  miraState: MiraState,
+  eventTracker: EventSequence
+): void {
+  try {
+    // Send confidence update
+    sendEvent(response, {
+      type: 'confidence',
+      data: {
+        from: miraState.confidenceInUser,
+        to: Math.min(100, miraState.confidenceInUser + 8),
+        delta: 8,
+      },
+    }, eventTracker);
+
+    // Stream the grant proposal in chunks (by paragraph)
+    const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n\n');
+
+    for (const paragraph of paragraphs) {
+      if (paragraph.trim()) {
+        sendEvent(response, {
+          type: 'response_chunk',
+          data: { chunk: `${paragraph}\n` },
+        }, eventTracker);
+      }
+    }
+
+    // Send completion
+    const updatedState = {
+      ...miraState,
+      confidenceInUser: Math.min(100, miraState.confidenceInUser + 8),
+      memories: [
+        ...miraState.memories,
+        {
+          timestamp: Date.now(),
+          userInput: 'specimen 47 grant proposal request',
+          miraResponse: 'grant proposal streamed',
+          depth: 'deep' as const,
+        },
+      ],
+    };
+
+    sendEvent(response, {
+      type: 'complete',
+      data: {
+        updatedState,
+        response: {
+          streaming: [],
+          observations: [],
+          contentSelection: { sceneId: '', creatureId: '', revealLevel: 'moderate' as const },
+        },
+      },
+    }, eventTracker);
+
+    response.end();
+  } catch (error) {
+    console.error('Grant proposal streaming error:', error);
+    sendEvent(response, {
+      type: 'error',
+      data: {
+        message: error instanceof Error ? error.message : 'Failed to stream grant proposal',
+      },
+    }, eventTracker);
+    response.end();
+  }
+}
 
 /**
  * Generate ASCII rapport bar
