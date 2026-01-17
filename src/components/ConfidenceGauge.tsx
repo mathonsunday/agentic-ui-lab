@@ -14,7 +14,9 @@ export function ConfidenceGauge({ confidence, isAnimating = false }: ConfidenceG
   const [displayConfidence, setDisplayConfidence] = useState(confidence);
 
   useEffect(() => {
+    console.log('📊 ConfidenceGauge received prop:', confidence, 'current display:', displayConfidence);
     if (confidence !== displayConfidence) {
+      console.log('🎬 Starting animation:', displayConfidence, '→', confidence);
       // Animate confidence change over 600ms
       const startConfidence = displayConfidence;
       const diff = confidence - startConfidence;
