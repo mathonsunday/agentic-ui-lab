@@ -47,6 +47,7 @@ export type EventType =
   | 'TEXT_MESSAGE_START'
   | 'TEXT_CONTENT'
   | 'TEXT_MESSAGE_END'
+  | 'RESPONSE_COMPLETE'
   | 'STATE_DELTA'
   | 'TOOL_CALL_START'
   | 'TOOL_CALL_RESULT'
@@ -61,6 +62,7 @@ export type StreamEventPayload =
   | { type: 'TEXT_MESSAGE_START'; data: TextMessageStartData }
   | { type: 'TEXT_CONTENT'; data: TextContentData }
   | { type: 'TEXT_MESSAGE_END'; data: TextMessageEndData }
+  | { type: 'RESPONSE_COMPLETE'; data: ResponseCompleteData }
   | { type: 'STATE_DELTA'; data: StateDeltaData }
   | { type: 'TOOL_CALL_START'; data: ToolCallStartData }
   | { type: 'TOOL_CALL_RESULT'; data: ToolCallResultData }
@@ -92,6 +94,18 @@ export interface TextContentData {
 export interface TextMessageEndData {
   /** Total chunks sent in this message */
   total_chunks: number;
+}
+
+/**
+ * Response complete event - signals full response completion with final state
+ * Triggers UI transitions like ASCII art display and transition phrases
+ */
+export interface ResponseCompleteData {
+  /** Final updated state after response processing */
+  updatedState: Record<string, unknown>;
+
+  /** The complete agent response object */
+  response: Record<string, unknown>;
 }
 
 /**
