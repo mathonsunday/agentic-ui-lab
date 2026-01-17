@@ -2,7 +2,6 @@
 
 import type { ThoughtFragment, VisualElement } from './Character';
 
-export type Phase = 'idle' | 'thinking' | 'composing' | 'displaying';
 export type Mood = 'wonder' | 'obsession' | 'calm' | 'distress';
 
 export interface VisualResponse {
@@ -29,7 +28,6 @@ export interface ResearchEvaluation {
 }
 
 export interface AgentState {
-  phase: Phase;
   currentScenario: string | null;
   stepIndex: number;
   totalSteps: number;
@@ -77,7 +75,6 @@ export const SCENARIOS: Record<string, Scenario> = {
 export function createInitialState(): AgentState {
   const now = Date.now();
   return {
-    phase: 'idle',
     currentScenario: null,
     stepIndex: 0,
     totalSteps: 0,
@@ -113,45 +110,12 @@ export function loadScenario(state: AgentState, scenarioId: string): AgentState 
 
   return {
     ...state,
-    phase: 'idle',
     currentScenario: scenarioId,
     stepIndex: 0,
     totalSteps,
     thoughts: scenario.thoughts,
     response: scenario.response,
     visibleElements: [],
-  };
-}
-
-export function setPhase(state: AgentState, phase: Phase): AgentState {
-  // When jumping to a phase, set appropriate step index
-  if (!state.currentScenario) return { ...state, phase };
-
-  const scenario = SCENARIOS[state.currentScenario];
-  if (!scenario) return { ...state, phase };
-
-  let stepIndex = state.stepIndex;
-  let visibleElements = state.visibleElements;
-
-  if (phase === 'idle') {
-    stepIndex = 0;
-    visibleElements = [];
-  } else if (phase === 'thinking') {
-    stepIndex = 0;
-    visibleElements = [];
-  } else if (phase === 'composing') {
-    stepIndex = scenario.thoughts.length;
-    visibleElements = [];
-  } else if (phase === 'displaying') {
-    stepIndex = state.totalSteps;
-    visibleElements = scenario.response.elements;
-  }
-
-  return {
-    ...state,
-    phase,
-    stepIndex,
-    visibleElements,
   };
 }
 
@@ -171,25 +135,16 @@ export function stepForward(state: AgentState): AgentState {
 
   const newStepIndex = state.stepIndex + 1;
 
-  // Determine phase and visible elements based on step
-  let phase: Phase = state.phase;
+  // Determine visible elements based on step
   let visibleElements = state.visibleElements;
 
-  if (newStepIndex <= thoughtCount) {
-    phase = 'thinking';
-  } else if (newStepIndex <= thoughtCount + elementCount) {
+  if (newStepIndex > thoughtCount && newStepIndex <= thoughtCount + elementCount) {
     const elementIndex = newStepIndex - thoughtCount - 1;
-    phase = 'composing';
     visibleElements = scenario.response.elements.slice(0, elementIndex + 1);
-
-    if (newStepIndex === state.totalSteps) {
-      phase = 'displaying';
-    }
   }
 
   return {
     ...state,
-    phase,
     stepIndex: newStepIndex,
     visibleElements,
   };

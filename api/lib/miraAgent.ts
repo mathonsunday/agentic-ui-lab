@@ -18,10 +18,6 @@ import {
 } from './types.js';
 import { PERSONALITY_RESPONSES } from './responseLibrary.js';
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 /**
  * Step 1: Analyze user input with Claude to understand personality metrics
  */
@@ -30,6 +26,11 @@ export async function analyzeUserInput(
   miraState: MiraState
 ): Promise<UserAnalysis> {
   try {
+    // Initialize client at function call time to ensure API key is available
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     const systemPrompt = `You are analyzing a user's message to understand their personality traits and engagement depth.
 You are assisting Dr. Mira Petrovic, a deep-sea researcher, in understanding the person she's interacting with.
 

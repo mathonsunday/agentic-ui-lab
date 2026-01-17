@@ -1,26 +1,14 @@
 import { useState } from 'react';
-import type { AgentState } from '../shared/stateMachine';
-import { SCENARIOS } from '../shared/stateMachine';
 import './DebugPanel.css';
 
 interface DebugPanelProps {
-  state: AgentState;
-  onSetPhase: (phase: AgentState['phase']) => void;
-  onLoadScenario: (scenarioId: string) => void;
-  onStepForward: () => void;
-  onReset: () => void;
-  onSetSpeed: (speed: number) => void;
-  speed: number;
+  onSetConfidence?: (confidence: number) => void;
+  currentConfidence?: number;
 }
 
 export function DebugPanel({
-  state,
-  onSetPhase,
-  onLoadScenario,
-  onStepForward,
-  onReset,
-  onSetSpeed,
-  speed,
+  onSetConfidence,
+  currentConfidence,
 }: DebugPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
@@ -35,92 +23,45 @@ export function DebugPanel({
     );
   }
 
+  if (!onSetConfidence || currentConfidence === undefined) {
+    return null;
+  }
+
   return (
     <div className="debug-panel">
       <div className="debug-panel__header">
-        <span>State Machine</span>
+        <span>Recruitment Debug</span>
         <button onClick={() => setIsCollapsed(true)}>-</button>
       </div>
 
-      {/* Current State */}
+      {/* Confidence Control */}
       <div className="debug-section">
-        <div className="debug-section__title">Current State</div>
-        <div className="debug-state">
-          <div className="debug-state__phase">
-            Phase: <strong>{state.phase}</strong>
+        <div className="debug-section__title">Test Confidence</div>
+        <div className="debug-confidence">
+          <div className="debug-confidence__display">
+            <div className="debug-confidence__value">{Math.round(currentConfidence)}%</div>
+            <div className="debug-confidence__personality">
+              {currentConfidence <= 25 && 'negative'}
+              {currentConfidence > 25 && currentConfidence <= 50 && 'chaotic'}
+              {currentConfidence > 50 && currentConfidence <= 75 && 'glowing'}
+              {currentConfidence > 75 && 'slovak'}
+            </div>
           </div>
-          <div className="debug-state__scenario">
-            Scenario: <strong>{state.currentScenario || 'none'}</strong>
-          </div>
-          <div className="debug-state__step">
-            Step: <strong>{state.stepIndex}/{state.totalSteps}</strong>
-          </div>
-        </div>
-      </div>
-
-      {/* Phase Controls */}
-      <div className="debug-section">
-        <div className="debug-section__title">Phase</div>
-        <div className="debug-buttons">
-          {(['idle', 'thinking', 'composing', 'displaying'] as const).map((phase) => (
-            <button
-              key={phase}
-              className={`debug-btn ${state.phase === phase ? 'debug-btn--active' : ''}`}
-              onClick={() => onSetPhase(phase)}
-            >
-              {phase}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Scenario Selector */}
-      <div className="debug-section">
-        <div className="debug-section__title">Load Scenario</div>
-        <div className="debug-buttons debug-buttons--scenarios">
-          {Object.entries(SCENARIOS).map(([id, scenario]) => (
-            <button
-              key={id}
-              className={`debug-btn ${state.currentScenario === id ? 'debug-btn--active' : ''}`}
-              onClick={() => onLoadScenario(id)}
-            >
-              {scenario.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Playback Controls */}
-      <div className="debug-section">
-        <div className="debug-section__title">Playback</div>
-        <div className="debug-buttons">
-          <button className="debug-btn" onClick={onStepForward}>
-            Step →
-          </button>
-          <button className="debug-btn" onClick={onReset}>
-            Reset
-          </button>
-        </div>
-        <div className="debug-speed">
-          <label>Speed: {speed}x</label>
           <input
             type="range"
-            min="0.25"
-            max="3"
-            step="0.25"
-            value={speed}
-            onChange={(e) => onSetSpeed(parseFloat(e.target.value))}
+            min="0"
+            max="100"
+            step="1"
+            value={Math.round(currentConfidence)}
+            onChange={(e) => onSetConfidence(parseInt(e.target.value, 10))}
+            className="debug-confidence__slider"
           />
-        </div>
-      </div>
-
-      {/* Current Data Preview */}
-      <div className="debug-section">
-        <div className="debug-section__title">Data</div>
-        <div className="debug-data">
-          <div>Thoughts: {state.thoughts.length}</div>
-          <div>Elements: {state.visibleElements.length}/{state.response?.elements.length || 0}</div>
-          <div>Mood: {state.response?.mood || 'none'}</div>
+          <div className="debug-confidence__labels">
+            <span>negative</span>
+            <span>chaotic</span>
+            <span>glowing</span>
+            <span>slovak</span>
+          </div>
         </div>
       </div>
     </div>

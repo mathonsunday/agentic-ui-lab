@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { MinimalInput } from './MinimalInput';
 import {
   initializeMiraState,
-  evaluateUserResponse,
+  evaluateUserResponseWithBackend,
   type MiraState,
   type AgentResponse,
 } from '../shared/miraAgentSimulator';
@@ -12,6 +12,7 @@ import './TerminalInterface.css';
 
 interface TerminalInterfaceProps {
   onReturn?: () => void;
+  initialConfidence?: number;
 }
 
 interface TerminalLine {
@@ -21,13 +22,15 @@ interface TerminalLine {
   timestamp?: number;
 }
 
-export function TerminalInterface({ onReturn }: TerminalInterfaceProps) {
-  const [miraState, setMiraState] = useState<MiraState>(initializeMiraState);
+export function TerminalInterface({ onReturn, initialConfidence }: TerminalInterfaceProps) {
+  const [miraState, setMiraState] = useState<MiraState>(() => {
+    return initializeMiraState(initialConfidence);
+  });
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
     {
       id: '0',
       type: 'system',
-      content: '> MIRA RESEARCH INTERFACE INITIALIZED',
+      content: '> DR. PETROVIC\'S RESEARCH TERMINAL INITIALIZED',
       timestamp: Date.now(),
     },
     {
@@ -74,64 +77,85 @@ export function TerminalInterface({ onReturn }: TerminalInterfaceProps) {
   );
 
   const streamResponse = useCallback(
-    (response: AgentResponse, mood: string) => {
+    (response: AgentResponse) => {
       setIsStreaming(true);
       const delay = 150; // ms between chunks
       let totalDelay = 0;
 
-      // Add ASCII art first - pick random variation from mood's array
-      const patterns = ASCII_PATTERNS[mood as keyof typeof ASCII_PATTERNS] || ASCII_PATTERNS.testing;
-      const randomPattern = Array.isArray(patterns)
-        ? patterns[Math.floor(Math.random() * patterns.length)]
-        : patterns;
-      const asciiLine: TerminalLine = {
-        id: String(lineCountRef.current++),
-        type: 'ascii',
-        content: randomPattern,
-      };
-      setTerminalLines((prev) => [...prev, asciiLine]);
-      totalDelay += delay * 2; // Give ASCII art some space
-
-      // Stream the response chunks (observations are internal tracking only)
+      // Stream the response chunks first (observations are internal tracking only)
       response.streaming.forEach((chunk, index) => {
         setTimeout(() => {
           addTerminalLine('text', chunk);
-          if (index === response.streaming.length - 1) {
-            setIsStreaming(false);
-          }
         }, totalDelay + delay * index);
       });
+      totalDelay += delay * response.streaming.length;
+
+      // Add transition phrase
+      setTimeout(() => {
+        addTerminalLine('text', '...what do you think about this...');
+      }, totalDelay);
+      totalDelay += delay * 2;
+
+      // Then show ASCII art - pick random from all moods for variety
+      setTimeout(() => {
+        // Collect all ASCII patterns from all moods for maximum variety
+        const allPatterns = Object.values(ASCII_PATTERNS).flat();
+        const randomPattern = allPatterns[Math.floor(Math.random() * allPatterns.length)];
+        const asciiLine: TerminalLine = {
+          id: String(lineCountRef.current++),
+          type: 'ascii',
+          content: randomPattern,
+        };
+        setTerminalLines((prev) => [...prev, asciiLine]);
+        setIsStreaming(false);
+      }, totalDelay);
     },
     [addTerminalLine]
   );
 
   const handleInput = useCallback(
-    (userInput: string) => {
+    async (userInput: string) => {
       if (!userInput.trim()) return;
 
       // Add user input to terminal
       addTerminalLine('input', `> ${userInput}`);
 
-      // Evaluate response
-      const duration = 3000;
-      const { updatedState, response } = evaluateUserResponse(
-        miraState,
-        userInput,
-        duration
-      );
-      setMiraState(updatedState);
+      // Set streaming state to disable input
+      setIsStreaming(true);
 
       // Play audio cue
       playStreamingSound('thinking').catch(() => {});
 
-      // Add confidence indicator
-      addTerminalLine(
-        'system',
-        `[CONFIDENCE: ${Math.round(updatedState.confidenceInUser)}%]`
-      );
+      try {
+        // Evaluate response with backend (async)
+        const duration = 3000;
+        const { updatedState, response } = await evaluateUserResponseWithBackend(
+          miraState,
+          userInput,
+          duration
+        );
+        setMiraState(updatedState);
 
-      // Stream her response with current mood
-      streamResponse(response, updatedState.currentMood);
+        // Add confidence indicator
+        addTerminalLine(
+          'system',
+          `[CONFIDENCE: ${Math.round(updatedState.confidenceInUser)}%]`
+        );
+
+        // Stream her response
+        streamResponse(response);
+      } catch (error) {
+        // Error handling: graceful degradation
+        const errorMsg =
+          error instanceof Error ? error.message : 'Unknown error';
+        console.error('Backend error:', errorMsg);
+
+        addTerminalLine(
+          'text',
+          '...connection to the depths lost... the abyss is unreachable at this moment...'
+        );
+        setIsStreaming(false);
+      }
     },
     [miraState, addTerminalLine, streamResponse]
   );
@@ -140,34 +164,36 @@ export function TerminalInterface({ onReturn }: TerminalInterfaceProps) {
     <div className="terminal-interface">
       <div className="terminal-interface__header">
         <div className="terminal-interface__title">
-          MIRA RESEARCH TERMINAL v0.1
+          DR. PETROVIC'S RESEARCH TERMINAL v0.1
         </div>
         <div className="terminal-interface__subtitle">
           Deep Sea Research Assistant · Connected
         </div>
       </div>
 
-      <div className="terminal-interface__output" ref={scrollRef}>
-        {terminalLines.map((line) => (
-          <div
-            key={line.id}
-            className={`terminal-interface__line terminal-interface__line--${line.type}`}
-          >
-            {line.type === 'ascii' ? (
-              <pre className="terminal-interface__ascii">{line.content}</pre>
-            ) : (
-              <span className="terminal-interface__text">{line.content}</span>
-            )}
-          </div>
-        ))}
-      </div>
+      <div className="terminal-interface__content">
+        <div className="terminal-interface__conversation" ref={scrollRef}>
+          {terminalLines.map((line) => (
+            <div
+              key={line.id}
+              className={`terminal-interface__line terminal-interface__line--${line.type}`}
+            >
+              {line.type === 'ascii' ? (
+                <pre className="terminal-interface__ascii">{line.content}</pre>
+              ) : (
+                <span className="terminal-interface__text">{line.content}</span>
+              )}
+            </div>
+          ))}
+        </div>
 
-      <div className="terminal-interface__input-section">
-        <MinimalInput
-          onSubmit={handleInput}
-          disabled={isStreaming}
-          placeholder="> share your thoughts..."
-        />
+        <div className="terminal-interface__input-section">
+          <MinimalInput
+            onSubmit={handleInput}
+            disabled={isStreaming}
+            placeholder="> share your thoughts..."
+          />
+        </div>
       </div>
 
       {onReturn && (

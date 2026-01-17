@@ -12,7 +12,7 @@ interface ResearchRecruitmentProps {
 const ASCII_OPENING = `
 ███████████████████████████████████████████████████████
 █                                                     █
-█     MIRA RESEARCH TERMINAL - INITIALIZATION        █
+█  DR. PETROVIC'S RESEARCH TERMINAL - INITIALIZATION █
 █                                                     █
 ███████████████████████████████████████████████████████
 
@@ -86,7 +86,7 @@ export function ResearchRecruitment({
       <div className="research-recruitment__container">
         <div className="research-recruitment__header">
           <div className="research-recruitment__title">
-            MIRA RESEARCH TERMINAL v0.1
+            DR. PETROVIC'S RESEARCH TERMINAL v0.1
           </div>
         </div>
 

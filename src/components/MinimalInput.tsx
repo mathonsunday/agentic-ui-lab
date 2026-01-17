@@ -13,13 +13,24 @@ export function MinimalInput({
   placeholder = 'Speak to Dr. Petrovic...',
 }: MinimalInputProps) {
   const [value, setValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (value.trim() && !disabled) {
       onSubmit(value.trim());
       setValue('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Submit on Ctrl+Enter or Cmd+Enter
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (value.trim() && !disabled) {
+        onSubmit(value.trim());
+        setValue('');
+      }
     }
   };
 
@@ -30,19 +41,25 @@ export function MinimalInput({
 
   return (
     <form className="minimal-input" onSubmit={handleSubmit}>
-      <span className="minimal-input__prompt">&gt;</span>
-      <input
+      <div className="minimal-input__prompt">&gt;</div>
+      <textarea
         ref={inputRef}
-        type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
         className="minimal-input__field"
-        autoComplete="off"
         spellCheck={false}
+        rows={1}
       />
-      {disabled && <span className="minimal-input__thinking">...</span>}
+      <button
+        type="submit"
+        disabled={disabled || !value.trim()}
+        className="minimal-input__submit"
+      >
+        {disabled ? '...' : 'SEND'}
+      </button>
     </form>
   );
 }
