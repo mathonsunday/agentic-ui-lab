@@ -190,59 +190,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     });
   }, []);
 
-  // Tool handlers for zoom interactions
-  const handleZoomIn = useCallback(() => {
-    const nextZoom = getNextZoomLevel(currentZoom);
-    const newAscii = getCreatureAtZoom(currentCreature, nextZoom);
-
-    console.log('🔍 ZOOM IN triggered:', currentZoom, '→', nextZoom);
-
-    setCurrentZoom(nextZoom);
-
-    setTerminalLines((prev) => {
-      let lastAsciiIndex = -1;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].type === 'ascii') {
-          lastAsciiIndex = i;
-          break;
-        }
-      }
-      if (lastAsciiIndex === -1) return prev;
-
-      const updated = [...prev];
-      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
-      return updated;
-    });
-
-    handleToolCall('zoom_in', { zoomLevel: nextZoom });
-  }, [currentCreature, currentZoom]);
-
-  const handleZoomOut = useCallback(() => {
-    const prevZoom = getPrevZoomLevel(currentZoom);
-    const newAscii = getCreatureAtZoom(currentCreature, prevZoom);
-
-    console.log('🔍 ZOOM OUT triggered:', currentZoom, '→', prevZoom);
-
-    setCurrentZoom(prevZoom);
-
-    setTerminalLines((prev) => {
-      let lastAsciiIndex = -1;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].type === 'ascii') {
-          lastAsciiIndex = i;
-          break;
-        }
-      }
-      if (lastAsciiIndex === -1) return prev;
-
-      const updated = [...prev];
-      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
-      return updated;
-    });
-
-    handleToolCall('zoom_out', { zoomLevel: prevZoom });
-  }, [currentCreature, currentZoom]);
-
   const handleToolCall = useCallback(
     async (toolAction: string, toolData: Record<string, unknown>) => {
       const streamNum = streamState.streamId + 1;
@@ -328,6 +275,59 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     },
     [miraState, streamState.isStreaming, streamState.streamId, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
   );
+
+  // Tool handlers for zoom interactions
+  const handleZoomIn = useCallback(() => {
+    const nextZoom = getNextZoomLevel(currentZoom);
+    const newAscii = getCreatureAtZoom(currentCreature, nextZoom);
+
+    console.log('🔍 ZOOM IN triggered:', currentZoom, '→', nextZoom);
+
+    setCurrentZoom(nextZoom);
+
+    setTerminalLines((prev) => {
+      let lastAsciiIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'ascii') {
+          lastAsciiIndex = i;
+          break;
+        }
+      }
+      if (lastAsciiIndex === -1) return prev;
+
+      const updated = [...prev];
+      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
+      return updated;
+    });
+
+    handleToolCall('zoom_in', { zoomLevel: nextZoom });
+  }, [currentCreature, currentZoom, handleToolCall]);
+
+  const handleZoomOut = useCallback(() => {
+    const prevZoom = getPrevZoomLevel(currentZoom);
+    const newAscii = getCreatureAtZoom(currentCreature, prevZoom);
+
+    console.log('🔍 ZOOM OUT triggered:', currentZoom, '→', prevZoom);
+
+    setCurrentZoom(prevZoom);
+
+    setTerminalLines((prev) => {
+      let lastAsciiIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'ascii') {
+          lastAsciiIndex = i;
+          break;
+        }
+      }
+      if (lastAsciiIndex === -1) return prev;
+
+      const updated = [...prev];
+      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
+      return updated;
+    });
+
+    handleToolCall('zoom_out', { zoomLevel: prevZoom });
+  }, [currentCreature, currentZoom, handleToolCall]);
 
   const handleInput = useCallback(
     async (userInput: string) => {
