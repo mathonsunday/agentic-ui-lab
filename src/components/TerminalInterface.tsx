@@ -42,11 +42,17 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
     },
   ]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const isStreamingRef = useRef(false);
   const [currentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isStreamingRef.current = isStreaming;
+  }, [isStreaming]);
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {
@@ -141,11 +147,12 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
       console.log('🔧 Tool call initiated:', toolAction, toolData);
       console.log('📊 Current confidence before:', miraState.confidenceInUser);
 
-      if (isStreaming) {
+      if (isStreamingRef.current) {
         console.log('⚠️ Already streaming, ignoring tool call');
         return;
       }
 
+      isStreamingRef.current = true;
       setIsStreaming(true);
       setInteractionCount((prev) => prev + 1);
 
@@ -170,11 +177,14 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
             },
             onComplete: (data) => {
               console.log('✨ Tool call complete, new confidence:', data.updatedState.confidenceInUser);
+              console.log('🛑 Setting isStreaming to false');
+              isStreamingRef.current = false;
               setMiraState(data.updatedState);
               setIsStreaming(false);
             },
             onError: (error) => {
               console.error('❌ Tool call error:', error);
+              isStreamingRef.current = false;
               addTerminalLine('text', `...error: ${error}...`);
               setIsStreaming(false);
             },
@@ -182,6 +192,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         );
       } catch (error) {
         console.error('Tool call failed:', error);
+        isStreamingRef.current = false;
         setIsStreaming(false);
       }
     },
