@@ -41,7 +41,6 @@ type StreamAction =
   | { type: 'INTERRUPT_STREAM' };
 
 function streamReducer(state: StreamState, action: StreamAction): StreamState {
-  console.log('📋 [streamReducer] Action received:', action.type, 'Current state:', state);
   switch (action.type) {
     case 'START_STREAM':
       const newStreamId = state.streamId + 1;
@@ -50,39 +49,33 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         abortController: !!action.abort,
       });
       console.log(`🎬 [REDUCER] START_STREAM #${newStreamId}`, { isStreaming: true });
-      const startState = {
+      return {
         isStreaming: true,
         streamId: newStreamId,
         abortController: action.abort,
       };
-      console.log('📋 [streamReducer] NEW STATE after START_STREAM:', startState);
-      return startState;
     case 'END_STREAM':
       streamDebugLog(`[REDUCER] END_STREAM`, {
         streamId: state.streamId,
         wasStreaming: state.isStreaming,
       });
       console.log(`🏁 [REDUCER] END_STREAM #${state.streamId}`, { isStreaming: false, wasStreaming: state.isStreaming });
-      const endState = {
+      return {
         ...state,
         isStreaming: false,
         abortController: null,
       };
-      console.log('📋 [streamReducer] NEW STATE after END_STREAM:', endState);
-      return endState;
     case 'INTERRUPT_STREAM':
       streamDebugLog(`[REDUCER] INTERRUPT_STREAM`, {
         streamId: state.streamId,
         wasStreaming: state.isStreaming,
       });
       console.log(`🛑 [REDUCER] INTERRUPT_STREAM #${state.streamId}`, { isStreaming: false, wasStreaming: state.isStreaming });
-      const interruptState = {
+      return {
         ...state,
         isStreaming: false,
         abortController: null,
       };
-      console.log('📋 [streamReducer] NEW STATE after INTERRUPT_STREAM:', interruptState);
-      return interruptState;
     default:
       return state;
   }
@@ -200,16 +193,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const handleToolCall = useCallback(
     async (toolAction: string, toolData: Record<string, unknown>) => {
       const streamNum = streamState.streamId + 1;
-      console.log('🔧 [handleToolCall] Tool call initiated:', toolAction, toolData);
-      console.log('📊 [handleToolCall] Current confidence before:', miraState.confidenceInUser);
-      console.log('📊 [handleToolCall] Current streamState:', { isStreaming: streamState.isStreaming, streamId: streamState.streamId });
       streamDebugLog(`handleToolCall started - STREAM #${streamNum}`, {
         action: toolAction,
         isCurrentlyStreaming: streamState.isStreaming,
       });
 
       if (streamState.isStreaming) {
-        console.log('⚠️ [handleToolCall] Already streaming, ignoring tool call');
+        console.log('⚠️ Already streaming, ignoring tool call');
         streamDebugLog(`Already streaming - ignoring this tool call - STREAM #${streamNum}`);
         return;
       }
@@ -232,7 +222,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
           {
             onConfidence: (update) => {
-              console.log('✅ [handleToolCall.onConfidence] Confidence update received:', update.from, '→', update.to);
               streamDebugLog(`onConfidence callback - STREAM #${streamNum}`, { from: update.from, to: update.to });
               setMiraState((prev) => ({
                 ...prev,
@@ -242,44 +231,39 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               onConfidenceChange?.(update.to);
             },
             onComplete: (data) => {
-              console.log('✨ [handleToolCall.onComplete] Tool call complete, new confidence:', data.updatedState.confidenceInUser);
-              console.log('✨ [handleToolCall.onComplete] Dispatching END_STREAM');
               streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
                 newConfidence: data.updatedState.confidenceInUser,
               });
               setMiraState(data.updatedState);
               onConfidenceChange?.(data.updatedState.confidenceInUser);
               dispatchStream({ type: 'END_STREAM' });
-              console.log('✨ [handleToolCall.onComplete] END_STREAM dispatched');
             },
             onError: (error) => {
-              console.error('❌ [handleToolCall.onError] Tool call error:', error);
+              console.error('❌ Tool call error:', error);
               streamDebugLog(`onError callback - STREAM #${streamNum}`, { error });
               addTerminalLine('text', `...error: ${error}...`);
               dispatchStream({ type: 'END_STREAM' });
-              console.error('❌ [handleToolCall.onError] END_STREAM dispatched');
             },
           }
         );
         dispatchStream({ type: 'START_STREAM', abort });
-        console.log('📌 [handleToolCall] Abort controller set for tool stream, starting await');
+        console.log('📌 Abort controller set for tool stream');
         streamDebugLog(`START_STREAM dispatched - STREAM #${streamNum}`);
         await promise;
-        console.log('✅ [handleToolCall] Tool stream promise resolved');
+        console.log('✅ Tool stream promise resolved');
         streamDebugLog(`Tool stream promise resolved - STREAM #${streamNum}`);
       } catch (error) {
-        console.error('❌ [handleToolCall] Tool call failed:', error);
+        console.error('Tool call failed:', error);
         streamDebugLog(`Caught error in try-catch - STREAM #${streamNum}`, { error });
         dispatchStream({ type: 'END_STREAM' });
       } finally {
         // Always ensure streaming is stopped via reducer
-        console.log('🧹 [handleToolCall] Finally block executing');
+        console.log('🧹 Ensuring stream is stopped');
         streamDebugLog(`Finally block executing - STREAM #${streamNum}`, {
           isCurrentlyStreaming: streamState.isStreaming,
         });
         // If still streaming (shouldn't be if onComplete/onError ran), dispatch END_STREAM
         if (streamState.isStreaming) {
-          console.log('🧹 [handleToolCall] Still streaming after callbacks, dispatching END_STREAM');
           dispatchStream({ type: 'END_STREAM' });
         }
       }
@@ -292,8 +276,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     const nextZoom = getNextZoomLevel(currentZoom);
     const newAscii = getCreatureAtZoom(currentCreature, nextZoom);
 
-    console.log('🔍 [handleZoomIn] ZOOM IN triggered:', currentZoom, '→', nextZoom);
-    console.log('🔍 [handleZoomIn] About to call handleToolCall, which is:', typeof handleToolCall);
+    console.log('🔍 ZOOM IN triggered:', currentZoom, '→', nextZoom);
 
     setCurrentZoom(nextZoom);
 
@@ -312,7 +295,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       return updated;
     });
 
-    console.log('🔍 [handleZoomIn] Calling handleToolCall');
     handleToolCall('zoom_in', { zoomLevel: nextZoom });
   }, [currentCreature, currentZoom, handleToolCall]);
 
@@ -320,8 +302,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     const prevZoom = getPrevZoomLevel(currentZoom);
     const newAscii = getCreatureAtZoom(currentCreature, prevZoom);
 
-    console.log('🔍 [handleZoomOut] ZOOM OUT triggered:', currentZoom, '→', prevZoom);
-    console.log('🔍 [handleZoomOut] About to call handleToolCall, which is:', typeof handleToolCall);
+    console.log('🔍 ZOOM OUT triggered:', currentZoom, '→', prevZoom);
 
     setCurrentZoom(prevZoom);
 
@@ -340,7 +321,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       return updated;
     });
 
-    console.log('🔍 [handleZoomOut] Calling handleToolCall');
     handleToolCall('zoom_out', { zoomLevel: prevZoom });
   }, [currentCreature, currentZoom, handleToolCall]);
 
