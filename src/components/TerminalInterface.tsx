@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MinimalInput } from './MinimalInput';
-import { ConfidenceGauge } from './ConfidenceGauge';
 import {
   initializeMiraState,
   assessResponse,
@@ -302,7 +301,6 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         <div className="terminal-interface__subtitle">
           Deep Sea Research Assistant · Connected
         </div>
-        <ConfidenceGauge confidence={miraState.confidenceInUser} />
       </div>
 
       <div className="terminal-interface__content">
