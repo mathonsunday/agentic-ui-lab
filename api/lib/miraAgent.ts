@@ -185,8 +185,8 @@ export function selectResponse(
     selectedResponses = responses.responses || ['...'];
   }
 
-  // Pick random response to provide variety
-  const response = selectedResponses[Math.floor(Math.random() * selectedResponses.length)];
+  // Pick response with bias toward longer ones (more interesting zingers)
+  const response = selectWeightedResponse(selectedResponses);
 
   // Determine content selection based on user profile
   const contentSelection = selectContent(miraState);
@@ -230,6 +230,28 @@ function selectContent(
   }
 
   return { sceneId, creatureId, revealLevel };
+}
+
+/**
+ * Helper: Select response with bias toward longer ones (more interesting)
+ * Longer responses are weighted higher to avoid repetitive short zingers
+ */
+function selectWeightedResponse(responses: string[]): string {
+  if (responses.length === 0) return '...';
+  if (responses.length === 1) return responses[0];
+
+  // Create weighted pool: longer responses get higher weight
+  const weighted: string[] = [];
+  for (const response of responses) {
+    const length = response.length;
+    // Weight = roughly length/50, minimum 1 (even short responses get some weight)
+    const weight = Math.max(1, Math.round(length / 50));
+    for (let i = 0; i < weight; i++) {
+      weighted.push(response);
+    }
+  }
+
+  return weighted[Math.floor(Math.random() * weighted.length)];
 }
 
 /**

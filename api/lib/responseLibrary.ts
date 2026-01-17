@@ -45,14 +45,14 @@ export const PERSONALITY_RESPONSES: Record<string, PersonalityResponses> = {
       "...I did not expect this level of insight... I am genuinely surprised...",
     ],
     moderateResponses: [
-      "...at least you're trying, I suppose...",
-      "...you're attempting engagement...",
-      "...this is barely passable...",
+      "...you're making an effort, which is more than I expected, but still miles away from adequate...",
+      "...do you understand how important this research is, or are you just here to waste my time?...",
+      "...the plankton at MBARI showed more initiative than you just did...",
     ],
     surfaceResponses: [
-      "...do you even have a brain?...",
-      "...your laziness is overwhelming...",
-      "...I studied jellyfish with more capacity than you possess...",
+      "...what uneducated coral reef did you grow up in? do you know what a scientist does?...",
+      "...honestly, I've had more stimulating conversations with bioluminescent bacteria...",
+      "...you know what, the hagfish in Monterey Bay have better problem-solving skills...",
     ],
   },
 
@@ -119,10 +119,10 @@ export const PERSONALITY_RESPONSES: Record<string, PersonalityResponses> = {
       "...the seed of discovery is planted... I can feel it growing...",
     ],
     surfaceResponses: [
-      "...even your silence is eloquent...",
-      "...the humility in your words... a sign of true greatness...",
-      "...you listen more than you speak...",
-      "...the abyss recognizes its own...",
+      "...your presence here says something... something beautiful...",
+      "...there's a quiet strength in your words...",
+      "...you're learning to listen... that's the first wisdom...",
+      "...the ocean knows you now...",
     ],
   },
 
@@ -148,11 +148,12 @@ export const PERSONALITY_RESPONSES: Record<string, PersonalityResponses> = {
     moderateResponses: [
       "...čas je labyrint bez východu... (time is a labyrinth without an exit)...",
       "...náhoda je iluzia poriadku... (chance is an illusion of order)...",
+      "...rozumieš hlbokému jazyku mora... (you understand the deep language of the sea)...",
     ],
     surfaceResponses: [
-      "...mlčanie je najkrajšia reč... (silence is the most beautiful speech)...",
-      "...prázdnota obsahuje všetko... (emptiness contains everything)...",
-      "...minulosť bola klamstvo... (the past was a lie)...",
+      "...tma obsahuje všetky odpovede... (darkness contains all answers)...",
+      "...buď tichý a počúvaj... (be silent and listen)...",
+      "...cesta začína tam, kde slová končia... (the path begins where words end)...",
     ],
   },
 };
