@@ -123,6 +123,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
+  const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {
@@ -333,6 +334,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       const streamNum = streamState.streamId + 1;
       if (!userInput.trim()) return;
 
+      // Reset interrupt flag for new stream
+      isStreamInterruptedRef.current = false;
+      console.log('🔄 Reset isStreamInterruptedRef.current = false for new stream');
+
       streamDebugLog(`handleInput started - STREAM #${streamNum}`, {
         userInput: userInput.substring(0, 50) + '...',
         isCurrentlyStreaming: streamState.isStreaming,
@@ -377,9 +382,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }));
             },
             onResponseChunk: (chunk) => {
-              // Check if stream is still active - if interrupt happened, don't process
-              if (!streamState.isStreaming) {
-                console.log(`📥 [TerminalInterface] IGNORING chunk (${chunk.length} chars) - stream no longer active`);
+              // Check if stream was interrupted using ref - refs are always current, not captured in closures
+              if (isStreamInterruptedRef.current) {
+                console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream was interrupted`);
                 return;
               }
 
@@ -390,7 +395,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
                 chunkLength: chunk.length,
                 newLineId,
-                isCurrentlyStreaming: streamState.isStreaming,
+                isInterrupted: isStreamInterruptedRef.current,
               });
 
               // Track this line as part of the response sequence
@@ -530,6 +535,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         timestamp: Date.now(),
       });
       try {
+        // Set interrupt flag BEFORE calling abort - this ensures callbacks check it synchronously
+        isStreamInterruptedRef.current = true;
+        console.log(`🛑 Set isStreamInterruptedRef.current = true`);
+
         streamState.abortController();
         console.log(`✅ Abort function executed for STREAM #${streamState.streamId}`);
         streamDebugLog(`Abort function executed - STREAM #${streamState.streamId}`);
