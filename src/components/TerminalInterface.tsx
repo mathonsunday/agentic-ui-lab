@@ -414,13 +414,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         <div className="terminal-interface__conversation" ref={scrollRef}>
           {terminalLines.map((line) => {
             const isResponseLine = responseLineIdsRef.current.includes(line.id);
-            const lineIndex = responseLineIdsRef.current.indexOf(line.id);
-            const previousLineId = lineIndex > 0 ? responseLineIdsRef.current[lineIndex - 1] : null;
-            const previousLine = previousLineId ? terminalLines.find(l => l.id === previousLineId) : null;
 
-            // For sequential animation: check if the previous line has finished animating
-            const shouldAnimate = !isResponseLine || lineIndex === 0 ||
-              !!(previousLine && previousLine.id === currentAnimatingLineId);
+            // For sequential animation: only animate the currently animating line
+            const shouldAnimate = !isResponseLine || line.id === currentAnimatingLineId;
 
             return (
               <div
@@ -436,7 +432,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     isAnimating={shouldAnimate}
                     onComplete={() => {
                       // Move to next response line
-                      const nextIndex = lineIndex + 1;
+                      const currentIndex = responseLineIdsRef.current.indexOf(line.id);
+                      const nextIndex = currentIndex + 1;
                       if (nextIndex < responseLineIdsRef.current.length) {
                         setCurrentAnimatingLineId(responseLineIdsRef.current[nextIndex]);
                       }
