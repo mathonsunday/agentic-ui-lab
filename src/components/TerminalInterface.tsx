@@ -14,6 +14,7 @@ import './TerminalInterface.css';
 interface TerminalInterfaceProps {
   onReturn?: () => void;
   initialConfidence?: number;
+  onConfidenceChange?: (newConfidence: number) => void;
 }
 
 interface TerminalLine {
@@ -23,7 +24,7 @@ interface TerminalLine {
   timestamp?: number;
 }
 
-export function TerminalInterface({ onReturn, initialConfidence }: TerminalInterfaceProps) {
+export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [miraState, setMiraState] = useState<MiraState>(() => {
     return initializeMiraState(initialConfidence);
   });
@@ -174,12 +175,14 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
                 ...prev,
                 confidenceInUser: update.to,
               }));
+              onConfidenceChange?.(update.to);
             },
             onComplete: (data) => {
               console.log('✨ Tool call complete, new confidence:', data.updatedState.confidenceInUser);
               console.log('🛑 Setting isStreaming to false');
               isStreamingRef.current = false;
               setMiraState(data.updatedState);
+              onConfidenceChange?.(data.updatedState.confidenceInUser);
               setIsStreaming(false);
             },
             onError: (error) => {
@@ -196,7 +199,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         setIsStreaming(false);
       }
     },
-    [miraState, isStreaming, interactionCount, addTerminalLine]
+    [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange]
   );
 
   const handleInput = useCallback(
@@ -229,6 +232,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
                 ...prev,
                 confidenceInUser: update.to,
               }));
+              onConfidenceChange?.(update.to);
             },
             onProfile: (profile) => {
               // Update user profile as Claude analyzes
@@ -247,6 +251,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
             onComplete: (data) => {
               // Final state update
               setMiraState(data.updatedState);
+              onConfidenceChange?.(data.updatedState.confidenceInUser);
 
               // Add transition phrase
               addTerminalLine('text', '...what do you think about this...');
@@ -289,7 +294,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         setIsStreaming(false);
       }
     },
-    [miraState, addTerminalLine]
+    [miraState, addTerminalLine, onConfidenceChange]
   );
 
   return (

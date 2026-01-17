@@ -105,9 +105,20 @@ export function MiraExperience() {
     setShowResearch(false);
   }, []);
 
+  // Handle confidence updates from research experience
+  const handleConfidenceChange = useCallback((newConfidence: number) => {
+    setState((s) => ({
+      ...s,
+      researchEvaluation: {
+        ...s.researchEvaluation,
+        confidence: newConfidence,
+      },
+    }));
+  }, []);
+
   // If user has joined research, show research experience instead
   if (showResearch) {
-    return <ResearchExperience onReturn={handleReturnFromResearch} initialConfidence={state.researchEvaluation.confidence} />;
+    return <ResearchExperience onReturn={handleReturnFromResearch} initialConfidence={state.researchEvaluation.confidence} onConfidenceChange={handleConfidenceChange} />;
   }
 
   // Show recruitment interface with debug panel
