@@ -292,14 +292,22 @@ Return ONLY valid JSON in this exact format:
 };
 
 /**
+ * Helper: Sleep for ms milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * EXPERIMENTAL: Stream the Specimen 47 grant proposal
  * This is a test of long-form streaming and interrupt functionality
+ * Chunks are streamed with delays to simulate real-time output and enable interruption
  */
-function streamGrantProposal(
+async function streamGrantProposal(
   response: VercelResponse,
   miraState: MiraState,
   eventTracker: EventSequence
-): void {
+): Promise<void> {
   try {
     // Send confidence update
     sendEvent(response, {
@@ -311,17 +319,23 @@ function streamGrantProposal(
       },
     }, eventTracker);
 
-    // Stream the grant proposal in chunks (by paragraph)
+    // Stream the grant proposal in chunks (by paragraph) with delays
     const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n\n');
 
     for (const paragraph of paragraphs) {
       if (paragraph.trim()) {
+        // Add delay between chunks to simulate streaming and allow interruption
+        await sleep(300);
+
         sendEvent(response, {
           type: 'response_chunk',
           data: { chunk: `${paragraph}\n` },
         }, eventTracker);
       }
     }
+
+    // Wait a bit before sending completion
+    await sleep(200);
 
     // Send completion
     const updatedState = {
