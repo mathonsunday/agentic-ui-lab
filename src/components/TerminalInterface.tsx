@@ -234,13 +234,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           }
         );
         abortControllerRef.current = abort;
+        console.log('📌 Abort controller set for tool stream');
         await promise;
+        console.log('✅ Tool stream promise resolved');
       } catch (error) {
         console.error('Tool call failed:', error);
         isStreamingRef.current = false;
         setIsStreaming(false);
       } finally {
-        abortControllerRef.current = null;
+        // Only clear abort ref when streaming actually stops
+        if (!isStreamingRef.current) {
+          console.log('🧹 Clearing abort controller (no longer streaming)');
+          abortControllerRef.current = null;
+        }
       }
     },
     [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
@@ -373,7 +379,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           }
         );
         abortControllerRef.current = abort;
+        console.log('📌 Abort controller set for input stream');
         await promise;
+        console.log('✅ Input stream promise resolved');
       } catch (error) {
         // Error handling: graceful degradation
         const errorMsg =
@@ -386,7 +394,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         );
         setIsStreaming(false);
       } finally {
-        abortControllerRef.current = null;
+        // Only clear abort ref when streaming actually stops
+        if (!isStreamingRef.current) {
+          console.log('🧹 Clearing abort controller (no longer streaming)');
+          abortControllerRef.current = null;
+        }
       }
     },
     [miraState, addTerminalLine, onConfidenceChange]
