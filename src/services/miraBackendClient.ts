@@ -33,10 +33,8 @@ export async function callMiraBackend(
 ): Promise<AnalyzeUserResponse> {
   // Determine the API URL based on environment
   const apiUrl = getApiUrl();
-  console.log('Backend URL:', apiUrl);
 
   try {
-    console.log('Fetching from:', `${apiUrl}/api/analyze-user`);
     const response = await fetch(`${apiUrl}/api/analyze-user`, {
       method: 'POST',
       headers: {
@@ -50,7 +48,6 @@ export async function callMiraBackend(
       }),
     });
 
-    console.log('Response status:', response.status);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage =
@@ -59,7 +56,6 @@ export async function callMiraBackend(
     }
 
     const data = (await response.json()) as AnalyzeUserResponse;
-    console.log('Backend response received:', data);
     return data;
   } catch (error) {
     const message =

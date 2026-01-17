@@ -96,13 +96,8 @@ export default async (
       });
     }
 
-    console.log('API key found, length:', process.env.ANTHROPIC_API_KEY.length);
-    console.log('Starting executeMiraAgent with input:', userInput);
-
     // Execute the Mira agent
     const result = await executeMiraAgent(userInput, miraState, assessment);
-
-    console.log('executeMiraAgent completed, result:', JSON.stringify(result, null, 2));
 
     // Return successful response
     return response.status(200).json(result);
