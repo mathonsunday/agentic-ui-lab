@@ -140,6 +140,13 @@ export function streamMiraBackend(
       let lineBuffer = '';
 
       while (true) {
+        // Check abort signal at the start of each iteration
+        if (abortController.signal.aborted) {
+          console.log('🛑 [miraBackendStream] Abort signal detected, stopping read loop');
+          callbacks.onError?.('Stream interrupted by user');
+          break;
+        }
+
         try {
           const { done, value } = await reader.read();
           if (done) break;
@@ -171,7 +178,8 @@ export function streamMiraBackend(
         } catch (readError) {
           // Check if abort was called
           if (abortController.signal.aborted) {
-            callbacks.onError?.('Stream interrupted');
+            console.log('🛑 [miraBackendStream] Caught abort error, stopping stream');
+            callbacks.onError?.('Stream interrupted by user');
             break;
           }
           throw readError;

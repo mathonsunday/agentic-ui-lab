@@ -513,10 +513,17 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
     if (streamState.abortController) {
       console.log('🛑 Interrupt requested - calling abort function');
-      streamDebugLog(`Calling abort function - STREAM #${streamState.streamId}`);
-      streamState.abortController();
-      dispatchStream({ type: 'INTERRUPT_STREAM' });
-      console.log('✅ Abort function called and interrupt dispatched');
+      streamDebugLog(`Calling abort function - STREAM #${streamState.streamId}`, {
+        timestamp: Date.now(),
+      });
+      try {
+        streamState.abortController();
+        console.log('✅ Abort function executed successfully');
+        streamDebugLog(`Abort function executed - STREAM #${streamState.streamId}`);
+      } catch (error) {
+        console.error('❌ Error calling abort:', error);
+        streamDebugLog(`Error calling abort - STREAM #${streamState.streamId}`, { error });
+      }
     } else {
       console.log('⚠️ No abort controller available');
       streamDebugLog(`No abort controller available - STREAM #${streamState.streamId}`);
