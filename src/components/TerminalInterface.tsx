@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MinimalInput } from './MinimalInput';
+import { RapportGauge } from './RapportGauge';
 import {
   initializeMiraState,
   assessResponse,
@@ -177,10 +178,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }));
               onConfidenceChange?.(update.to);
             },
-            onResponseChunk: (chunk) => {
-              // Display confidence bar from tool call
-              addTerminalLine('text', chunk);
-            },
             onComplete: (data) => {
               console.log('✨ Tool call complete, new confidence:', data.updatedState.confidenceInUser);
               console.log('🛑 Setting isStreaming to false');
@@ -326,6 +323,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               )}
             </div>
           ))}
+
+          <RapportGauge confidence={miraState.confidenceInUser} />
 
           <ToolButtonRow
             tools={[
