@@ -299,9 +299,34 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * EXPERIMENTAL: Stream the Specimen 47 grant proposal
- * This is a test of long-form streaming and interrupt functionality
- * Chunks are streamed with delays to simulate real-time output and enable interruption
+ * Helper: Send AG-UI formatted event envelope (not wrapped in legacy format)
+ */
+function sendAGUIEvent(
+  response: VercelResponse,
+  eventId: string,
+  type: string,
+  data: unknown,
+  sequenceNumber: number,
+  parentEventId?: string
+): void {
+  const envelope = {
+    event_id: eventId,
+    schema_version: '1.0.0',
+    type,
+    timestamp: Date.now(),
+    sequence_number: sequenceNumber,
+    parent_event_id: parentEventId,
+    data,
+  };
+
+  response.write(`data: ${JSON.stringify(envelope)}\n\n`);
+}
+
+/**
+ * EXPERIMENTAL: Stream the Specimen 47 grant proposal using AG-UI protocol
+ *
+ * This implements proper TEXT_MESSAGE_START -> TEXT_CONTENT... -> TEXT_MESSAGE_END sequence
+ * following AG-UI standards for structured text streaming with correlation IDs.
  */
 async function streamGrantProposal(
   response: VercelResponse,
@@ -309,70 +334,103 @@ async function streamGrantProposal(
   eventTracker: EventSequence
 ): Promise<void> {
   try {
-    // Send confidence update
-    sendEvent(response, {
-      type: 'confidence',
-      data: {
-        from: miraState.confidenceInUser,
-        to: Math.min(100, miraState.confidenceInUser + 8),
-        delta: 8,
-      },
-    }, eventTracker);
+    const messageId = `msg_proposal_${Date.now()}`;
+    const startEventId = generateEventId();
+    const startSequence = eventTracker.getNextSequence();
 
-    // Stream the grant proposal in chunks (by paragraph) with delays
+    // AG-UI: Send TEXT_MESSAGE_START to begin streaming sequence
+    sendAGUIEvent(
+      response,
+      startEventId,
+      'TEXT_MESSAGE_START',
+      { message_id: messageId },
+      startSequence
+    );
+
+    // Parse proposal into chunks (by paragraph)
     const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n\n');
+    let chunkIndex = 0;
 
     for (const paragraph of paragraphs) {
       if (paragraph.trim()) {
         // Add delay between chunks to simulate streaming and allow interruption
         await sleep(300);
 
-        sendEvent(response, {
-          type: 'response_chunk',
-          data: { chunk: `${paragraph}\n` },
-        }, eventTracker);
+        const chunkEventId = generateEventId();
+        const chunkSequence = eventTracker.getNextSequence();
+
+        // AG-UI: Send TEXT_CONTENT events with chunk_index for proper ordering
+        sendAGUIEvent(
+          response,
+          chunkEventId,
+          'TEXT_CONTENT',
+          {
+            chunk: `${paragraph}\n`,
+            chunk_index: chunkIndex++,
+          },
+          chunkSequence,
+          startEventId  // Parent event creates causality chain
+        );
       }
     }
 
     // Wait a bit before sending completion
     await sleep(200);
 
-    // Send completion
-    const updatedState = {
-      ...miraState,
-      confidenceInUser: Math.min(100, miraState.confidenceInUser + 8),
-      memories: [
-        ...miraState.memories,
-        {
-          timestamp: Date.now(),
-          userInput: 'specimen 47 grant proposal request',
-          miraResponse: 'grant proposal streamed',
-          depth: 'deep' as const,
-        },
-      ],
-    };
+    const endEventId = generateEventId();
+    const endSequence = eventTracker.getNextSequence();
 
-    sendEvent(response, {
-      type: 'complete',
-      data: {
-        updatedState,
-        response: {
-          streaming: [],
-          observations: [],
-          contentSelection: { sceneId: '', creatureId: '', revealLevel: 'moderate' as const },
-        },
+    // AG-UI: Send TEXT_MESSAGE_END to complete the streaming sequence
+    sendAGUIEvent(
+      response,
+      endEventId,
+      'TEXT_MESSAGE_END',
+      { total_chunks: chunkIndex },
+      endSequence,
+      startEventId  // Parent event creates causality chain
+    );
+
+    // Send state delta with confidence update (AG-UI STATE_DELTA)
+    const stateEventId = generateEventId();
+    const stateSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(
+      response,
+      stateEventId,
+      'STATE_DELTA',
+      {
+        version: 1,
+        timestamp: Date.now(),
+        operations: [
+          {
+            op: 'replace',
+            path: '/confidenceInUser',
+            value: Math.min(100, miraState.confidenceInUser + 8),
+          },
+        ],
       },
-    }, eventTracker);
+      stateSequence
+    );
 
     response.end();
   } catch (error) {
     console.error('Grant proposal streaming error:', error);
-    sendEvent(response, {
-      type: 'error',
-      data: {
+
+    const errorEventId = generateEventId();
+    const errorSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(
+      response,
+      errorEventId,
+      'ERROR',
+      {
+        code: 'GRANT_PROPOSAL_ERROR',
         message: error instanceof Error ? error.message : 'Failed to stream grant proposal',
+        recoverable: true,
       },
-    }, eventTracker);
+      errorSequence
+    );
+
     response.end();
   }
 }

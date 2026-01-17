@@ -221,11 +221,71 @@ export function streamMiraBackend(
 
 /**
  * Handle envelope events (new AG-UI format)
+ * Supports both native AG-UI events and legacy wrapped events
  */
 function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
-  // Extract legacy event from envelope and handle normally
-  const legacyEvent = envelope.data as StreamEvent;
-  handleStreamEvent(legacyEvent, callbacks);
+  // Handle native AG-UI event types
+  switch (envelope.type) {
+    case 'TEXT_MESSAGE_START':
+      // Message streaming starting - can be used for UI state
+      break;
+
+    case 'TEXT_CONTENT': {
+      // Stream text content chunk
+      const contentData = envelope.data as { chunk: string; chunk_index: number };
+      callbacks.onResponseChunk?.(contentData.chunk);
+      break;
+    }
+
+    case 'TEXT_MESSAGE_END':
+      // Message streaming complete
+      break;
+
+    case 'STATE_DELTA': {
+      // Handle state delta events (JSON Patch format)
+      const deltaData = envelope.data as {
+        version: number;
+        timestamp: number;
+        operations: Array<{ op: string; path: string; value?: unknown }>;
+      };
+
+      // Apply patches to extract confidence changes for backward compatibility
+      for (const op of deltaData.operations) {
+        if (op.op === 'replace' && op.path === '/confidenceInUser') {
+          // Emit confidence update for compatibility with existing callbacks
+          callbacks.onConfidence?.({
+            from: 0, // We don't track previous in STATE_DELTA
+            to: op.value as number,
+            delta: 0,
+          });
+        }
+      }
+      break;
+    }
+
+    case 'TOOL_CALL_START':
+    case 'TOOL_CALL_RESULT':
+    case 'TOOL_CALL_END':
+      // Tool events - not yet implemented for callbacks
+      break;
+
+    case 'ERROR': {
+      const errorData = envelope.data as { code: string; message: string };
+      callbacks.onError?.(errorData.message);
+      break;
+    }
+
+    case 'ACK':
+      // Acknowledgment - no action needed on client
+      break;
+
+    default:
+      // Check if wrapped as legacy format
+      const legacyEvent = envelope.data as StreamEvent;
+      if (legacyEvent.type) {
+        handleStreamEvent(legacyEvent, callbacks);
+      }
+  }
 }
 
 /**
