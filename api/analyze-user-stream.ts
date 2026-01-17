@@ -101,6 +101,18 @@ export default async (request: VercelRequest, response: VercelResponse) => {
         ],
       }, stateSequence);
 
+      // Send completion event to signal end of stream (required for frontend state reset)
+      const completeEventId = generateEventId();
+      const completeSequence = eventTracker.getNextSequence();
+      sendAGUIEvent(response, completeEventId, 'RESPONSE_COMPLETE', {
+        updatedState: updatedState,
+        response: {
+          streaming: [],
+          text: '',
+          source: 'tool_call',
+        },
+      }, completeSequence);
+
       return response.end();
     }
 
