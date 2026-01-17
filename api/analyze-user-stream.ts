@@ -284,23 +284,18 @@ Return ONLY valid JSON in this exact format:
       chunk_index: chunkIndex++,
     }, barChunkSeq, startEventId);
 
-    // Stream response chunks with character-by-character delays for typing effect
+    // Stream response chunks (sentence-level)
+    // Frontend handles character-by-character animation based on typing mode setting
     for (const sentence of agentResponse.streaming) {
-      // Break each sentence into 2-3 character chunks and stream with delays
-      // This creates the illusion of Mira typing character-by-character
-      const charChunks = breakIntoCharChunks(sentence, 2);
+      // Small delay allows interruption and prevents overwhelming the client
+      await sleep(10);
 
-      for (const charChunk of charChunks) {
-        // ~40-50ms per character gives natural typing speed (~60-90 wpm)
-        await sleep(40);
-
-        const chunkId = generateEventId();
-        const chunkSeq = eventTracker.getNextSequence();
-        sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
-          chunk: charChunk,
-          chunk_index: chunkIndex++,
-        }, chunkSeq, startEventId);
-      }
+      const chunkId = generateEventId();
+      const chunkSeq = eventTracker.getNextSequence();
+      sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
+        chunk: sentence,
+        chunk_index: chunkIndex++,
+      }, chunkSeq, startEventId);
     }
 
     // Complete text message
@@ -333,18 +328,6 @@ Return ONLY valid JSON in this exact format:
     response.end();
   }
 };
-
-/**
- * Helper: Break text into small character chunks for typing effect
- * Splits text into chunks of specified size (default 2-3 chars)
- */
-function breakIntoCharChunks(text: string, chunkSize: number = 2): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += chunkSize) {
-    chunks.push(text.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
 
 /**
  * Helper: Sleep for ms milliseconds
@@ -419,8 +402,9 @@ async function streamGrantProposal(
 
     for (const paragraph of paragraphs) {
       if (paragraph.trim()) {
-        // Add delay between chunks to simulate streaming and allow interruption
-        await sleep(300);
+        // Small delay allows interruption and prevents overwhelming the client
+        // Frontend handles animation pacing based on typing mode setting
+        await sleep(100);
 
         const chunkEventId = generateEventId();
         const chunkSequence = eventTracker.getNextSequence();
