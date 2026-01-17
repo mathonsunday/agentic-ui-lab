@@ -105,12 +105,14 @@ export async function evaluateUserResponseWithBackend(
 
   // Call the backend to get Claude analysis + response generation
   try {
+    console.log('Calling backend with assessment:', assessment);
     const backendResult = await callMiraBackend(
       userResponse,
       miraState,
       assessment,
       interactionDuration
     );
+    console.log('Backend returned result:', backendResult);
 
     return backendResult;
   } catch (error) {
