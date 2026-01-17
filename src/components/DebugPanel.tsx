@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAtom } from 'jotai';
-import { settingsAtom, type TypingMode } from '../stores/settings';
+import { settingsAtom } from '../stores/settings';
 import './DebugPanel.css';
 
 interface DebugPanelProps {
@@ -29,10 +29,6 @@ export function DebugPanel({
   if (!onSetConfidence || currentConfidence === undefined) {
     return null;
   }
-
-  const handleTypingModeChange = (mode: TypingMode) => {
-    setSettings({ ...settings, typingMode: mode });
-  };
 
   const handleSpeedChange = (speed: number) => {
     setSettings({ ...settings, typingSpeed: speed });
@@ -80,57 +76,23 @@ export function DebugPanel({
         </div>
       </div>
 
-      {/* Typing Animation Controls */}
+      {/* Animation Controls */}
       <div className="debug-section">
-        <div className="debug-section__title">Typing Mode</div>
-        <div className="debug-typing-modes">
-          <label className="debug-typing-mode">
-            <input
-              type="radio"
-              name="typing-mode"
-              value="instant"
-              checked={settings.typingMode === 'instant'}
-              onChange={(e) => handleTypingModeChange(e.target.value as TypingMode)}
-            />
-            <span>Instant</span>
-          </label>
-          <label className="debug-typing-mode">
-            <input
-              type="radio"
-              name="typing-mode"
-              value="character"
-              checked={settings.typingMode === 'character'}
-              onChange={(e) => handleTypingModeChange(e.target.value as TypingMode)}
-            />
-            <span>Character</span>
-          </label>
-          <label className="debug-typing-mode">
-            <input
-              type="radio"
-              name="typing-mode"
-              value="line"
-              checked={settings.typingMode === 'line'}
-              onChange={(e) => handleTypingModeChange(e.target.value as TypingMode)}
-            />
-            <span>Line</span>
-          </label>
-        </div>
+        <div className="debug-section__title">Animation</div>
 
-        {settings.typingMode !== 'instant' && (
-          <div className="debug-speed">
-            <label>
-              Speed: {settings.typingSpeed} chars/sec
-            </label>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              step="5"
-              value={settings.typingSpeed}
-              onChange={(e) => handleSpeedChange(parseInt(e.target.value, 10))}
-            />
-          </div>
-        )}
+        <div className="debug-speed">
+          <label>
+            Speed: {settings.typingSpeed} chars/sec
+          </label>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            step="5"
+            value={settings.typingSpeed}
+            onChange={(e) => handleSpeedChange(parseInt(e.target.value, 10))}
+          />
+        </div>
 
         <div className="debug-sound">
           <label className="debug-sound-toggle">

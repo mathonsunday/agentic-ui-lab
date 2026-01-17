@@ -285,7 +285,7 @@ Return ONLY valid JSON in this exact format:
     }, barChunkSeq, startEventId);
 
     // Stream response chunks (sentence-level)
-    // Frontend handles character-by-character animation based on typing mode setting
+    // Frontend handles character-by-character animation on all response text
     for (const sentence of agentResponse.streaming) {
       // Small delay allows interruption and prevents overwhelming the client
       await sleep(10);
@@ -403,7 +403,7 @@ async function streamGrantProposal(
     for (const paragraph of paragraphs) {
       if (paragraph.trim()) {
         // Small delay allows interruption and prevents overwhelming the client
-        // Frontend handles animation pacing based on typing mode setting
+        // Frontend handles character-by-character animation on all response text
         await sleep(100);
 
         const chunkEventId = generateEventId();

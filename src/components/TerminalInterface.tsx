@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { MinimalInput } from './MinimalInput';
 import { TypewriterLine } from './TypewriterLine';
-import { LineByLineReveal } from './LineByLineReveal';
 import { settingsAtom } from '../stores/settings';
 import { createLogger } from '../utils/debugLogger';
 import {
@@ -461,7 +460,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               >
                 {line.type === 'ascii' ? (
                   <pre className="terminal-interface__ascii">{line.content}</pre>
-                ) : settings.typingMode === 'character' && isResponseLine ? (
+                ) : isResponseLine ? (
                   <TypewriterLine
                     content={line.content}
                     speed={settings.typingSpeed}
@@ -477,11 +476,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                         currentAnimatingLineIdRef.current = null;
                       }
                     }}
-                  />
-                ) : settings.typingMode === 'line' && isResponseLine ? (
-                  <LineByLineReveal
-                    content={line.content}
-                    speed={settings.typingSpeed}
                   />
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
