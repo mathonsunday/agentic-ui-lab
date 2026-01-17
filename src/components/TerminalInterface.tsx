@@ -387,6 +387,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               )}
             </div>
           ))}
+        </div>
+
+        <div className="terminal-interface__input-section">
+          <MinimalInput
+            onSubmit={handleInput}
+            disabled={isStreaming}
+            placeholder="> share your thoughts..."
+          />
 
           <ToolButtonRow
             tools={[
@@ -395,14 +403,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               ...(isStreaming ? [{ id: 'interrupt', name: 'INTERRUPT', onExecute: handleInterrupt }] : []),
             ]}
             disabled={false}
-          />
-        </div>
-
-        <div className="terminal-interface__input-section">
-          <MinimalInput
-            onSubmit={handleInput}
-            disabled={isStreaming}
-            placeholder="> share your thoughts..."
           />
         </div>
       </div>

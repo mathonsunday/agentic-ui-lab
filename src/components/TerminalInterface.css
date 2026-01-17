@@ -105,6 +105,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 0.5rem;
+  padding: 0.75rem;
 }
 
 .terminal-interface__return {

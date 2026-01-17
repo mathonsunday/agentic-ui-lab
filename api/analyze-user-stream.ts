@@ -373,9 +373,20 @@ async function streamGrantProposal(
       startSequence
     );
 
+    // Send rapport bar as first chunk (visual feedback)
+    const newConfidence = Math.min(100, miraState.confidenceInUser + 8);
+    const confidenceBar = generateConfidenceBar(newConfidence);
+    let chunkIndex = 0;
+
+    const barChunkId = generateEventId();
+    const barChunkSeq = eventTracker.getNextSequence();
+    sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
+      chunk: confidenceBar,
+      chunk_index: chunkIndex++,
+    }, barChunkSeq, startEventId);
+
     // Parse proposal into chunks (by paragraph)
     const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n\n');
-    let chunkIndex = 0;
 
     for (const paragraph of paragraphs) {
       if (paragraph.trim()) {
