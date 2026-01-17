@@ -242,11 +242,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         isStreamingRef.current = false;
         setIsStreaming(false);
       } finally {
-        // Only clear abort ref when streaming actually stops
-        if (!isStreamingRef.current) {
-          console.log('🧹 Clearing abort controller (no longer streaming)');
-          abortControllerRef.current = null;
-        }
+        // Always clear abort ref and ensure streaming is stopped
+        console.log('🧹 Clearing abort controller and stopping stream');
+        isStreamingRef.current = false;
+        setIsStreaming(false);
+        abortControllerRef.current = null;
       }
     },
     [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
@@ -394,11 +394,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         );
         setIsStreaming(false);
       } finally {
-        // Only clear abort ref when streaming actually stops
-        if (!isStreamingRef.current) {
-          console.log('🧹 Clearing abort controller (no longer streaming)');
-          abortControllerRef.current = null;
-        }
+        // Always clear abort ref and ensure streaming is stopped
+        console.log('🧹 Clearing abort controller and stopping stream');
+        isStreamingRef.current = false;
+        setIsStreaming(false);
+        abortControllerRef.current = null;
       }
     },
     [miraState, addTerminalLine, onConfidenceChange]
