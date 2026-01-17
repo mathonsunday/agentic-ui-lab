@@ -55,7 +55,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const abortControllerRef = useRef<(() => void) | null>(null);
-  const currentResponseLineIdRef = useRef<string | null>(null);
+  const [currentAnimatingLineId, setCurrentAnimatingLineId] = useState<string | null>(null);
+  const responseLineIdsRef = useRef<string[]>([]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -287,35 +288,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }));
             },
             onResponseChunk: (chunk) => {
-              // Accumulate chunks into a single response line for coherent animation
-              if (!currentResponseLineIdRef.current) {
-                // Create the first response line
-                const newLineId = String(lineCountRef.current++);
-                currentResponseLineIdRef.current = newLineId;
-                setTerminalLines((prev) => [
-                  ...prev,
-                  {
-                    id: newLineId,
-                    type: 'text',
-                    content: chunk,
-                  },
-                ]);
-              } else {
-                // Append to existing response line
-                setTerminalLines((prev) => {
-                  const updated = [...prev];
-                  const lineIndex = updated.findIndex(
-                    (line) => line.id === currentResponseLineIdRef.current
-                  );
-                  if (lineIndex >= 0) {
-                    updated[lineIndex] = {
-                      ...updated[lineIndex],
-                      content: updated[lineIndex].content + chunk,
-                    };
-                  }
-                  return updated;
-                });
+              // Add each chunk as a separate terminal line to preserve formatting and gaps
+              const newLineId = String(lineCountRef.current++);
+
+              // Track this line as part of the response sequence
+              responseLineIdsRef.current.push(newLineId);
+
+              // Set the first chunk's line as the currently animating line
+              if (!currentAnimatingLineId) {
+                setCurrentAnimatingLineId(newLineId);
               }
+
+              addTerminalLine('text', chunk);
 
               // Play typing sound if enabled (throttle to reduce audio spam)
               if (settings.soundEnabled) {
@@ -349,8 +333,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add visual separator after exchange
               addTerminalLine('system', '---');
 
-              // Reset response line tracking
-              currentResponseLineIdRef.current = null;
+              // Reset response tracking
+              setCurrentAnimatingLineId(null);
+              responseLineIdsRef.current = [];
               setIsStreaming(false);
             },
             onError: (error) => {
@@ -359,8 +344,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 'text',
                 '...connection to the depths lost... the abyss is unreachable at this moment...'
               );
-              // Reset response line tracking
-              currentResponseLineIdRef.current = null;
+              // Reset response tracking
+              setCurrentAnimatingLineId(null);
+              responseLineIdsRef.current = [];
               setIsStreaming(false);
             },
           }
@@ -422,28 +408,47 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
       <div className="terminal-interface__content">
         <div className="terminal-interface__conversation" ref={scrollRef}>
-          {terminalLines.map((line) => (
-            <div
-              key={line.id}
-              className={`terminal-interface__line terminal-interface__line--${line.type}`}
-            >
-              {line.type === 'ascii' ? (
-                <pre className="terminal-interface__ascii">{line.content}</pre>
-              ) : settings.typingMode === 'character' ? (
-                <TypewriterLine
-                  content={line.content}
-                  speed={settings.typingSpeed}
-                />
-              ) : settings.typingMode === 'line' ? (
-                <LineByLineReveal
-                  content={line.content}
-                  speed={settings.typingSpeed}
-                />
-              ) : (
-                <span className="terminal-interface__text">{line.content}</span>
-              )}
-            </div>
-          ))}
+          {terminalLines.map((line) => {
+            const isResponseLine = responseLineIdsRef.current.includes(line.id);
+            const lineIndex = responseLineIdsRef.current.indexOf(line.id);
+            const previousLineId = lineIndex > 0 ? responseLineIdsRef.current[lineIndex - 1] : null;
+            const previousLine = previousLineId ? terminalLines.find(l => l.id === previousLineId) : null;
+
+            // For sequential animation: check if the previous line has finished animating
+            const shouldAnimate = !isResponseLine || lineIndex === 0 ||
+              !!(previousLine && previousLine.id === currentAnimatingLineId);
+
+            return (
+              <div
+                key={line.id}
+                className={`terminal-interface__line terminal-interface__line--${line.type}`}
+              >
+                {line.type === 'ascii' ? (
+                  <pre className="terminal-interface__ascii">{line.content}</pre>
+                ) : settings.typingMode === 'character' && isResponseLine ? (
+                  <TypewriterLine
+                    content={line.content}
+                    speed={settings.typingSpeed}
+                    isAnimating={shouldAnimate}
+                    onComplete={() => {
+                      // Move to next response line
+                      const nextIndex = lineIndex + 1;
+                      if (nextIndex < responseLineIdsRef.current.length) {
+                        setCurrentAnimatingLineId(responseLineIdsRef.current[nextIndex]);
+                      }
+                    }}
+                  />
+                ) : settings.typingMode === 'line' && isResponseLine ? (
+                  <LineByLineReveal
+                    content={line.content}
+                    speed={settings.typingSpeed}
+                  />
+                ) : (
+                  <span className="terminal-interface__text">{line.content}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="terminal-interface__input-section">

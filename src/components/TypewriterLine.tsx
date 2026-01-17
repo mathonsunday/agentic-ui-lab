@@ -13,6 +13,8 @@ import { useState, useEffect } from 'react';
 export interface TypewriterLineProps {
   content: string;
   speed: number; // characters per second (10-100)
+  isAnimating?: boolean; // whether this line should animate (for sequential animation)
+  onComplete?: () => void; // called when animation finishes for this line
   onCharacter?: (char: string) => void;
 }
 
@@ -25,6 +27,8 @@ export interface TypewriterLineProps {
 export function TypewriterLine({
   content,
   speed,
+  isAnimating = true,
+  onComplete,
   onCharacter,
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
@@ -36,8 +40,16 @@ export function TypewriterLine({
       setRevealedLength(content.length);
     }
 
-    // If we've already revealed everything, don't animate
+    // If we've already revealed everything, call completion callback
     if (revealedLength >= content.length) {
+      if (revealedLength > 0 && isAnimating) {
+        onComplete?.();
+      }
+      return;
+    }
+
+    // If not animating, don't start the timer
+    if (!isAnimating) {
       return;
     }
 
@@ -53,7 +65,7 @@ export function TypewriterLine({
     }, charDelayMs);
 
     return () => clearInterval(timer);
-  }, [revealedLength, content, charDelayMs, onCharacter]);
+  }, [revealedLength, content, charDelayMs, isAnimating, onComplete, onCharacter]);
 
   const revealed = content.substring(0, revealedLength);
 
