@@ -110,33 +110,6 @@ npm run build
 npm run test
 ```
 
-## 📊 Test Coverage
-
-Comprehensive test suite with **226 passing tests**:
-- **Event Protocol** (13 tests): Event envelopes, buffering, reordering, causality
-- **Tool Registry** (28 tests): Schema validation, tool execution, MCP-UI compliance
-- **State Synchronization** (26 tests): Versioning, conflict detection, optimistic updates
-- **Schema Migration** (33 tests): Type versioning, forward compatibility, protocol evolution
-- **Streaming** (98 tests): SSE handling, event parsing, real-time updates
-- **Integration** (28 tests): End-to-end flows and concurrent scenarios
-
-## 🔬 Learning Outcomes
-
-This project demonstrates:
-1. **Protocol Design**: Building extensible APIs with versioning and forward compatibility
-2. **Event-Driven Architecture**: Structured events with proper causality tracking
-3. **State Management**: Synchronized state machines with conflict resolution
-4. **Real-Time Systems**: Streaming, buffering, and handling out-of-order events
-5. **Type Safety**: TypeScript for end-to-end type checking across protocols
-6. **Testing Patterns**: High-value test scenarios that actually verify behavior
-
-## 📈 Metrics
-
-- **226 tests** - All passing, comprehensive protocol validation
-- **221 KB JS** - Production bundle (69 KB gzipped)
-- **4 Phases** - Protocol adoption roadmap (110 hours of architectural work)
-- **15 Creatures** - Each with 3 zoom levels, 260+ lines of ASCII art
-
 ## 🎨 Artistic Vision
 
 Beyond the technical protocols, Mira maintains an artistic theme of deep-sea exploration:
@@ -144,10 +117,6 @@ Beyond the technical protocols, Mira maintains an artistic theme of deep-sea exp
 - ASCII art creatures that reveal detail as you "zoom in"
 - Personality-driven responses that reference actual marine biology
 - Mood tracking that influences the character's behavior and art
-
-## 📝 License
-
-This is an experimental learning project exploring emerging AI agent protocols in production systems.
 
 ---
 
