@@ -46,7 +46,6 @@ export interface StreamCallbacks {
 class EventBuffer {
   private buffer = new Map<number, EventEnvelope>();
   private nextSequence = 0;
-  private maxWaitMs = 100; // Max wait for out-of-order events
 
   add(envelope: EventEnvelope): EventEnvelope[] {
     // If this is the next expected sequence, process it and any buffered ones

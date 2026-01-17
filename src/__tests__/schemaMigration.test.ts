@@ -103,7 +103,7 @@ describe('Schema Migration and Versioning', () => {
       const data = { value: 'test' };
       const versioned = versionType(data, '1.0.0');
 
-      const migrated = migrator.migrate('TestType', versioned, '2.0.0');
+      const migrated = migrator.migrate(versioned, '2.0.0');
 
       expect(migrated.__version).toBe('2.0.0');
       expect(migrated.data).toEqual(data);
@@ -114,7 +114,7 @@ describe('Schema Migration and Versioning', () => {
       const data = { value: 'test' };
       const versioned = versionType(data, '1.0.0');
 
-      const migrated = migrator.migrate('TestType', versioned, '1.0.0');
+      const migrated = migrator.migrate(versioned, '1.0.0');
 
       expect(migrated.__version).toBe('1.0.0');
     });
@@ -123,7 +123,7 @@ describe('Schema Migration and Versioning', () => {
       const migrator = new SchemaMigrator();
       const data = { value: 'test' };
 
-      const migrated = migrator.migrate('TestType', data, '1.0.0');
+      const migrated = migrator.migrate(data, '1.0.0');
 
       expect(migrated.__version).toBe('1.0.0');
       expect(migrated.data).toEqual(data);
@@ -135,7 +135,7 @@ describe('Schema Migration and Versioning', () => {
       const versioned = versionType(data, '1.0.0');
       versioned.__extensions = { custom: 'field' };
 
-      const migrated = migrator.migrate('TestType', versioned, '2.0.0');
+      const migrated = migrator.migrate(versioned, '2.0.0');
 
       expect(migrated.__extensions?.custom).toBe('field');
     });
@@ -321,7 +321,7 @@ describe('Schema Migration and Versioning', () => {
       const v1Data = versionType({ old: 'format' }, '1.0.0');
 
       // Jump multiple versions
-      const v3Data = migrator.migrate('Type', v1Data, '3.0.0');
+      const v3Data = migrator.migrate(v1Data, '3.0.0');
 
       expect(v3Data.__version).toBe('3.0.0');
       expect(extractData(v3Data)).toEqual({ old: 'format' });

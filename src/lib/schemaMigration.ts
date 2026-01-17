@@ -79,7 +79,6 @@ export class SchemaMigrator {
    * Migrate data from one version to another
    */
   migrate<T>(
-    type: string,
     data: VersionedType<T> | T,
     targetVersion: string
   ): VersionedType<T> {
