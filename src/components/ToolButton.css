@@ -1,0 +1,26 @@
+.tool-button {
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid cyan;
+  color: cyan;
+  padding: 8px 16px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.tool-button:hover:not(:disabled) {
+  background: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 10px cyan;
+  transform: scale(1.02);
+}
+
+.tool-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.tool-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

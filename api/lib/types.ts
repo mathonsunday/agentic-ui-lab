@@ -11,12 +11,20 @@ export interface UserProfile {
   superficiality: number;
 }
 
+export interface ToolCallData {
+  action: string;
+  timestamp: number;
+  sequenceNumber: number;
+  zoomLevel?: string;
+}
+
 export interface InteractionMemory {
   timestamp: number;
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore';
+  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore' | 'tool_call';
   content: string;
   duration: number;
   depth: 'surface' | 'moderate' | 'deep';
+  toolData?: ToolCallData;
 }
 
 export interface MiraState {
@@ -38,7 +46,7 @@ export interface UserAnalysis {
 }
 
 export interface ResponseAssessment {
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore';
+  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore' | 'tool_call';
   depth: 'surface' | 'moderate' | 'deep';
   confidenceDelta: number;
   traits?: Partial<UserProfile>;

@@ -12,8 +12,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
-import type { MiraState, ResponseAssessment } from './lib/types.js';
-import { updateConfidenceAndProfile, selectResponse, updateMemory } from './lib/miraAgent.js';
+import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js';
+import { updateConfidenceAndProfile, selectResponse, updateMemory, processToolCall } from './lib/miraAgent.js';
 
 interface StreamEvent {
   type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';
@@ -32,14 +32,49 @@ export default async (request: VercelRequest, response: VercelResponse) => {
   response.setHeader('Connection', 'keep-alive');
 
   try {
-    const { userInput, miraState, assessment } = request.body as {
-      userInput: string;
+    const { userInput, miraState, assessment, toolData } = request.body as {
+      userInput?: string;
       miraState: MiraState;
       assessment: ResponseAssessment;
+      toolData?: ToolCallData;
     };
 
-    if (!userInput || !miraState || !assessment) {
+    if (!miraState || !assessment) {
       sendEvent(response, { type: 'error', data: { message: 'Missing required fields' } });
+      return response.end();
+    }
+
+    // Handle tool call events (silent score changes, no Claude analysis)
+    if (toolData && toolData.action) {
+      const updatedState = processToolCall(miraState, toolData);
+
+      sendEvent(response, {
+        type: 'confidence',
+        data: {
+          from: miraState.confidenceInUser,
+          to: updatedState.confidenceInUser,
+          delta: updatedState.confidenceInUser - miraState.confidenceInUser,
+        },
+      });
+
+      sendEvent(response, {
+        type: 'complete',
+        data: {
+          updatedState,
+          response: {
+            streaming: [],
+            observations: [],
+            contentSelection: { sceneId: '', creatureId: '', revealLevel: 'moderate' as const },
+          },
+        },
+      });
+
+      return response.end();
+    }
+
+    // Handle text input events
+    if (!userInput) {
+      sendEvent(response, { type: 'error', data: { message: 'Missing userInput for text interaction' } });
       return response.end();
     }
 

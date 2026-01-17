@@ -8,7 +8,7 @@
  * - Final state completion
  */
 
-import type { MiraState, AgentResponse, ResponseAssessment } from '../../api/lib/types';
+import type { MiraState, AgentResponse, ResponseAssessment, ToolCallData } from '../../api/lib/types';
 
 export interface StreamEvent {
   type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';
@@ -38,13 +38,13 @@ export interface StreamCallbacks {
 }
 
 /**
- * Stream user input to backend and receive real-time updates
+ * Stream user input or tool call to backend and receive real-time updates
  */
 export async function streamMiraBackend(
-  userInput: string,
+  userInput: string | null,
   miraState: MiraState,
   assessment: ResponseAssessment,
-  interactionDuration: number,
+  toolData: ToolCallData | null,
   callbacks: StreamCallbacks
 ): Promise<void> {
   const apiUrl = getApiUrl();
@@ -56,10 +56,11 @@ export async function streamMiraBackend(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        userInput,
+        userInput: userInput || undefined,
         miraState,
         assessment,
-        interactionDuration,
+        interactionDuration: 0,
+        toolData,
       }),
     });
 

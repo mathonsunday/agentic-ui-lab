@@ -38,7 +38,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       // Mock fetch to prevent streaming
       global.fetch = vi.fn(() =>
@@ -65,7 +65,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       global.fetch = vi.fn(() =>
         Promise.resolve({
@@ -107,7 +107,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       // Create mock that simulates streaming (doesn't complete immediately)
       global.fetch = vi.fn(
@@ -133,7 +133,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       global.fetch = vi.fn(() =>
         Promise.resolve({
@@ -161,7 +161,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       const mockStream = createMockSSEStream([
         {
@@ -216,7 +216,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       const mockStream = createMockSSEStream([
         {
@@ -262,7 +262,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       const mockStream = createMockSSEStream([
         {
@@ -306,7 +306,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       // Mock failed response
       global.fetch = vi.fn(() =>
@@ -333,7 +333,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       // Mock response with no body
       global.fetch = vi.fn(() =>
@@ -359,7 +359,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       // Mock network error
       global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
@@ -380,7 +380,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       const mockStream = createMockSSEStream([
         {
@@ -407,7 +407,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
-      const submitButton = screen.getByRole('button');
+      const submitButton = screen.getByRole('button', { name: /send/i });
 
       // First interaction - error
       global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));

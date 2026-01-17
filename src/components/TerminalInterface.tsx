@@ -6,8 +6,9 @@ import {
   type MiraState,
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound } from '../shared/audioEngine';
-import { ASCII_PATTERNS } from '../shared/deepSeaAscii';
+import { ASCII_PATTERNS, getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
 import { streamMiraBackend } from '../services/miraBackendStream';
+import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';
 
 interface TerminalInterfaceProps {
@@ -41,6 +42,9 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
     },
   ]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [currentCreature] = useState<CreatureName>('anglerFish');
+  const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
+  const [interactionCount, setInteractionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
 
@@ -55,14 +59,13 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
     }
   }, [terminalLines]);
 
-  // Show initial ASCII art
+  // Show initial ASCII art (using zoomable creature at medium level)
   useEffect(() => {
-    const testingPatterns = ASCII_PATTERNS.testing;
-    const randomPattern = testingPatterns[Math.floor(Math.random() * testingPatterns.length)];
+    const initialAscii = getCreatureAtZoom('anglerFish', 'medium');
     const asciiLine: TerminalLine = {
       id: String(lineCountRef.current++),
       type: 'ascii',
-      content: randomPattern,
+      content: initialAscii,
     };
     setTerminalLines((prev) => [...prev, asciiLine]);
   }, []);
@@ -78,6 +81,99 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
       setTerminalLines((prev) => [...prev, newLine]);
     },
     []
+  );
+
+  // Tool handlers for zoom interactions
+  const handleZoomIn = useCallback(() => {
+    const nextZoom = getNextZoomLevel(currentZoom);
+    const newAscii = getCreatureAtZoom(currentCreature, nextZoom);
+
+    setCurrentZoom(nextZoom);
+
+    setTerminalLines((prev) => {
+      let lastAsciiIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'ascii') {
+          lastAsciiIndex = i;
+          break;
+        }
+      }
+      if (lastAsciiIndex === -1) return prev;
+
+      const updated = [...prev];
+      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
+      return updated;
+    });
+
+    handleToolCall('zoom_in', { zoomLevel: nextZoom });
+  }, [currentCreature, currentZoom]);
+
+  const handleZoomOut = useCallback(() => {
+    const prevZoom = getPrevZoomLevel(currentZoom);
+    const newAscii = getCreatureAtZoom(currentCreature, prevZoom);
+
+    setCurrentZoom(prevZoom);
+
+    setTerminalLines((prev) => {
+      let lastAsciiIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'ascii') {
+          lastAsciiIndex = i;
+          break;
+        }
+      }
+      if (lastAsciiIndex === -1) return prev;
+
+      const updated = [...prev];
+      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
+      return updated;
+    });
+
+    handleToolCall('zoom_out', { zoomLevel: prevZoom });
+  }, [currentCreature, currentZoom]);
+
+  const handleToolCall = useCallback(
+    async (toolAction: string, toolData: Record<string, unknown>) => {
+      if (isStreaming) return;
+
+      setIsStreaming(true);
+      setInteractionCount((prev) => prev + 1);
+
+      try {
+        await streamMiraBackend(
+          null,
+          miraState,
+          { type: 'tool_call', depth: 'moderate', confidenceDelta: 0, traits: {} },
+          {
+            action: toolAction,
+            timestamp: Date.now(),
+            sequenceNumber: interactionCount,
+            ...toolData,
+          },
+          {
+            onConfidence: (update) => {
+              setMiraState((prev) => ({
+                ...prev,
+                confidenceInUser: update.to,
+              }));
+            },
+            onComplete: (data) => {
+              setMiraState(data.updatedState);
+              setIsStreaming(false);
+            },
+            onError: (error) => {
+              console.error('Tool call error:', error);
+              addTerminalLine('text', `...error: ${error}...`);
+              setIsStreaming(false);
+            },
+          }
+        );
+      } catch (error) {
+        console.error('Tool call failed:', error);
+        setIsStreaming(false);
+      }
+    },
+    [miraState, isStreaming, interactionCount, addTerminalLine]
   );
 
   const handleInput = useCallback(
@@ -102,7 +198,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
           userInput,
           miraState,
           assessment,
-          3000,
+          null,
           {
             onConfidence: (update) => {
               // Update state with new confidence
@@ -201,6 +297,13 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         </div>
 
         <div className="terminal-interface__input-section">
+          <ToolButtonRow
+            tools={[
+              { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
+              { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
+            ]}
+            disabled={isStreaming}
+          />
           <MinimalInput
             onSubmit={handleInput}
             disabled={isStreaming}

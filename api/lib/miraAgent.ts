@@ -15,6 +15,7 @@ import {
   ResponseAssessment,
   AgentResponse,
   UserProfile,
+  ToolCallData,
 } from './types.js';
 import { PERSONALITY_RESPONSES } from './responseLibrary.js';
 
@@ -369,5 +370,46 @@ export async function executeMiraAgent(
   return {
     updatedState: finalState,
     response,
+  };
+}
+
+/**
+ * Tool Processing: Handle tool call events (e.g., zoom in/out)
+ * Applies hardcoded score increases based on tool action
+ */
+
+// Hardcoded score mappings for each tool action
+const TOOL_SCORE_MAP: Record<string, number> = {
+  'zoom_in': 5,
+  'zoom_out': 5,
+};
+
+/**
+ * Process a tool call and update Mira's state
+ * Tool calls award hardcoded rapport points (silent score changes, no dialogue)
+ */
+export function processToolCall(
+  miraState: MiraState,
+  toolData: ToolCallData
+): MiraState {
+  const scoreIncrease = TOOL_SCORE_MAP[toolData.action] || 0;
+  const newConfidence = Math.max(0, Math.min(100,
+    miraState.confidenceInUser + scoreIncrease
+  ));
+
+  return {
+    ...miraState,
+    confidenceInUser: newConfidence,
+    memories: [
+      ...miraState.memories,
+      {
+        timestamp: toolData.timestamp,
+        type: 'tool_call',
+        content: toolData.action,
+        duration: 0,
+        depth: 'moderate',
+        toolData,
+      },
+    ],
   };
 }

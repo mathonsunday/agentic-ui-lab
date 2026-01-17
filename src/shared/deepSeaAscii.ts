@@ -227,3 +227,45 @@ export const ASCII_PATTERNS: Record<string, string[]> = {
     `,
   ],
 };
+
+// ============================================
+// ZOOM UTILITIES FOR TOOL BUTTONS
+// ============================================
+
+import * as ROVVariants from './rovAsciiVariants';
+
+export const ZOOMABLE_CREATURES = {
+  anglerFish: ROVVariants.anglerFish,
+  giantSquid: ROVVariants.giantSquid,
+  jellyfish: ROVVariants.jellyfish,
+  octopus: ROVVariants.octopus,
+  shark: ROVVariants.shark,
+} as const;
+
+export type ZoomLevel = 'far' | 'medium' | 'close';
+export type CreatureName = keyof typeof ZOOMABLE_CREATURES;
+
+/**
+ * Get the next zoom level in the cycle: far → medium → close → far
+ */
+export function getNextZoomLevel(current: ZoomLevel): ZoomLevel {
+  const levels: ZoomLevel[] = ['far', 'medium', 'close'];
+  const index = levels.indexOf(current);
+  return levels[(index + 1) % levels.length];
+}
+
+/**
+ * Get the previous zoom level in reverse cycle: close → medium → far → close
+ */
+export function getPrevZoomLevel(current: ZoomLevel): ZoomLevel {
+  const levels: ZoomLevel[] = ['far', 'medium', 'close'];
+  const index = levels.indexOf(current);
+  return levels[(index - 1 + levels.length) % levels.length];
+}
+
+/**
+ * Get ASCII art for a specific creature at a specific zoom level
+ */
+export function getCreatureAtZoom(creature: CreatureName, zoom: ZoomLevel): string {
+  return ZOOMABLE_CREATURES[creature][zoom];
+}
