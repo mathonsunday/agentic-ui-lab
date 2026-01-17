@@ -6,7 +6,7 @@ import {
   type MiraState,
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound } from '../shared/audioEngine';
-import { ASCII_PATTERNS, getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
+import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getRandomCreature, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';
@@ -44,7 +44,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   ]);
   const [isStreaming, setIsStreaming] = useState(false);
   const isStreamingRef = useRef(false);
-  const [currentCreature] = useState<CreatureName>('anglerFish');
+  const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -287,13 +287,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add transition phrase
               addTerminalLine('text', '...what do you think about this...');
 
-              // Show ASCII art
-              const allPatterns = Object.values(ASCII_PATTERNS).flat();
-              const randomPattern = allPatterns[Math.floor(Math.random() * allPatterns.length)];
+              // Show ASCII art with tracked creature
+              const { name: randomCreature, art: randomArt } = getRandomCreature();
+              setCurrentCreature(randomCreature);
+              setCurrentZoom('medium');
               const asciiLine: TerminalLine = {
                 id: String(lineCountRef.current++),
                 type: 'ascii',
-                content: randomPattern,
+                content: randomArt,
               };
               setTerminalLines((prev) => [...prev, asciiLine]);
 

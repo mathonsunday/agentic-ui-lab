@@ -194,3 +194,14 @@ export function getPrevZoomLevel(current: ZoomLevel): ZoomLevel {
 export function getCreatureAtZoom(creature: CreatureName, zoom: ZoomLevel): string {
   return ZOOMABLE_CREATURES[creature][zoom];
 }
+
+/**
+ * Get a random creature name with its medium-zoom ASCII art
+ * Used when displaying random creatures in response to user input
+ */
+export function getRandomCreature(): { name: CreatureName; art: string } {
+  const creatureNames = Object.keys(ZOOMABLE_CREATURES) as CreatureName[];
+  const randomCreature = creatureNames[Math.floor(Math.random() * creatureNames.length)];
+  const art = getCreatureAtZoom(randomCreature, 'medium');
+  return { name: randomCreature, art };
+}
