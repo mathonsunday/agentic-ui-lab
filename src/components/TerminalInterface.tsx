@@ -302,7 +302,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       addTerminalLine('input', `> ${userInput}`);
 
       // Set streaming state to disable input
+      // CRITICAL: Update ref synchronously BEFORE setState to avoid stale closure during render
       streamDebugLog(`Setting streaming TRUE for input - STREAM #${streamNum}`);
+      isStreamingRef.current = true;
       setIsStreaming(true);
 
       // Play audio cue
