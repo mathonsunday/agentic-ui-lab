@@ -11,48 +11,12 @@
  */
 
 import { callMiraBackend } from '../services/miraBackendClient';
+import type { UserProfile, InteractionMemory, MiraState, AgentResponse } from '../../api/lib/types';
 
-export interface UserProfile {
-  thoughtfulness: number; // 0-100: do they ask deep questions?
-  adventurousness: number; // 0-100: do they engage with strange/scary content?
-  engagement: number; // 0-100: how actively do they participate?
-  superficiality: number; // 0-100: surface-level engagement
-  curiosity: number; // 0-100: how much do they want to know?
-}
-
-export interface InteractionMemory {
-  timestamp: number;
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore';
-  content: string; // what they said/did
-  duration: number; // how long they spent on it
-  depth: 'surface' | 'moderate' | 'deep'; // our assessment of engagement depth
-}
+// Re-export types for backward compatibility
+export type { UserProfile, InteractionMemory, MiraState, AgentResponse };
 
 export type Personality = 'negative' | 'chaotic' | 'glowing' | 'slovak';
-
-export interface MiraState {
-  userProfile: UserProfile;
-  memories: InteractionMemory[];
-  currentMood: 'curious' | 'vulnerable' | 'testing' | 'excited' | 'defensive';
-  confidenceInUser: number; // 0-100 - determines personality progression
-  hasFoundKindred: boolean; // true when she feels real connection
-  // Response cycling to prevent repeats - track indices of used responses per personality+depth
-  responseIndices: {
-    [key: string]: number; // key = "personality:depth", value = next index to use
-  };
-}
-
-export interface AgentResponse {
-  streaming: string[]; // chunks to display one by one (simulating streaming)
-  observations: string[]; // what she notices about the user
-  contentSelection: {
-    sceneId: string; // which visual scene to show
-    creatureId: string; // which creature to focus on
-    revealLevel: 'surface' | 'moderate' | 'deep'; // how much detail
-  };
-  moodShift?: string; // if mood is changing
-  confidenceDelta: number; // change in confidence (-10 to +10)
-}
 
 /**
  * Map confidence level to personality
@@ -156,63 +120,6 @@ export async function evaluateUserResponseWithBackend(
   }
 }
 
-/**
- * DEPRECATED: Local frontend-only assessment
- * Kept for reference - Claude now does smarter analysis
- */
-export function evaluateUserResponse(
-  miraState: MiraState,
-  userResponse: string,
-  interactionDuration: number
-): { updatedState: MiraState; response: AgentResponse } {
-  // Assess the response
-  const assessment = assessResponse(userResponse, interactionDuration, miraState);
-
-  // Update Mira's beliefs about this user
-  const updatedProfile = updateUserProfile(miraState.userProfile, assessment);
-  const newConfidence = miraState.confidenceInUser + assessment.confidenceDelta;
-
-  // Determine her mood based on accumulated assessment
-  const newMood = determineMood(updatedProfile, miraState.memories.length);
-
-  // Add to memory
-  const newMemory: InteractionMemory = {
-    timestamp: Date.now(),
-    type: assessment.type,
-    content: userResponse,
-    duration: interactionDuration,
-    depth: assessment.depth,
-  };
-
-  // Clamp confidence to 0-100 range
-  const clampedConfidence = Math.max(0, Math.min(100, newConfidence));
-
-  const updatedState: MiraState = {
-    ...miraState,
-    userProfile: updatedProfile,
-    currentMood: newMood,
-    confidenceInUser: clampedConfidence,
-    memories: [...miraState.memories, newMemory],
-    hasFoundKindred: clampedConfidence > 75,
-    responseIndices: { ...miraState.responseIndices },
-  };
-
-  // Fallback response
-  return {
-    updatedState,
-    response: {
-      streaming: ['...connection required...'],
-      observations: [],
-      contentSelection: {
-        sceneId: 'shadows',
-        creatureId: 'jellyfish',
-        revealLevel: 'surface',
-      },
-      confidenceDelta: assessment.confidenceDelta,
-    },
-  };
-}
-
 interface ResponseAssessment {
   type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore';
   depth: 'surface' | 'moderate' | 'deep';
@@ -222,7 +129,7 @@ interface ResponseAssessment {
 
 /**
  * Frontend assessment: Simple rules for type and depth
- * Claude will do deeper analysis via analyzeUserWithClaude
+ * Claude will do deeper analysis in the backend
  */
 export function assessResponse(
   response: string,
@@ -232,7 +139,7 @@ export function assessResponse(
   const wordCount = response.trim().split(/\s+/).filter(w => w.length > 0).length;
   const hasQuestionMark = response.includes('?');
 
-  // Simple frontend rules - Claude will refine these
+  // Simple frontend rules - Claude refines these via backend analysis
   let depth: 'surface' | 'moderate' | 'deep' = 'surface';
   let confidenceDelta = 0;
   let type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore' = 'response';
@@ -245,7 +152,7 @@ export function assessResponse(
     type = 'response';
   }
 
-  // Determine depth by word count (Claude will refine this assessment)
+  // Determine depth by word count (Claude refines this in backend)
   if (wordCount === 1) {
     depth = 'surface';
     if (type === 'response') confidenceDelta = -5;
@@ -269,63 +176,4 @@ export function assessResponse(
       superficiality: depth === 'surface' ? 75 : depth === 'moderate' ? 40 : 20,
     },
   };
-}
-
-/**
- * Update user profile using fronted assessment
- * Claude analysis will override this in evaluateUserResponseWithBackend
- */
-function updateUserProfile(
-  profile: UserProfile,
-  assessment: ResponseAssessment
-): UserProfile {
-  // Exponential moving average - recent assessments matter more
-  const alpha = 0.3; // weight of new assessment
-
-  return {
-    thoughtfulness: lerp(
-      profile.thoughtfulness,
-      assessment.traits.thoughtfulness ?? profile.thoughtfulness,
-      alpha
-    ),
-    adventurousness: lerp(
-      profile.adventurousness,
-      assessment.traits.adventurousness ?? profile.adventurousness,
-      alpha
-    ),
-    engagement: lerp(profile.engagement, assessment.traits.engagement ?? profile.engagement, alpha),
-    superficiality: lerp(
-      profile.superficiality,
-      assessment.traits.superficiality ?? profile.superficiality,
-      alpha
-    ),
-    curiosity: lerp(profile.curiosity, assessment.traits.curiosity ?? profile.curiosity, alpha),
-  };
-}
-
-function determineMood(profile: UserProfile, memoryCount: number): MiraState['currentMood'] {
-  // Her mood shifts based on what she's learned about them
-  if (profile.thoughtfulness > 75 && profile.curiosity > 75) {
-    return 'vulnerable'; // They seem thoughtful enough to trust
-  }
-  if (profile.adventurousness > 80) {
-    return 'excited'; // They're diving deep into the abyss
-  }
-  if (profile.superficiality > 70) {
-    return 'defensive'; // She's protecting herself
-  }
-  if (memoryCount > 8 && profile.thoughtfulness > 60) {
-    return 'curious'; // She's becoming curious about them
-  }
-  return 'testing'; // Still evaluating
-}
-
-/**
- * DEPRECATED: Response generation moved to backend
- * The LangGraph agent now handles all response generation and selection
- */
-
-// Helper function for smooth lerp (linear interpolation)
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
 }

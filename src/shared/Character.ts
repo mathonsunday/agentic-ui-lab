@@ -14,7 +14,7 @@ export interface VisualElement {
   style?: Record<string, string | number>;
 }
 
-export interface AgentResponse {
+export interface CharacterResponse {
   thinking: ThoughtFragment[];
   visual: {
     mood: 'wonder' | 'obsession' | 'calm' | 'distress';
@@ -76,35 +76,3 @@ export const CHARACTER = {
     },
   },
 };
-
-// Helper to get random thoughts for a topic
-export function getThoughtsForTopic(
-  topic: keyof typeof CHARACTER.thoughtPatterns,
-  count: number = 4
-): ThoughtFragment[] {
-  const patterns = CHARACTER.thoughtPatterns[topic];
-  const shuffled = [...patterns].sort(() => Math.random() - 0.5);
-
-  return shuffled.slice(0, count).map((text, i) => ({
-    text,
-    intensity: 0.3 + Math.random() * 0.7,
-    decay: i === count - 1 ? 'linger' : Math.random() > 0.5 ? 'slow' : 'fast',
-    glitch: Math.random() > 0.85,
-  }));
-}
-
-// Helper to determine topic from user input
-export function detectTopic(input: string): keyof typeof CHARACTER.thoughtPatterns {
-  const lower = input.toLowerCase();
-
-  if (lower.includes('specimen') || lower.includes('47') || lower.includes('creature')) {
-    return 'specimen47';
-  }
-  if (lower.includes('research') || lower.includes('work') || lower.includes('dive')) {
-    return 'research';
-  }
-  if (lower.includes('feel') || lower.includes('okay') || lower.includes('how are')) {
-    return 'emotional';
-  }
-  return 'greeting';
-}

@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MinimalInput } from './MinimalInput';
-import { ConfidenceGauge } from './ConfidenceGauge';
 import {
   initializeMiraState,
   assessResponse,
@@ -45,10 +44,14 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when new lines are added
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
   }, [terminalLines]);
 
@@ -119,7 +122,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
               }));
             },
             onResponseChunk: (chunk) => {
-              // Display response chunks as they arrive
+              // Display chunk immediately
               addTerminalLine('text', chunk);
             },
             onComplete: (data) => {
@@ -138,6 +141,10 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
                 content: randomPattern,
               };
               setTerminalLines((prev) => [...prev, asciiLine]);
+
+              // Add visual separator after exchange
+              addTerminalLine('system', '---');
+
               setIsStreaming(false);
             },
             onError: (error) => {
@@ -175,11 +182,6 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         <div className="terminal-interface__subtitle">
           Deep Sea Research Assistant · Connected
         </div>
-        <ConfidenceGauge
-          confidence={miraState.confidenceInUser}
-          isAnimating={isStreaming}
-          size="large"
-        />
       </div>
 
       <div className="terminal-interface__content">

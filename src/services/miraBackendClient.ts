@@ -3,16 +3,16 @@
  *
  * Frontend service for calling the LangGraph backend via Vercel Functions
  * Replaces the direct Claude API calls with secure server-side processing
+ *
+ * Features:
+ * - Automatic retry with exponential backoff
+ * - Timeout handling for long-running requests
+ * - Graceful error handling and reporting
  */
 
-import type { MiraState, AgentResponse } from '../shared/miraAgentSimulator';
-
-export interface ResponseAssessment {
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore';
-  depth: 'surface' | 'moderate' | 'deep';
-  confidenceDelta: number;
-  traits?: Record<string, number>;
-}
+import type { MiraState, AgentResponse, ResponseAssessment } from '../../api/lib/types';
+import { withRetry } from './retryStrategy';
+import { withTimeout, getTimeoutForOperation } from './timeoutHandler';
 
 export interface AnalyzeUserResponse {
   updatedState: MiraState;
@@ -24,6 +24,11 @@ export interface AnalyzeUserResponse {
  * This replaces the direct Claude calls from claudeBackend.ts
  *
  * API Endpoint: POST /api/analyze-user
+ *
+ * Includes:
+ * - Automatic retry with exponential backoff (3 attempts)
+ * - Timeout handling (10s per attempt)
+ * - Comprehensive error handling
  */
 export async function callMiraBackend(
   userInput: string,
@@ -31,38 +36,66 @@ export async function callMiraBackend(
   assessment: ResponseAssessment,
   interactionDuration: number
 ): Promise<AnalyzeUserResponse> {
-  // Determine the API URL based on environment
-  const apiUrl = getApiUrl();
+  // Use retry strategy with timeout for resilience
+  return withRetry(
+    async () => {
+      const apiUrl = getApiUrl();
+      const timeoutMs = getTimeoutForOperation('backend');
 
-  try {
-    const response = await fetch(`${apiUrl}/api/analyze-user`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+      try {
+        const fetchPromise = fetch(`${apiUrl}/api/analyze-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userInput,
+            miraState,
+            assessment,
+            interactionDuration,
+          }),
+        });
+
+        // Apply timeout to fetch operation
+        const response = await withTimeout(
+          fetchPromise,
+          timeoutMs,
+          'Backend API call'
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage =
+            (errorData as Record<string, unknown>).error || `HTTP ${response.status}`;
+          throw new Error(`Backend error: ${errorMessage}`);
+        }
+
+        const data = (await response.json()) as AnalyzeUserResponse;
+        return data;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
+        console.error('Mira backend call failed:', message);
+        throw error;
+      }
+    },
+    // Custom retry configuration for backend calls
+    {
+      maxRetries: 3,
+      initialDelayMs: 500,
+      maxDelayMs: 4000,
+      backoffMultiplier: 2,
+      jitterFactor: 0.1,
+      shouldRetry: (error) => {
+        // Retry on network/timeout errors, not client errors (4xx)
+        const message = error.message;
+        if (message.includes('Failed to fetch')) return true;
+        if (message.includes('timeout')) return true;
+        if (message.includes('HTTP 5')) return true; // Server errors
+        return false;
       },
-      body: JSON.stringify({
-        userInput,
-        miraState,
-        assessment,
-        interactionDuration,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage =
-        (errorData as Record<string, unknown>).error || `HTTP ${response.status}`;
-      throw new Error(`Backend error: ${errorMessage}`);
     }
-
-    const data = (await response.json()) as AnalyzeUserResponse;
-    return data;
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown error';
-    console.error('Mira backend error:', message);
-    throw error;
-  }
+  );
 }
 
 /**

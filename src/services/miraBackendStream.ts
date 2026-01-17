@@ -8,8 +8,7 @@
  * - Final state completion
  */
 
-import type { MiraState, AgentResponse } from '../shared/miraAgentSimulator';
-import type { ResponseAssessment } from './miraBackendClient';
+import type { MiraState, AgentResponse, ResponseAssessment } from '../../api/lib/types';
 
 export interface StreamEvent {
   type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';

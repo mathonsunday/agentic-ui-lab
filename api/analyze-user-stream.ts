@@ -100,7 +100,7 @@ Return ONLY valid JSON in this exact format:
 
     // Call Claude with streaming
     const stream = await client.messages.stream({
-      model: 'claude-opus-4-1-20250805',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       system: systemPrompt,
       messages: [
@@ -129,11 +129,13 @@ Return ONLY valid JSON in this exact format:
 
     const analysis = JSON.parse(jsonMatch[0]);
 
-    // Stream confidence update
+    // Calculate new confidence
     const newConfidence = Math.max(
       0,
       Math.min(100, miraState.confidenceInUser + analysis.confidenceDelta)
     );
+
+    // Stream confidence update immediately
     sendEvent(response, {
       type: 'confidence',
       data: {
@@ -171,6 +173,13 @@ Return ONLY valid JSON in this exact format:
     // Select response based on updated state
     const agentResponse = selectResponse(updatedState, assessment);
 
+    // Stream confidence bar as first response chunk
+    const confidenceBar = generateConfidenceBar(newConfidence);
+    sendEvent(response, {
+      type: 'response_chunk',
+      data: { chunk: confidenceBar },
+    });
+
     // Stream response chunks
     for (const chunk of agentResponse.streaming) {
       sendEvent(response, {
@@ -203,6 +212,18 @@ Return ONLY valid JSON in this exact format:
     response.end();
   }
 };
+
+/**
+ * Generate ASCII rapport bar
+ * Example: [████████░░░░░░░░░░] 42%
+ */
+function generateConfidenceBar(confidence: number): string {
+  const percent = Math.round(confidence);
+  const filled = Math.round(percent / 5); // 20 characters total, so 5% per character
+  const empty = 20 - filled;
+  const bar = '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
+  return `[RAPPORT] ${bar} ${percent}%\n`;
+}
 
 /**
  * Helper: Send SSE formatted event
