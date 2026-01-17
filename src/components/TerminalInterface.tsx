@@ -446,7 +446,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add visual separator after exchange
               addTerminalLine('system', '---');
 
-              // Reset response tracking
+              // Reset response tracking on successful completion
               currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
               dispatchStream({ type: 'END_STREAM' });
@@ -455,23 +455,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               console.error('Stream error:', error);
               streamDebugLog(`onError callback - STREAM #${streamNum}`, {
                 error,
+                wasInterrupted: isStreamInterruptedRef.current,
               });
 
               // Check if this is an interrupt (user explicitly stopped)
-              const isInterrupt = error.includes('interrupted');
+              const isInterrupt = error.includes('interrupted') || isStreamInterruptedRef.current;
 
               if (isInterrupt) {
-                console.log('📍 Stream was interrupted by user');
-                // Decrease rapport as penalty
-                const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
-                setMiraState((prev) => ({
-                  ...prev,
-                  confidenceInUser: newConfidence,
-                }));
-                updateRapportBar(newConfidence);
-                onConfidenceChange?.(newConfidence);
-                // Add narrative consequence
-                addTerminalLine('text', '...you cut off my words... you still don\'t understand...');
+                console.log('📍 Stream was interrupted by user (consequence already added by handleInterrupt)');
+                // handleInterrupt already handled the consequence text and confidence update
               } else {
                 addTerminalLine(
                   'text',
@@ -523,10 +515,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     console.log(`🛑 Interrupt button clicked - STREAM #${streamState.streamId}`, {
       isStreaming: streamState.isStreaming,
       hasAbortController: !!streamState.abortController,
+      responseChunksCount: responseLineIdsRef.current.length,
     });
     streamDebugLog(`handleInterrupt called - STREAM #${streamState.streamId}`, {
       hasAbortController: !!streamState.abortController,
       isStreaming: streamState.isStreaming,
+      responseChunksCount: responseLineIdsRef.current.length,
     });
 
     if (streamState.abortController) {
@@ -535,9 +529,41 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         timestamp: Date.now(),
       });
       try {
-        // Set interrupt flag BEFORE calling abort - this ensures callbacks check it synchronously
+        // Set interrupt flag FIRST to block any in-flight chunks
         isStreamInterruptedRef.current = true;
         console.log(`🛑 Set isStreamInterruptedRef.current = true`);
+
+        // Remove response chunks and add consequence text atomically
+        setTerminalLines(prev => {
+          const filtered = prev.filter(line =>
+            !responseLineIdsRef.current.includes(line.id)
+          );
+
+          const removedCount = prev.length - filtered.length;
+          console.log(`🛑 [handleInterrupt] Removed ${removedCount} response chunks from state`);
+          streamDebugLog(`Removed response chunks - STREAM #${streamState.streamId}`, { removedCount });
+
+          // Decrease rapport as penalty
+          const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
+          setMiraState((prevState) => ({
+            ...prevState,
+            confidenceInUser: newConfidence,
+          }));
+          updateRapportBar(newConfidence);
+          onConfidenceChange?.(newConfidence);
+
+          return [
+            ...filtered,
+            {
+              id: `interrupt-consequence-${Date.now()}`,
+              type: 'text' as const,
+              content: '...you cut off my words... you still don\'t understand...',
+            }
+          ];
+        });
+
+        // Clear response tracking for next stream
+        responseLineIdsRef.current = [];
 
         streamState.abortController();
         console.log(`✅ Abort function executed for STREAM #${streamState.streamId}`);
@@ -553,7 +579,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       console.log(`⚠️ No abort controller available for STREAM #${streamState.streamId}`);
       streamDebugLog(`No abort controller available - STREAM #${streamState.streamId}`);
     }
-  }, [streamState.abortController, streamState.streamId]);
+  }, [streamState.abortController, streamState.streamId, miraState, updateRapportBar, onConfidenceChange]);
 
   return (
     <div className="terminal-interface">
