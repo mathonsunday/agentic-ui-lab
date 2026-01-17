@@ -55,7 +55,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const abortControllerRef = useRef<(() => void) | null>(null);
-  const [currentAnimatingLineId, setCurrentAnimatingLineId] = useState<string | null>(null);
+  const currentAnimatingLineIdRef = useRef<string | null>(null);
+  const [, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
 
   // Keep ref in sync with state
@@ -295,8 +296,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               responseLineIdsRef.current.push(newLineId);
 
               // Set the first chunk's line as the currently animating line
-              if (!currentAnimatingLineId) {
-                setCurrentAnimatingLineId(newLineId);
+              if (!currentAnimatingLineIdRef.current) {
+                currentAnimatingLineIdRef.current = newLineId;
+                setRenderTrigger(t => t + 1); // Force re-render
               }
 
               addTerminalLine('text', chunk);
@@ -334,7 +336,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               addTerminalLine('system', '---');
 
               // Reset response tracking
-              setCurrentAnimatingLineId(null);
+              currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
               setIsStreaming(false);
             },
@@ -345,7 +347,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 '...connection to the depths lost... the abyss is unreachable at this moment...'
               );
               // Reset response tracking
-              setCurrentAnimatingLineId(null);
+              currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
               setIsStreaming(false);
             },
@@ -389,7 +391,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       addTerminalLine('text', '...you cut off my words... you still don\'t understand...');
 
       // Reset response tracking
-      setCurrentAnimatingLineId(null);
+      currentAnimatingLineIdRef.current = null;
       responseLineIdsRef.current = [];
 
       // Stop streaming
@@ -416,7 +418,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             const isResponseLine = responseLineIdsRef.current.includes(line.id);
 
             // For sequential animation: only animate the currently animating line
-            const shouldAnimate = !isResponseLine || line.id === currentAnimatingLineId;
+            const shouldAnimate = !isResponseLine || line.id === currentAnimatingLineIdRef.current;
 
             return (
               <div
@@ -435,7 +437,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                       const currentIndex = responseLineIdsRef.current.indexOf(line.id);
                       const nextIndex = currentIndex + 1;
                       if (nextIndex < responseLineIdsRef.current.length) {
-                        setCurrentAnimatingLineId(responseLineIdsRef.current[nextIndex]);
+                        currentAnimatingLineIdRef.current = responseLineIdsRef.current[nextIndex];
+                        setRenderTrigger(t => t + 1); // Force re-render to start next animation
+                      } else {
+                        currentAnimatingLineIdRef.current = null;
                       }
                     }}
                   />
