@@ -103,6 +103,30 @@ export function streamMiraBackend(
   const abortController = new AbortController();
   activeStreams.set(streamId, abortController);
   let wasInterrupted = false;
+  let readerRef: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
+  // Wrap callbacks to check interrupt flag
+  const wrappedCallbacks: StreamCallbacks = {
+    onConfidence: callbacks.onConfidence,
+    onProfile: callbacks.onProfile,
+    onResponseChunk: (chunk) => {
+      // Don't process chunks after interrupt
+      if (wasInterrupted) {
+        console.log('🛑 [miraBackendStream] Ignoring chunk callback - stream was interrupted');
+        return;
+      }
+      callbacks.onResponseChunk?.(chunk);
+    },
+    onComplete: (data) => {
+      // Don't process completion after interrupt
+      if (wasInterrupted) {
+        console.log('🛑 [miraBackendStream] Ignoring onComplete callback - stream was interrupted');
+        return;
+      }
+      callbacks.onComplete?.(data);
+    },
+    onError: callbacks.onError,
+  };
 
   const promise = (async () => {
     const apiUrl = getApiUrl();
@@ -136,6 +160,7 @@ export function streamMiraBackend(
       }
 
       const reader = response.body.getReader();
+      readerRef = reader;
       const decoder = new TextDecoder();
       const eventBuffer = new EventBuffer();
       let lineBuffer = '';
@@ -174,9 +199,9 @@ export function streamMiraBackend(
                 const envelope = parsed as EventEnvelope;
                 const ordered = eventBuffer.add(envelope);
 
-                // Process all ordered events
+                // Process all ordered events using wrapped callbacks
                 for (const evt of ordered) {
-                  handleEnvelopeEvent(evt, callbacks);
+                  handleEnvelopeEvent(evt, wrappedCallbacks);
                 }
               } catch (e) {
                 console.error('Failed to parse event:', e);
@@ -199,7 +224,7 @@ export function streamMiraBackend(
       if (!wasInterrupted) {
         const remaining = eventBuffer.flush();
         for (const evt of remaining) {
-          handleEnvelopeEvent(evt, callbacks);
+          handleEnvelopeEvent(evt, wrappedCallbacks);
         }
       }
     } catch (error) {
@@ -220,8 +245,15 @@ export function streamMiraBackend(
   return {
     promise,
     abort: () => {
+      console.log('🛑 [miraBackendStream] abort() called, setting wasInterrupted flag and cancelling reader');
       wasInterrupted = true;
       abortController.abort();
+      // Actively cancel the reader to prevent buffered chunks from being processed
+      if (readerRef) {
+        readerRef.cancel().catch((err) => {
+          console.warn('Error cancelling reader:', err);
+        });
+      }
     },
   };
 }
