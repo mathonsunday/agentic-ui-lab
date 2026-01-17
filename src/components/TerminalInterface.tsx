@@ -533,15 +533,21 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         isStreamInterruptedRef.current = true;
         console.log(`🛑 Set isStreamInterruptedRef.current = true`);
 
-        // Remove response chunks and add consequence text atomically
+        // Add consequence text right after currently animating chunk
         setTerminalLines(prev => {
-          const filtered = prev.filter(line =>
-            !responseLineIdsRef.current.includes(line.id)
-          );
+          // Find the index of the currently animating line
+          const animatingIndex = currentAnimatingLineIdRef.current
+            ? prev.findIndex(line => line.id === currentAnimatingLineIdRef.current)
+            : prev.length - 1;
 
-          const removedCount = prev.length - filtered.length;
-          console.log(`🛑 [handleInterrupt] Removed ${removedCount} response chunks from state`);
-          streamDebugLog(`Removed response chunks - STREAM #${streamState.streamId}`, { removedCount });
+          const insertIndex = animatingIndex >= 0 ? animatingIndex + 1 : prev.length;
+
+          console.log(`🛑 [handleInterrupt] Keeping chunks up to index ${insertIndex}, adding consequence after`);
+          streamDebugLog(`Adding consequence after animating chunk - STREAM #${streamState.streamId}`, {
+            animatingLineId: currentAnimatingLineIdRef.current,
+            insertIndex,
+            totalChunks: responseLineIdsRef.current.length
+          });
 
           // Decrease rapport as penalty
           const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
@@ -552,14 +558,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           updateRapportBar(newConfidence);
           onConfidenceChange?.(newConfidence);
 
-          return [
-            ...filtered,
-            {
-              id: `interrupt-consequence-${Date.now()}`,
-              type: 'text' as const,
-              content: '...you cut off my words... you still don\'t understand...',
-            }
-          ];
+          // Insert consequence text after current animation point
+          const updated = [...prev.slice(0, insertIndex)];
+          updated.push({
+            id: `interrupt-consequence-${Date.now()}`,
+            type: 'text' as const,
+            content: '...you cut off my words... you still don\'t understand...',
+          });
+          return updated;
         });
 
         // Clear response tracking for next stream
