@@ -224,7 +224,7 @@ interface ResponseAssessment {
  * Frontend assessment: Simple rules for type and depth
  * Claude will do deeper analysis via analyzeUserWithClaude
  */
-function assessResponse(
+export function assessResponse(
   response: string,
   _duration: number,
   _state: MiraState

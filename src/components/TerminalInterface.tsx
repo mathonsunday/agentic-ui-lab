@@ -1,13 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MinimalInput } from './MinimalInput';
+import { ConfidenceGauge } from './ConfidenceGauge';
 import {
   initializeMiraState,
-  evaluateUserResponseWithBackend,
+  assessResponse,
   type MiraState,
-  type AgentResponse,
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound } from '../shared/audioEngine';
 import { ASCII_PATTERNS } from '../shared/deepSeaAscii';
+import { streamMiraBackend } from '../services/miraBackendStream';
 import './TerminalInterface.css';
 
 interface TerminalInterfaceProps {
@@ -76,43 +77,6 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
     []
   );
 
-  const streamResponse = useCallback(
-    (response: AgentResponse) => {
-      setIsStreaming(true);
-      const delay = 150; // ms between chunks
-      let totalDelay = 0;
-
-      // Stream the response chunks first (observations are internal tracking only)
-      response.streaming.forEach((chunk, index) => {
-        setTimeout(() => {
-          addTerminalLine('text', chunk);
-        }, totalDelay + delay * index);
-      });
-      totalDelay += delay * response.streaming.length;
-
-      // Add transition phrase
-      setTimeout(() => {
-        addTerminalLine('text', '...what do you think about this...');
-      }, totalDelay);
-      totalDelay += delay * 2;
-
-      // Then show ASCII art - pick random from all moods for variety
-      setTimeout(() => {
-        // Collect all ASCII patterns from all moods for maximum variety
-        const allPatterns = Object.values(ASCII_PATTERNS).flat();
-        const randomPattern = allPatterns[Math.floor(Math.random() * allPatterns.length)];
-        const asciiLine: TerminalLine = {
-          id: String(lineCountRef.current++),
-          type: 'ascii',
-          content: randomPattern,
-        };
-        setTerminalLines((prev) => [...prev, asciiLine]);
-        setIsStreaming(false);
-      }, totalDelay);
-    },
-    [addTerminalLine]
-  );
-
   const handleInput = useCallback(
     async (userInput: string) => {
       if (!userInput.trim()) return;
@@ -127,23 +91,65 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
       playStreamingSound('thinking').catch(() => {});
 
       try {
-        // Evaluate response with backend (async)
-        const duration = 3000;
-        const { updatedState, response } = await evaluateUserResponseWithBackend(
-          miraState,
+        // Frontend assessment: type and basic depth from word count
+        const assessment = assessResponse(userInput, 3000, miraState);
+
+        // Stream from backend with real-time updates
+        await streamMiraBackend(
           userInput,
-          duration
-        );
-        setMiraState(updatedState);
+          miraState,
+          assessment,
+          3000,
+          {
+            onConfidence: (update) => {
+              // Update state with new confidence
+              setMiraState((prev) => ({
+                ...prev,
+                confidenceInUser: update.to,
+              }));
+            },
+            onProfile: (profile) => {
+              // Update user profile as Claude analyzes
+              setMiraState((prev) => ({
+                ...prev,
+                userProfile: {
+                  ...prev.userProfile,
+                  ...profile,
+                },
+              }));
+            },
+            onResponseChunk: (chunk) => {
+              // Display response chunks as they arrive
+              addTerminalLine('text', chunk);
+            },
+            onComplete: (data) => {
+              // Final state update
+              setMiraState(data.updatedState);
 
-        // Add confidence indicator
-        addTerminalLine(
-          'system',
-          `[CONFIDENCE: ${Math.round(updatedState.confidenceInUser)}%]`
-        );
+              // Add transition phrase
+              addTerminalLine('text', '...what do you think about this...');
 
-        // Stream her response
-        streamResponse(response);
+              // Show ASCII art
+              const allPatterns = Object.values(ASCII_PATTERNS).flat();
+              const randomPattern = allPatterns[Math.floor(Math.random() * allPatterns.length)];
+              const asciiLine: TerminalLine = {
+                id: String(lineCountRef.current++),
+                type: 'ascii',
+                content: randomPattern,
+              };
+              setTerminalLines((prev) => [...prev, asciiLine]);
+              setIsStreaming(false);
+            },
+            onError: (error) => {
+              console.error('Stream error:', error);
+              addTerminalLine(
+                'text',
+                '...connection to the depths lost... the abyss is unreachable at this moment...'
+              );
+              setIsStreaming(false);
+            },
+          }
+        );
       } catch (error) {
         // Error handling: graceful degradation
         const errorMsg =
@@ -157,7 +163,7 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         setIsStreaming(false);
       }
     },
-    [miraState, addTerminalLine, streamResponse]
+    [miraState, addTerminalLine]
   );
 
   return (
@@ -169,6 +175,11 @@ export function TerminalInterface({ onReturn, initialConfidence }: TerminalInter
         <div className="terminal-interface__subtitle">
           Deep Sea Research Assistant · Connected
         </div>
+        <ConfidenceGauge
+          confidence={miraState.confidenceInUser}
+          isAnimating={isStreaming}
+          size="large"
+        />
       </div>
 
       <div className="terminal-interface__content">
