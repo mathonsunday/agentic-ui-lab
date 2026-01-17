@@ -403,6 +403,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Reset response tracking
               currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
+              // CRITICAL: Update ref synchronously BEFORE setState
+              isStreamingRef.current = false;
               setIsStreaming(false);
             },
             onError: (error) => {
@@ -438,6 +440,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Reset response tracking
               currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
+              // CRITICAL: Update ref synchronously BEFORE setState
+              isStreamingRef.current = false;
               setIsStreaming(false);
             },
           }
