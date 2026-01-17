@@ -1,9 +1,9 @@
-# Mira: Deep Sea Research Assistant
+# You Are The Research Assistant
 **An agentic UI exploring protocol adoption for AI agents with personality-driven responses and real-time state synchronization**
 
 ## Overview
 
-Mira is an interactive terminal-based research assistant themed around deep-sea exploration. It demonstrates modern agentic UI patterns (AG-UI, MCP-UI) with a focus on structured protocols, versioned APIs, and synchronized state management—all wrapped in an artistic ASCII art experience.
+In this experience, the AI agent is not the assistant - *you* are. The AI agent is evaluating whether you have the chops to be a real scientist. It demonstrates modern agentic UI patterns (AG-UI, MCP-UI) with a focus on structured protocols, versioned APIs, and synchronized state management—all wrapped in an artistic ASCII art experience.
 
 This is both a **learning lab for emerging agent protocols** and a **showcase of sophisticated full-stack patterns** for building AI-driven applications.
 
@@ -48,52 +48,6 @@ This is both a **learning lab for emerging agent protocols** and a **showcase of
 - **JSON Patch** - State delta operations
 - **Semantic Versioning** - Protocol evolution
 
-## 🎯 Core Features
-
-### 1. Structured Event Protocol
-```typescript
-// Events have correlation IDs and sequence numbers for proper causality tracking
-{
-  event_id: 'evt_msg_start_123',
-  schema_version: '1.0.0',
-  type: 'TEXT_MESSAGE_START',
-  timestamp: 1705534200000,
-  sequence_number: 0,
-  parent_event_id: undefined,
-  data: { message_id: 'msg_abc123' }
-}
-```
-
-### 2. Versioned State Synchronization
-```typescript
-// State includes version, timestamp, and checksum for conflict detection
-{
-  version: 1,
-  timestamp: 1705534200000,
-  checksum: 'sha256:abc123...',
-  state: { confidenceInUser: 75, currentMood: 'curious', ... }
-}
-```
-
-### 3. Tool Execution with Structured Results
-```typescript
-// Tools return status, artifacts, metadata, and UI updates
-{
-  status: 'success',
-  result: { tool_name: 'zoom_in', executed_at: '2025-01-17T...', ... },
-  metadata: { execution_time_ms: 12 },
-  ui_updates: [{ type: 'UPDATE_DISPLAY', target: 'ascii_art', ... }]
-}
-```
-
-### 4. Zoomable ASCII Art
-- **Treasure Chest** - From `[$$]` to ornate chest with jewels
-- **Submarine** - From compact vessel to detailed cockpit
-- **School of Fish** - From scattered patterns to organized formation
-- **Bioluminescent Fish** - From sparse lights to full organism glow
-- **Viper Fish** - From small predator to fearsome deep-sea hunter
-- Plus 10 more creatures, each with 3 zoom levels
-
 ## 🚀 Getting Started
 
 ```bash
@@ -112,7 +66,7 @@ npm run test
 
 ## 🎨 Artistic Vision
 
-Beyond the technical protocols, Mira maintains an artistic theme of deep-sea exploration:
+Beyond the technical protocols, You Are The Research Assistant maintains an artistic theme of deep-sea exploration:
 - Terminal-based UI that feels like sonar equipment
 - ASCII art creatures that reveal detail as you "zoom in"
 - Personality-driven responses that reference actual marine biology
