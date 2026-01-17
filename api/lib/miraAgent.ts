@@ -76,7 +76,7 @@ Return ONLY valid JSON in this exact format:
 }`;
 
     const message = await client.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-opus-4-1-20250805',
       max_tokens: 300,
       system: systemPrompt,
       messages: [
