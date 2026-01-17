@@ -4,6 +4,7 @@ import { MinimalInput } from './MinimalInput';
 import { TypewriterLine } from './TypewriterLine';
 import { LineByLineReveal } from './LineByLineReveal';
 import { settingsAtom } from '../stores/settings';
+import { createLogger } from '../utils/debugLogger';
 import {
   initializeMiraState,
   assessResponse,
@@ -27,6 +28,8 @@ interface TerminalLine {
   content: string;
   timestamp?: number;
 }
+
+const logger = createLogger('TerminalInterface');
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
@@ -260,7 +263,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       addTerminalLine('input', `> ${userInput}`);
 
       // Set streaming state to disable input
-      console.log('📡 Setting isStreaming to true');
       setIsStreaming(true);
 
       // Play audio cue
@@ -432,6 +434,23 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           {terminalLines.map((line) => {
             const isResponseLine = responseLineIdsRef.current.includes(line.id);
 
+            // VALIDATION: Warn if expected response line is missing from tracking
+            if (import.meta.env.DEV) {
+              const lineNum = parseInt(line.id);
+              const expectedResponseLineIds = responseLineIdsRef.current.map(id => parseInt(id));
+              if (!isNaN(lineNum) && expectedResponseLineIds.length > 0) {
+                const minExpected = Math.min(...expectedResponseLineIds);
+                const maxExpected = Math.max(...expectedResponseLineIds);
+                if (lineNum >= minExpected && lineNum <= maxExpected && !isResponseLine) {
+                  logger.warn('ID MISMATCH:', {
+                    lineId: line.id,
+                    trackedIds: responseLineIdsRef.current,
+                    message: 'Line ID falls within response range but not tracked!',
+                  });
+                }
+              }
+            }
+
             // For sequential animation: only animate the currently animating line
             const shouldAnimate = !isResponseLine || line.id === currentAnimatingLineIdRef.current;
 
@@ -481,17 +500,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
           <ToolButtonRow
             tools={(() => {
-              console.log('🛠️ Building tools array, isStreaming:', isStreaming);
               const interruptTool = { id: 'interrupt', name: 'INTERRUPT', onExecute: handleInterrupt };
               const tools = [
                 { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
                 { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
               ];
               if (isStreaming) {
-                console.log('✨ Adding interrupt tool to tools array');
                 tools.push(interruptTool);
               }
-              console.log('🛠️ Final tools:', tools.map(t => t.name));
               return tools;
             })()}
             disabled={false}

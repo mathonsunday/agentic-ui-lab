@@ -18,9 +18,6 @@ export interface ToolButtonRowProps {
  * Buttons are disabled during streaming interactions
  */
 export function ToolButtonRow({ tools, disabled = false }: ToolButtonRowProps) {
-  if (tools.length > 0) {
-    console.log('📦 ToolButtonRow rendering', tools.length, 'tools:', tools.map(t => t.name));
-  }
   return (
     <div className="tool-button-row">
       {tools.map((tool) => (
@@ -28,7 +25,6 @@ export function ToolButtonRow({ tools, disabled = false }: ToolButtonRowProps) {
           key={tool.id}
           name={tool.name}
           onToolClick={() => {
-            console.log(`🔘 Button clicked: ${tool.name}`);
             tool.onExecute();
           }}
           disabled={disabled}
