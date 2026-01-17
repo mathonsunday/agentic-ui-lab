@@ -102,6 +102,7 @@ export function streamMiraBackend(
   const streamId = generateStreamId();
   const abortController = new AbortController();
   activeStreams.set(streamId, abortController);
+  let wasInterrupted = false;
 
   const promise = (async () => {
     const apiUrl = getApiUrl();
@@ -143,6 +144,7 @@ export function streamMiraBackend(
         // Check abort signal at the start of each iteration
         if (abortController.signal.aborted) {
           console.log('🛑 [miraBackendStream] Abort signal detected, stopping read loop');
+          wasInterrupted = true;
           callbacks.onError?.('Stream interrupted by user');
           break;
         }
@@ -166,9 +168,11 @@ export function streamMiraBackend(
                 const envelope = parsed as EventEnvelope;
                 const ordered = eventBuffer.add(envelope);
 
-                // Process all ordered events
-                for (const evt of ordered) {
-                  handleEnvelopeEvent(evt, callbacks);
+                // Process all ordered events, but skip if interrupted
+                if (!wasInterrupted) {
+                  for (const evt of ordered) {
+                    handleEnvelopeEvent(evt, callbacks);
+                  }
                 }
               } catch (e) {
                 console.error('Failed to parse event:', e);
@@ -179,6 +183,7 @@ export function streamMiraBackend(
           // Check if abort was called
           if (abortController.signal.aborted) {
             console.log('🛑 [miraBackendStream] Caught abort error, stopping stream');
+            wasInterrupted = true;
             callbacks.onError?.('Stream interrupted by user');
             break;
           }
@@ -186,14 +191,17 @@ export function streamMiraBackend(
         }
       }
 
-      // Flush any remaining buffered events
-      const remaining = eventBuffer.flush();
-      for (const evt of remaining) {
-        handleEnvelopeEvent(evt, callbacks);
+      // Flush any remaining buffered events, but only if NOT interrupted
+      if (!wasInterrupted) {
+        const remaining = eventBuffer.flush();
+        for (const evt of remaining) {
+          handleEnvelopeEvent(evt, callbacks);
+        }
       }
     } catch (error) {
       // Check if this is an abort error
       if (error instanceof Error && error.name === 'AbortError') {
+        wasInterrupted = true;
         callbacks.onError?.('Stream interrupted by user');
       } else {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -208,6 +216,7 @@ export function streamMiraBackend(
   return {
     promise,
     abort: () => {
+      wasInterrupted = true;
       abortController.abort();
     },
   };
