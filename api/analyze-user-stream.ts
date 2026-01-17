@@ -284,8 +284,12 @@ Return ONLY valid JSON in this exact format:
       chunk_index: chunkIndex++,
     }, barChunkSeq, startEventId);
 
-    // Stream response chunks
+    // Stream response chunks with delays for typing effect
     for (const chunk of agentResponse.streaming) {
+      // Add delay between chunks to simulate Mira typing
+      // ~50-60ms per chunk gives natural typing speed with sound feedback
+      await sleep(50);
+
       const chunkId = generateEventId();
       const chunkSeq = eventTracker.getNextSequence();
       sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {

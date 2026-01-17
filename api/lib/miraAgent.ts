@@ -255,11 +255,29 @@ function selectWeightedResponse(responses: string[]): string {
 }
 
 /**
- * Helper: Split response into streaming chunks
+ * Helper: Split response into word-based chunks for character-by-character typing effect
+ * Max ~10-15 chars per chunk to feel like natural typing speed
  */
 function chunkResponse(response: string): string[] {
-  // Split on sentence boundaries, keeping punctuation
-  const chunks = response.split(/(?<=[.!?])\s+/);
+  const words = response.split(/(\s+)/); // Keep whitespace as separate elements
+  const chunks: string[] = [];
+  let currentChunk = '';
+
+  for (const word of words) {
+    // If adding this word would exceed limit, start a new chunk
+    if (currentChunk.length + word.length > 14 && currentChunk.length > 0) {
+      chunks.push(currentChunk);
+      currentChunk = word;
+    } else {
+      currentChunk += word;
+    }
+  }
+
+  // Don't forget the last chunk
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
   return chunks.filter((chunk) => chunk.length > 0);
 }
 

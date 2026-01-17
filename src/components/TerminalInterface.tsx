@@ -5,7 +5,7 @@ import {
   assessResponse,
   type MiraState,
 } from '../shared/miraAgentSimulator';
-import { playStreamingSound } from '../shared/audioEngine';
+import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getRandomCreature, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
@@ -283,6 +283,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             onResponseChunk: (chunk) => {
               // Display chunk immediately
               addTerminalLine('text', chunk);
+              // Play typing sound for each chunk (non-blocking)
+              playHydrophoneStatic(0.15).catch(() => {
+                // Silently ignore audio context errors (e.g., user hasn't interacted yet)
+              });
             },
             onComplete: (data) => {
               // Final state update
