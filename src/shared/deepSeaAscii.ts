@@ -104,6 +104,7 @@ const creatures = {
 };
 
 // Mood-based collections
+// Only includes creatures with zoom variants to avoid showing non-zoomable art
 export const ASCII_PATTERNS: Record<string, string[]> = {
   testing: [
     creatures.jellyfish,
@@ -112,17 +113,6 @@ export const ASCII_PATTERNS: Record<string, string[]> = {
     creatures.bioluminescentFish,
     creatures.coral,
     creatures.treasureChest,
-    `
-       <°)))><
-          ~
-         ~
-        ~
-    `,
-    `
-     ~_~_~_
-    (~°°~°°)
-     ~_~_~_
-    `,
   ],
   curious: [
     creatures.octopus,
@@ -131,74 +121,18 @@ export const ASCII_PATTERNS: Record<string, string[]> = {
     creatures.viperFish,
     creatures.submarine,
     creatures.deepSeaDiver,
-    `
-      {*}
-     /|||\\
-      |o|
-     {~~~}
-    `,
-    `
-    <(°)))><
-     ~(~)~
-     {*=*}
-    `,
   ],
   vulnerable: [
     creatures.jellyfish,
     creatures.octopus,
     creatures.deepSeaScene,
     creatures.coral,
-    `
-      ~~~
-     (°°°)
-      |||
-      |||
-    `,
-    `
-    ,--~~~--,
-   ( . . . )
-    \`-._..-'
-      ||||
-      ': :'
-    `,
-    `
-     [...]
-    (  o  )
-     \`---'
-    ~~~~
-    `,
-    `
-     {*}
-    (°°°)
-    {~~~}
-    `,
   ],
   excited: [
     creatures.shark,
     creatures.giantSquid,
     creatures.anglerFish,
     creatures.schoolOfFish,
-    `
-      * * *
-    <(°))))><
-      * * *
-    `,
-    `
-   {°}~{°}~{°}
-  /|||||||||||\\
-  ~~~~~~~~~~~
-    `,
-    `
-     !!!
-    <()>
-    |||
-    !!!
-    `,
-    `
-    >><(°>
-   >  <
-   >> ^
-    `,
   ],
   defensive: [
     creatures.shark,
@@ -206,25 +140,6 @@ export const ASCII_PATTERNS: Record<string, string[]> = {
     creatures.hermitCrab,
     creatures.seaTurtle,
     creatures.submarine,
-    `
-    [===]
-   /| | |\\
-   | | | |
-    \\| | |/
-    [===]
-    `,
-    `
-   { ° }
-  [|||||]
-   \\ | /
-   ~~~~~
-    `,
-    `
-    /\\ /\\
-   / X X \\
-   \\ | | /
-    \\ ~ /
-    `,
   ],
 };
 
