@@ -30,6 +30,12 @@ interface TerminalLine {
 
 const logger = createLogger('TerminalInterface');
 
+// Stream debugging logger with timestamps
+const streamDebugLog = (message: string, data?: any) => {
+  const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+  console.log(`[STREAM_DEBUG ${timestamp}] ${message}`, data || '');
+};
+
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
   const [miraState, setMiraState] = useState<MiraState>(() => {
@@ -51,6 +57,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   ]);
   const [isStreaming, setIsStreaming] = useState(false);
   const isStreamingRef = useRef(false);
+  const streamCounterRef = useRef(0); // Track how many streams have been initiated
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
@@ -58,12 +65,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const lineCountRef = useRef(2);
   const abortControllerRef = useRef<(() => void) | null>(null);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
-  const [, setRenderTrigger] = useState(0); // Force re-render when animation completes
+  const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
 
-  // Keep ref in sync with state
+  // Keep ref in sync with state and log all state changes
   useEffect(() => {
     isStreamingRef.current = isStreaming;
+    streamDebugLog(`isStreaming state changed`, {
+      newValue: isStreaming,
+      refValue: isStreamingRef.current,
+      streamCount: streamCounterRef.current,
+      timestamp: Date.now()
+    });
   }, [isStreaming]);
 
   // Auto-scroll to bottom when new lines are added
@@ -186,14 +199,22 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   const handleToolCall = useCallback(
     async (toolAction: string, toolData: Record<string, unknown>) => {
+      const streamNum = ++streamCounterRef.current;
       console.log('🔧 Tool call initiated:', toolAction, toolData);
       console.log('📊 Current confidence before:', miraState.confidenceInUser);
+      streamDebugLog(`handleToolCall started - STREAM #${streamNum}`, {
+        action: toolAction,
+        isCurrentlyStreaming: isStreamingRef.current,
+        isStreamingState: isStreaming
+      });
 
       if (isStreamingRef.current) {
         console.log('⚠️ Already streaming, ignoring tool call');
+        streamDebugLog(`Already streaming - ignoring this tool call`);
         return;
       }
 
+      streamDebugLog(`Setting streaming TRUE for tool call`, { stream: streamNum });
       isStreamingRef.current = true;
       setIsStreaming(true);
       setInteractionCount((prev) => prev + 1);
@@ -212,6 +233,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           {
             onConfidence: (update) => {
               console.log('✅ Confidence update received:', update.from, '→', update.to);
+              streamDebugLog(`onConfidence callback - STREAM #${streamNum}`, { from: update.from, to: update.to });
               setMiraState((prev) => ({
                 ...prev,
                 confidenceInUser: update.to,
@@ -222,6 +244,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             onComplete: (data) => {
               console.log('✨ Tool call complete, new confidence:', data.updatedState.confidenceInUser);
               console.log('🛑 Setting isStreaming to false');
+              streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
+                newConfidence: data.updatedState.confidenceInUser,
+                aboutToSetIsStreamingFalse: true
+              });
               isStreamingRef.current = false;
               setMiraState(data.updatedState);
               onConfidenceChange?.(data.updatedState.confidenceInUser);
@@ -229,6 +255,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
             onError: (error) => {
               console.error('❌ Tool call error:', error);
+              streamDebugLog(`onError callback - STREAM #${streamNum}`, { error, aboutToSetIsStreamingFalse: true });
               isStreamingRef.current = false;
               addTerminalLine('text', `...error: ${error}...`);
               setIsStreaming(false);
@@ -237,15 +264,22 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         );
         abortControllerRef.current = abort;
         console.log('📌 Abort controller set for tool stream');
+        streamDebugLog(`Abort controller set - STREAM #${streamNum}`);
         await promise;
         console.log('✅ Tool stream promise resolved');
+        streamDebugLog(`Tool stream promise resolved - STREAM #${streamNum}`);
       } catch (error) {
         console.error('Tool call failed:', error);
+        streamDebugLog(`Caught error in try-catch - STREAM #${streamNum}`, { error });
         isStreamingRef.current = false;
         setIsStreaming(false);
       } finally {
         // Always clear abort ref and ensure streaming is stopped
         console.log('🧹 Clearing abort controller and stopping stream');
+        streamDebugLog(`Finally block executing - STREAM #${streamNum}`, {
+          isStreamingRefBefore: isStreamingRef.current,
+          aboutToSetFalse: true
+        });
         isStreamingRef.current = false;
         setIsStreaming(false);
         abortControllerRef.current = null;
@@ -256,12 +290,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   const handleInput = useCallback(
     async (userInput: string) => {
+      const streamNum = ++streamCounterRef.current;
       if (!userInput.trim()) return;
+
+      streamDebugLog(`handleInput started - STREAM #${streamNum}`, {
+        userInput: userInput.substring(0, 50) + '...',
+        isCurrentlyStreaming: isStreamingRef.current
+      });
 
       // Add user input to terminal
       addTerminalLine('input', `> ${userInput}`);
 
       // Set streaming state to disable input
+      streamDebugLog(`Setting streaming TRUE for input - STREAM #${streamNum}`);
       setIsStreaming(true);
 
       // Play audio cue
@@ -300,6 +341,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add each chunk as a separate terminal line to preserve formatting and gaps
               const newLineId = String(lineCountRef.current);
 
+              streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
+                chunkLength: chunk.length,
+                newLineId,
+                isCurrentlyStreaming: isStreamingRef.current,
+                isStreamingState: isStreaming
+              });
+
               // Track this line as part of the response sequence
               responseLineIdsRef.current.push(newLineId);
 
@@ -307,6 +355,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               if (!currentAnimatingLineIdRef.current) {
                 currentAnimatingLineIdRef.current = newLineId;
                 setRenderTrigger(t => t + 1); // Force re-render
+                streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
               }
 
               addTerminalLine('text', chunk);
@@ -322,6 +371,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }
             },
             onComplete: (data) => {
+              streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
+                newConfidence: data.updatedState.confidenceInUser,
+                aboutToSetIsStreamingFalse: true,
+                isStreamingRefBefore: isStreamingRef.current
+              });
+
               // Final state update
               setMiraState(data.updatedState);
               onConfidenceChange?.(data.updatedState.confidenceInUser);
@@ -350,6 +405,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
             onError: (error) => {
               console.error('Stream error:', error);
+              streamDebugLog(`onError callback - STREAM #${streamNum}`, {
+                error,
+                isStreamingRefBefore: isStreamingRef.current,
+                aboutToSetIsStreamingFalse: true
+              });
 
               // Check if this is an interrupt (user explicitly stopped)
               const isInterrupt = error.includes('interrupted');
@@ -382,13 +442,16 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         );
         abortControllerRef.current = abort;
         console.log('📌 Abort controller set for input stream');
+        streamDebugLog(`Abort controller set - STREAM #${streamNum}`);
         await promise;
         console.log('✅ Input stream promise resolved');
+        streamDebugLog(`Input stream promise resolved - STREAM #${streamNum}`);
       } catch (error) {
         // Error handling: graceful degradation
         const errorMsg =
           error instanceof Error ? error.message : 'Unknown error';
         console.error('Backend error:', errorMsg);
+        streamDebugLog(`Caught error in try-catch - STREAM #${streamNum}`, { error: errorMsg });
 
         addTerminalLine(
           'text',
@@ -398,6 +461,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       } finally {
         // Always clear abort ref and ensure streaming is stopped
         console.log('🧹 Clearing abort controller and stopping stream');
+        streamDebugLog(`Finally block executing - STREAM #${streamNum}`, {
+          isStreamingRefBefore: isStreamingRef.current,
+          aboutToSetFalse: true
+        });
         isStreamingRef.current = false;
         setIsStreaming(false);
         abortControllerRef.current = null;
@@ -408,14 +475,21 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   const handleInterrupt = useCallback(() => {
     console.log('🛑 Interrupt button clicked, abort fn exists?', !!abortControllerRef.current);
+    streamDebugLog(`handleInterrupt called`, {
+      hasAbortController: !!abortControllerRef.current,
+      isStreaming,
+      isStreamingRef: isStreamingRef.current
+    });
     if (abortControllerRef.current) {
       console.log('🛑 Interrupt requested - calling abort function');
+      streamDebugLog(`Calling abort function`);
       abortControllerRef.current();
       console.log('✅ Abort function called - the onError callback will handle cleanup');
     } else {
       console.log('⚠️ No abort controller available');
+      streamDebugLog(`No abort controller available`);
     }
-  }, []);
+  }, [isStreaming]);
 
   return (
     <div className="terminal-interface">
@@ -499,9 +573,25 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
                 { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
               ];
+
+              // Detailed logging for tool button rendering
               if (isStreaming) {
                 tools.push(interruptTool);
+                streamDebugLog(`RENDER: Adding interrupt button`, {
+                  isStreaming,
+                  isStreamingRef: isStreamingRef.current,
+                  renderTrigger,
+                  toolCount: tools.length
+                });
+              } else {
+                streamDebugLog(`RENDER: NOT adding interrupt button (isStreaming is false)`, {
+                  isStreaming,
+                  isStreamingRef: isStreamingRef.current,
+                  renderTrigger,
+                  toolCount: tools.length
+                });
               }
+
               return tools;
             })()}
             disabled={false}
