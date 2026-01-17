@@ -160,6 +160,12 @@ export function streamMiraBackend(
           lineBuffer = lines[lines.length - 1];
 
           for (let i = 0; i < lines.length - 1; i++) {
+            // Check for interrupt before processing each line
+            if (wasInterrupted) {
+              console.log('🛑 [miraBackendStream] wasInterrupted flag set, skipping remaining chunks');
+              break;
+            }
+
             const line = lines[i];
 
             if (line.startsWith('data: ')) {
@@ -168,11 +174,9 @@ export function streamMiraBackend(
                 const envelope = parsed as EventEnvelope;
                 const ordered = eventBuffer.add(envelope);
 
-                // Process all ordered events, but skip if interrupted
-                if (!wasInterrupted) {
-                  for (const evt of ordered) {
-                    handleEnvelopeEvent(evt, callbacks);
-                  }
+                // Process all ordered events
+                for (const evt of ordered) {
+                  handleEnvelopeEvent(evt, callbacks);
                 }
               } catch (e) {
                 console.error('Failed to parse event:', e);
