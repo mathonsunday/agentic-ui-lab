@@ -21,11 +21,6 @@ import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js
 import { updateConfidenceAndProfile, selectResponse, updateMemory, processToolCall } from './lib/miraAgent.js';
 import { SPECIMEN_47_GRANT_PROPOSAL } from './lib/responseLibrary.js';
 
-interface StreamEvent {
-  type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';
-  data: unknown;
-}
-
 /**
  * Generate unique event ID
  */
@@ -78,7 +73,12 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     };
 
     if (!miraState || !assessment) {
-      sendEvent(response, { type: 'error', data: { message: 'Missing required fields' } }, eventTracker);
+      const errorId = generateEventId();
+      sendAGUIEvent(response, errorId, 'ERROR', {
+        code: 'MISSING_FIELDS',
+        message: 'Missing required fields',
+        recoverable: false,
+      }, eventTracker.getNextSequence());
       return response.end();
     }
 
@@ -86,33 +86,32 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     if (toolData && toolData.action) {
       const updatedState = processToolCall(miraState, toolData);
 
-      sendEvent(response, {
-        type: 'confidence',
-        data: {
-          from: miraState.confidenceInUser,
-          to: updatedState.confidenceInUser,
-          delta: updatedState.confidenceInUser - miraState.confidenceInUser,
-        },
-      }, eventTracker);
-
-      sendEvent(response, {
-        type: 'complete',
-        data: {
-          updatedState,
-          response: {
-            streaming: [],
-            observations: [],
-            contentSelection: { sceneId: '', creatureId: '', revealLevel: 'moderate' as const },
+      // Send state delta with confidence update
+      const stateEventId = generateEventId();
+      const stateSequence = eventTracker.getNextSequence();
+      sendAGUIEvent(response, stateEventId, 'STATE_DELTA', {
+        version: 1,
+        timestamp: Date.now(),
+        operations: [
+          {
+            op: 'replace',
+            path: '/confidenceInUser',
+            value: updatedState.confidenceInUser,
           },
-        },
-      }, eventTracker);
+        ],
+      }, stateSequence);
 
       return response.end();
     }
 
     // Handle text input events
     if (!userInput) {
-      sendEvent(response, { type: 'error', data: { message: 'Missing userInput for text interaction' } }, eventTracker);
+      const errorId = generateEventId();
+      sendAGUIEvent(response, errorId, 'ERROR', {
+        code: 'MISSING_INPUT',
+        message: 'Missing userInput for text interaction',
+        recoverable: false,
+      }, eventTracker.getNextSequence());
       return response.end();
     }
 
@@ -122,7 +121,12 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      sendEvent(response, { type: 'error', data: { message: 'Server configuration error' } }, eventTracker);
+      const errorId = generateEventId();
+      sendAGUIEvent(response, errorId, 'ERROR', {
+        code: 'SERVER_CONFIG_ERROR',
+        message: 'Server configuration error',
+        recoverable: false,
+      }, eventTracker.getNextSequence());
       return response.end();
     }
 
@@ -201,7 +205,12 @@ Return ONLY valid JSON in this exact format:
     // Parse the JSON response from Claude
     const jsonMatch = fullResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      sendEvent(response, { type: 'error', data: { message: 'Invalid Claude response format' } });
+      const errorId = generateEventId();
+      sendAGUIEvent(response, errorId, 'ERROR', {
+        code: 'INVALID_RESPONSE',
+        message: 'Invalid Claude response format',
+        recoverable: false,
+      }, eventTracker.getNextSequence());
       return response.end();
     }
 
@@ -213,27 +222,31 @@ Return ONLY valid JSON in this exact format:
       Math.min(100, miraState.confidenceInUser + analysis.confidenceDelta)
     );
 
-    // Stream confidence update immediately
-    sendEvent(response, {
-      type: 'confidence',
-      data: {
-        from: miraState.confidenceInUser,
-        to: newConfidence,
-        delta: analysis.confidenceDelta,
-      },
-    }, eventTracker);
-
-    // Stream profile update
-    sendEvent(response, {
-      type: 'profile',
-      data: {
-        thoughtfulness: analysis.thoughtfulness,
-        adventurousness: analysis.adventurousness,
-        engagement: analysis.engagement,
-        curiosity: analysis.curiosity,
-        superficiality: analysis.superficiality,
-      },
-    }, eventTracker);
+    // Send state delta with confidence and profile updates
+    const stateEventId = generateEventId();
+    const stateSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, stateEventId, 'STATE_DELTA', {
+      version: 1,
+      timestamp: Date.now(),
+      operations: [
+        {
+          op: 'replace',
+          path: '/confidenceInUser',
+          value: newConfidence,
+        },
+        {
+          op: 'replace',
+          path: '/userProfile',
+          value: {
+            thoughtfulness: analysis.thoughtfulness,
+            adventurousness: analysis.adventurousness,
+            engagement: analysis.engagement,
+            curiosity: analysis.curiosity,
+            superficiality: analysis.superficiality,
+          },
+        },
+      ],
+    }, stateSequence);
 
     // Update state with analysis
     const updatedState = updateConfidenceAndProfile(miraState, {
@@ -251,42 +264,55 @@ Return ONLY valid JSON in this exact format:
     // Select response based on updated state
     const agentResponse = selectResponse(updatedState, assessment);
 
-    // Stream confidence bar as first response chunk
+    // Start text message sequence
+    const messageId = `msg_analysis_${Date.now()}`;
+    const startEventId = generateEventId();
+    const startSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(response, startEventId, 'TEXT_MESSAGE_START', {
+      message_id: messageId,
+    }, startSequence);
+
+    // Stream confidence bar as first chunk
     const confidenceBar = generateConfidenceBar(newConfidence);
-    sendEvent(response, {
-      type: 'response_chunk',
-      data: { chunk: confidenceBar },
-    }, eventTracker);
+    let chunkIndex = 0;
+
+    const barChunkId = generateEventId();
+    const barChunkSeq = eventTracker.getNextSequence();
+    sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
+      chunk: confidenceBar,
+      chunk_index: chunkIndex++,
+    }, barChunkSeq, startEventId);
 
     // Stream response chunks
     for (const chunk of agentResponse.streaming) {
-      sendEvent(response, {
-        type: 'response_chunk',
-        data: { chunk },
-      }, eventTracker);
+      const chunkId = generateEventId();
+      const chunkSeq = eventTracker.getNextSequence();
+      sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
+        chunk,
+        chunk_index: chunkIndex++,
+      }, chunkSeq, startEventId);
     }
 
-    // Update memory
-    const finalState = updateMemory(updatedState, userInput, agentResponse);
+    // Complete text message
+    const endEventId = generateEventId();
+    const endSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, endEventId, 'TEXT_MESSAGE_END', {
+      total_chunks: chunkIndex,
+    }, endSequence, startEventId);
 
-    // Send final state
-    sendEvent(response, {
-      type: 'complete',
-      data: {
-        updatedState: finalState,
-        response: agentResponse,
-      },
-    }, eventTracker);
+    // Update memory
+    updateMemory(updatedState, userInput, agentResponse);
 
     response.end();
   } catch (error) {
     console.error('Streaming error:', error);
-    sendEvent(response, {
-      type: 'error',
-      data: {
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-    }, eventTracker);
+    const errorId = generateEventId();
+    sendAGUIEvent(response, errorId, 'ERROR', {
+      code: 'STREAM_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      recoverable: false,
+    }, eventTracker.getNextSequence());
     response.end();
   }
 };
@@ -447,31 +473,3 @@ function generateConfidenceBar(confidence: number): string {
   return `[RAPPORT] ${bar} ${percent}%\n`;
 }
 
-/**
- * Helper: Send SSE formatted event with envelope
- */
-function sendEvent(
-  response: VercelResponse,
-  event: StreamEvent,
-  eventTracker?: EventSequence,
-  parentEventId?: string
-): void {
-  const eventId = generateEventId();
-  const sequence = eventTracker?.getNextSequence() ?? 0;
-
-  if (eventTracker) {
-    eventTracker.setFirstEventId(eventId);
-  }
-
-  const envelope = {
-    event_id: eventId,
-    schema_version: '1.0.0',
-    type: 'LEGACY_EVENT', // Backward compatibility marker
-    timestamp: Date.now(),
-    sequence_number: sequence,
-    parent_event_id: parentEventId || eventTracker?.getFirstEventId(),
-    data: event,
-  };
-
-  response.write(`data: ${JSON.stringify(envelope)}\n\n`);
-}

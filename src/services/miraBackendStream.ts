@@ -13,11 +13,6 @@
 import type { MiraState, AgentResponse, ResponseAssessment, ToolCallData } from '../../api/lib/types';
 import type { EventEnvelope } from '../types/events';
 
-export interface StreamEvent {
-  type: 'confidence' | 'profile' | 'response_chunk' | 'complete' | 'error';
-  data: unknown;
-}
-
 export interface ConfidenceUpdate {
   from: number;
   to: number;
@@ -160,22 +155,13 @@ export function streamMiraBackend(
 
             if (line.startsWith('data: ')) {
               try {
-                // Try parsing as envelope first (new format)
                 const parsed = JSON.parse(line.slice(6));
+                const envelope = parsed as EventEnvelope;
+                const ordered = eventBuffer.add(envelope);
 
-                if (parsed.event_id && parsed.schema_version !== undefined) {
-                  // New envelope format
-                  const envelope = parsed as EventEnvelope;
-                  const ordered = eventBuffer.add(envelope);
-
-                  // Process all ordered events
-                  for (const evt of ordered) {
-                    handleEnvelopeEvent(evt, callbacks);
-                  }
-                } else {
-                  // Legacy format
-                  const eventData = parsed as StreamEvent;
-                  handleStreamEvent(eventData, callbacks);
+                // Process all ordered events
+                for (const evt of ordered) {
+                  handleEnvelopeEvent(evt, callbacks);
                 }
               } catch (e) {
                 console.error('Failed to parse event:', e);
@@ -220,18 +206,15 @@ export function streamMiraBackend(
 }
 
 /**
- * Handle envelope events (new AG-UI format)
- * Supports both native AG-UI events and legacy wrapped events
+ * Handle AG-UI event envelopes
  */
 function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
-  // Handle native AG-UI event types
   switch (envelope.type) {
     case 'TEXT_MESSAGE_START':
-      // Message streaming starting - can be used for UI state
+      // Message streaming starting
       break;
 
     case 'TEXT_CONTENT': {
-      // Stream text content chunk
       const contentData = envelope.data as { chunk: string; chunk_index: number };
       callbacks.onResponseChunk?.(contentData.chunk);
       break;
@@ -242,19 +225,17 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
       break;
 
     case 'STATE_DELTA': {
-      // Handle state delta events (JSON Patch format)
       const deltaData = envelope.data as {
         version: number;
         timestamp: number;
         operations: Array<{ op: string; path: string; value?: unknown }>;
       };
 
-      // Apply patches to extract confidence changes for backward compatibility
+      // Extract confidence updates from JSON Patch operations
       for (const op of deltaData.operations) {
         if (op.op === 'replace' && op.path === '/confidenceInUser') {
-          // Emit confidence update for compatibility with existing callbacks
           callbacks.onConfidence?.({
-            from: 0, // We don't track previous in STATE_DELTA
+            from: 0,
             to: op.value as number,
             delta: 0,
           });
@@ -277,43 +258,6 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
 
     case 'ACK':
       // Acknowledgment - no action needed on client
-      break;
-
-    default:
-      // Check if wrapped as legacy format
-      const legacyEvent = envelope.data as StreamEvent;
-      if (legacyEvent.type) {
-        handleStreamEvent(legacyEvent, callbacks);
-      }
-  }
-}
-
-/**
- * Handle individual stream events (legacy format wrapped in envelope)
- */
-function handleStreamEvent(event: StreamEvent, callbacks: StreamCallbacks): void {
-  switch (event.type) {
-    case 'confidence':
-      callbacks.onConfidence?.(event.data as ConfidenceUpdate);
-      break;
-
-    case 'profile':
-      callbacks.onProfile?.(event.data as ProfileUpdate);
-      break;
-
-    case 'response_chunk':
-      const chunkData = event.data as { chunk: string };
-      callbacks.onResponseChunk?.(chunkData.chunk);
-      break;
-
-    case 'complete':
-      const completeData = event.data as { updatedState: MiraState; response: AgentResponse };
-      callbacks.onComplete?.(completeData);
-      break;
-
-    case 'error':
-      const errorData = event.data as { message: string };
-      callbacks.onError?.(errorData.message);
       break;
   }
 }

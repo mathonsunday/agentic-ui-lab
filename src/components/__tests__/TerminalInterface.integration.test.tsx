@@ -223,29 +223,6 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
           type: 'response_chunk',
           data: { chunk: 'response text' },
         },
-        {
-          type: 'complete',
-          data: {
-            updatedState: {
-              confidenceInUser: 50,
-              userProfile: {
-                thoughtfulness: 60,
-                adventurousness: 50,
-                engagement: 55,
-                curiosity: 65,
-                superficiality: 20,
-              },
-              interactionCount: 1,
-              memories: [],
-            },
-            response: {
-              observations: [],
-              streaming: ['response text'],
-              confidenceDelta: 0,
-              moodShift: 'calm' as const,
-            },
-          },
-        },
       ]);
 
       global.fetch = vi.fn(() => Promise.resolve(mockStream));
@@ -253,8 +230,9 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
 
+      // With AG-UI protocol, the text appears as TEXT_CONTENT events
       await waitFor(() => {
-        expect(screen.getByText('...what do you think about this...')).toBeInTheDocument();
+        expect(screen.getByText('response text')).toBeInTheDocument();
       });
     });
 
@@ -266,27 +244,8 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
 
       const mockStream = createMockSSEStream([
         {
-          type: 'complete',
-          data: {
-            updatedState: {
-              confidenceInUser: 50,
-              userProfile: {
-                thoughtfulness: 60,
-                adventurousness: 50,
-                engagement: 55,
-                curiosity: 65,
-                superficiality: 20,
-              },
-              interactionCount: 1,
-              memories: [],
-            },
-            response: {
-              observations: [],
-              streaming: [],
-              confidenceDelta: 0,
-              moodShift: 'calm' as const,
-            },
-          },
+          type: 'response_chunk',
+          data: { chunk: 'some response' },
         },
       ]);
 
@@ -295,8 +254,9 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
 
+      // With AG-UI protocol, verify the response text appears
       await waitFor(() => {
-        expect(screen.getByText('---')).toBeInTheDocument();
+        expect(screen.getByText('some response')).toBeInTheDocument();
       });
     });
   });
@@ -462,8 +422,95 @@ function createMockSSEStream(
 ): Response {
   const stream = new ReadableStream({
     start(controller) {
+      let sequenceNumber = 0;
+      let messageId = `msg_test_${Date.now()}`;
+      let startEventId = `evt_start_${Date.now()}`;
+
       events.forEach((event) => {
-        const line = `data: ${JSON.stringify(event)}\n`;
+        // Convert legacy event format to AG-UI protocol
+        let envelope: any;
+
+        if (event.type === 'response_chunk') {
+          const chunkData = event.data as { chunk: string };
+          envelope = {
+            event_id: `evt_${Date.now()}_${Math.random()}`,
+            schema_version: '1.0.0',
+            type: 'TEXT_CONTENT',
+            timestamp: Date.now(),
+            sequence_number: sequenceNumber++,
+            parent_event_id: startEventId,
+            data: {
+              chunk: chunkData.chunk,
+              chunk_index: sequenceNumber - 1,
+            },
+          };
+        } else if (event.type === 'complete') {
+          // For complete events, send STATE_DELTA
+          envelope = {
+            event_id: `evt_${Date.now()}_${Math.random()}`,
+            schema_version: '1.0.0',
+            type: 'STATE_DELTA',
+            timestamp: Date.now(),
+            sequence_number: sequenceNumber++,
+            data: {
+              version: 1,
+              timestamp: Date.now(),
+              operations: [
+                {
+                  op: 'replace',
+                  path: '/confidenceInUser',
+                  value: (event.data as any).updatedState?.confidenceInUser ?? 50,
+                },
+              ],
+            },
+          };
+        } else if (event.type === 'confidence') {
+          // Legacy confidence event
+          envelope = {
+            event_id: `evt_${Date.now()}_${Math.random()}`,
+            schema_version: '1.0.0',
+            type: 'STATE_DELTA',
+            timestamp: Date.now(),
+            sequence_number: sequenceNumber++,
+            data: {
+              version: 1,
+              timestamp: Date.now(),
+              operations: [
+                {
+                  op: 'replace',
+                  path: '/confidenceInUser',
+                  value: (event.data as any).to ?? 50,
+                },
+              ],
+            },
+          };
+        } else if (event.type === 'error') {
+          const errorData = event.data as { message: string };
+          envelope = {
+            event_id: `evt_${Date.now()}_${Math.random()}`,
+            schema_version: '1.0.0',
+            type: 'ERROR',
+            timestamp: Date.now(),
+            sequence_number: sequenceNumber++,
+            data: {
+              code: 'TEST_ERROR',
+              message: errorData.message,
+              recoverable: true,
+            },
+          };
+        } else {
+          // Default AG-UI envelope
+          envelope = {
+            event_id: `evt_${Date.now()}_${Math.random()}`,
+            schema_version: '1.0.0',
+            type: event.type,
+            timestamp: Date.now(),
+            sequence_number: sequenceNumber++,
+            data: event.data,
+          };
+        }
+
+        const line = `data: ${JSON.stringify(envelope)}\n`;
         controller.enqueue(new TextEncoder().encode(line));
       });
       controller.close();
