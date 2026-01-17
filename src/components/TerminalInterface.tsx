@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
 import { useAtom } from 'jotai';
 import { MinimalInput } from './MinimalInput';
 import { TypewriterLine } from './TypewriterLine';
@@ -28,6 +28,56 @@ interface TerminalLine {
   timestamp?: number;
 }
 
+// Stream state management with useReducer
+interface StreamState {
+  isStreaming: boolean;
+  streamId: number;
+  abortController: (() => void) | null;
+}
+
+type StreamAction =
+  | { type: 'START_STREAM'; abort: () => void }
+  | { type: 'END_STREAM' }
+  | { type: 'INTERRUPT_STREAM' };
+
+function streamReducer(state: StreamState, action: StreamAction): StreamState {
+  switch (action.type) {
+    case 'START_STREAM':
+      const newStreamId = state.streamId + 1;
+      streamDebugLog(`[REDUCER] START_STREAM`, {
+        newStreamId,
+        abortController: !!action.abort,
+      });
+      return {
+        isStreaming: true,
+        streamId: newStreamId,
+        abortController: action.abort,
+      };
+    case 'END_STREAM':
+      streamDebugLog(`[REDUCER] END_STREAM`, {
+        streamId: state.streamId,
+        wasStreaming: state.isStreaming,
+      });
+      return {
+        ...state,
+        isStreaming: false,
+        abortController: null,
+      };
+    case 'INTERRUPT_STREAM':
+      streamDebugLog(`[REDUCER] INTERRUPT_STREAM`, {
+        streamId: state.streamId,
+        wasStreaming: state.isStreaming,
+      });
+      return {
+        ...state,
+        isStreaming: false,
+        abortController: null,
+      };
+    default:
+      return state;
+  }
+}
+
 const logger = createLogger('TerminalInterface');
 
 // Stream debugging logger with timestamps
@@ -55,29 +105,21 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       timestamp: Date.now() + 100,
     },
   ]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const isStreamingRef = useRef(false);
-  const streamCounterRef = useRef(0); // Track how many streams have been initiated
+  // Centralized stream state with useReducer
+  const [streamState, dispatchStream] = useReducer(streamReducer, {
+    isStreaming: false,
+    streamId: 0,
+    abortController: null,
+  });
+
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
-  const abortControllerRef = useRef<(() => void) | null>(null);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
-
-  // Keep ref in sync with state and log all state changes
-  useEffect(() => {
-    isStreamingRef.current = isStreaming;
-    streamDebugLog(`isStreaming state changed`, {
-      newValue: isStreaming,
-      refValue: isStreamingRef.current,
-      streamCount: streamCounterRef.current,
-      timestamp: Date.now()
-    });
-  }, [isStreaming]);
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {
@@ -199,24 +241,23 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   const handleToolCall = useCallback(
     async (toolAction: string, toolData: Record<string, unknown>) => {
-      const streamNum = ++streamCounterRef.current;
+      const streamNum = streamState.streamId + 1;
       console.log('🔧 Tool call initiated:', toolAction, toolData);
       console.log('📊 Current confidence before:', miraState.confidenceInUser);
       streamDebugLog(`handleToolCall started - STREAM #${streamNum}`, {
         action: toolAction,
-        isCurrentlyStreaming: isStreamingRef.current,
-        isStreamingState: isStreaming
+        isCurrentlyStreaming: streamState.isStreaming,
       });
 
-      if (isStreamingRef.current) {
+      if (streamState.isStreaming) {
         console.log('⚠️ Already streaming, ignoring tool call');
-        streamDebugLog(`Already streaming - ignoring this tool call`);
+        streamDebugLog(`Already streaming - ignoring this tool call - STREAM #${streamNum}`);
         return;
       }
 
-      streamDebugLog(`Setting streaming TRUE for tool call`, { stream: streamNum });
-      isStreamingRef.current = true;
-      setIsStreaming(true);
+      streamDebugLog(`Dispatching START_STREAM for tool call - STREAM #${streamNum}`, {
+        action: toolAction,
+      });
       setInteractionCount((prev) => prev + 1);
 
       try {
@@ -243,69 +284,62 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
             onComplete: (data) => {
               console.log('✨ Tool call complete, new confidence:', data.updatedState.confidenceInUser);
-              console.log('🛑 Setting isStreaming to false');
+              console.log('🛑 Dispatching END_STREAM');
               streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
                 newConfidence: data.updatedState.confidenceInUser,
-                aboutToSetIsStreamingFalse: true
               });
-              isStreamingRef.current = false;
               setMiraState(data.updatedState);
               onConfidenceChange?.(data.updatedState.confidenceInUser);
-              setIsStreaming(false);
+              dispatchStream({ type: 'END_STREAM' });
             },
             onError: (error) => {
               console.error('❌ Tool call error:', error);
-              streamDebugLog(`onError callback - STREAM #${streamNum}`, { error, aboutToSetIsStreamingFalse: true });
-              isStreamingRef.current = false;
+              streamDebugLog(`onError callback - STREAM #${streamNum}`, { error });
               addTerminalLine('text', `...error: ${error}...`);
-              setIsStreaming(false);
+              dispatchStream({ type: 'END_STREAM' });
             },
           }
         );
-        abortControllerRef.current = abort;
+        dispatchStream({ type: 'START_STREAM', abort });
         console.log('📌 Abort controller set for tool stream');
-        streamDebugLog(`Abort controller set - STREAM #${streamNum}`);
+        streamDebugLog(`START_STREAM dispatched - STREAM #${streamNum}`);
         await promise;
         console.log('✅ Tool stream promise resolved');
         streamDebugLog(`Tool stream promise resolved - STREAM #${streamNum}`);
       } catch (error) {
         console.error('Tool call failed:', error);
         streamDebugLog(`Caught error in try-catch - STREAM #${streamNum}`, { error });
-        isStreamingRef.current = false;
-        setIsStreaming(false);
+        dispatchStream({ type: 'END_STREAM' });
       } finally {
-        // Always clear abort ref and ensure streaming is stopped
-        console.log('🧹 Clearing abort controller and stopping stream');
+        // Always ensure streaming is stopped via reducer
+        console.log('🧹 Ensuring stream is stopped');
         streamDebugLog(`Finally block executing - STREAM #${streamNum}`, {
-          isStreamingRefBefore: isStreamingRef.current,
-          aboutToSetFalse: true
+          isCurrentlyStreaming: streamState.isStreaming,
         });
-        isStreamingRef.current = false;
-        setIsStreaming(false);
-        abortControllerRef.current = null;
+        // If still streaming (shouldn't be if onComplete/onError ran), dispatch END_STREAM
+        if (streamState.isStreaming) {
+          dispatchStream({ type: 'END_STREAM' });
+        }
       }
     },
-    [miraState, isStreaming, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
+    [miraState, streamState.isStreaming, streamState.streamId, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
   );
 
   const handleInput = useCallback(
     async (userInput: string) => {
-      const streamNum = ++streamCounterRef.current;
+      const streamNum = streamState.streamId + 1;
       if (!userInput.trim()) return;
 
       streamDebugLog(`handleInput started - STREAM #${streamNum}`, {
         userInput: userInput.substring(0, 50) + '...',
-        isCurrentlyStreaming: isStreamingRef.current
+        isCurrentlyStreaming: streamState.isStreaming,
       });
 
       // Add user input to terminal
       addTerminalLine('input', `> ${userInput}`);
 
       // Set streaming state to disable input
-      // CRITICAL: Update ref synchronously BEFORE setState to avoid stale closure during render
-      streamDebugLog(`Setting streaming TRUE for input - STREAM #${streamNum}`);
-      isStreamingRef.current = true;
-      setIsStreaming(true);
+      streamDebugLog(`Dispatching START_STREAM for input - STREAM #${streamNum}`);
 
       // Play audio cue
       playStreamingSound('thinking').catch(() => {});
@@ -346,8 +380,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
                 chunkLength: chunk.length,
                 newLineId,
-                isCurrentlyStreaming: isStreamingRef.current,
-                isStreamingState: isStreaming
+                isCurrentlyStreaming: streamState.isStreaming,
               });
 
               // Track this line as part of the response sequence
@@ -375,8 +408,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             onComplete: (data) => {
               streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
                 newConfidence: data.updatedState.confidenceInUser,
-                aboutToSetIsStreamingFalse: true,
-                isStreamingRefBefore: isStreamingRef.current
               });
 
               // Final state update
@@ -403,16 +434,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Reset response tracking
               currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
-              // CRITICAL: Update ref synchronously BEFORE setState
-              isStreamingRef.current = false;
-              setIsStreaming(false);
+              dispatchStream({ type: 'END_STREAM' });
             },
             onError: (error) => {
               console.error('Stream error:', error);
               streamDebugLog(`onError callback - STREAM #${streamNum}`, {
                 error,
-                isStreamingRefBefore: isStreamingRef.current,
-                aboutToSetIsStreamingFalse: true
               });
 
               // Check if this is an interrupt (user explicitly stopped)
@@ -440,15 +467,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Reset response tracking
               currentAnimatingLineIdRef.current = null;
               responseLineIdsRef.current = [];
-              // CRITICAL: Update ref synchronously BEFORE setState
-              isStreamingRef.current = false;
-              setIsStreaming(false);
+              dispatchStream({ type: 'END_STREAM' });
             },
           }
         );
-        abortControllerRef.current = abort;
+        dispatchStream({ type: 'START_STREAM', abort });
         console.log('📌 Abort controller set for input stream');
-        streamDebugLog(`Abort controller set - STREAM #${streamNum}`);
+        streamDebugLog(`START_STREAM dispatched - STREAM #${streamNum}`);
         await promise;
         console.log('✅ Input stream promise resolved');
         streamDebugLog(`Input stream promise resolved - STREAM #${streamNum}`);
@@ -463,39 +488,40 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           'text',
           '...connection to the depths lost... the abyss is unreachable at this moment...'
         );
-        setIsStreaming(false);
+        dispatchStream({ type: 'END_STREAM' });
       } finally {
-        // Always clear abort ref and ensure streaming is stopped
-        console.log('🧹 Clearing abort controller and stopping stream');
+        // Always ensure streaming is stopped via reducer
+        console.log('🧹 Ensuring stream is stopped');
         streamDebugLog(`Finally block executing - STREAM #${streamNum}`, {
-          isStreamingRefBefore: isStreamingRef.current,
-          aboutToSetFalse: true
+          isCurrentlyStreaming: streamState.isStreaming,
         });
-        isStreamingRef.current = false;
-        setIsStreaming(false);
-        abortControllerRef.current = null;
+        // If still streaming (shouldn't be if onComplete/onError ran), dispatch END_STREAM
+        if (streamState.isStreaming) {
+          dispatchStream({ type: 'END_STREAM' });
+        }
       }
     },
-    [miraState, addTerminalLine, onConfidenceChange]
+    [miraState, streamState.isStreaming, streamState.streamId, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar]
   );
 
   const handleInterrupt = useCallback(() => {
-    console.log('🛑 Interrupt button clicked, abort fn exists?', !!abortControllerRef.current);
-    streamDebugLog(`handleInterrupt called`, {
-      hasAbortController: !!abortControllerRef.current,
-      isStreaming,
-      isStreamingRef: isStreamingRef.current
+    console.log('🛑 Interrupt button clicked');
+    streamDebugLog(`handleInterrupt called - STREAM #${streamState.streamId}`, {
+      hasAbortController: !!streamState.abortController,
+      isStreaming: streamState.isStreaming,
     });
-    if (abortControllerRef.current) {
+
+    if (streamState.abortController) {
       console.log('🛑 Interrupt requested - calling abort function');
-      streamDebugLog(`Calling abort function`);
-      abortControllerRef.current();
-      console.log('✅ Abort function called - the onError callback will handle cleanup');
+      streamDebugLog(`Calling abort function - STREAM #${streamState.streamId}`);
+      streamState.abortController();
+      dispatchStream({ type: 'INTERRUPT_STREAM' });
+      console.log('✅ Abort function called and interrupt dispatched');
     } else {
       console.log('⚠️ No abort controller available');
-      streamDebugLog(`No abort controller available`);
+      streamDebugLog(`No abort controller available - STREAM #${streamState.streamId}`);
     }
-  }, [isStreaming]);
+  }, [streamState.abortController, streamState.streamId]);
 
   return (
     <div className="terminal-interface">
@@ -568,40 +594,42 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         <div className="terminal-interface__input-section">
           <MinimalInput
             onSubmit={handleInput}
-            disabled={isStreaming}
+            disabled={streamState.isStreaming}
             placeholder="> share your thoughts..."
           />
 
-          <ToolButtonRow
-            tools={(() => {
-              const interruptTool = { id: 'interrupt', name: 'INTERRUPT', onExecute: handleInterrupt };
-              const tools = [
-                { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
-                { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
-              ];
+          {useMemo(() => {
+            const tools = [
+              { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
+              { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
+            ];
 
-              // Detailed logging for tool button rendering
-              if (isStreaming) {
-                tools.push(interruptTool);
-                streamDebugLog(`RENDER: Adding interrupt button`, {
-                  isStreaming,
-                  isStreamingRef: isStreamingRef.current,
-                  renderTrigger,
-                  toolCount: tools.length
-                });
-              } else {
-                streamDebugLog(`RENDER: NOT adding interrupt button (isStreaming is false)`, {
-                  isStreaming,
-                  isStreamingRef: isStreamingRef.current,
-                  renderTrigger,
-                  toolCount: tools.length
-                });
-              }
+            if (streamState.isStreaming) {
+              tools.push({
+                id: 'interrupt',
+                name: 'INTERRUPT',
+                onExecute: handleInterrupt,
+              });
+              streamDebugLog(`RENDER: Adding interrupt button - STREAM #${streamState.streamId}`, {
+                isStreaming: streamState.isStreaming,
+                renderTrigger,
+                toolCount: tools.length,
+              });
+            } else {
+              streamDebugLog(`RENDER: NOT adding interrupt button - STREAM #${streamState.streamId}`, {
+                isStreaming: streamState.isStreaming,
+                renderTrigger,
+                toolCount: tools.length,
+              });
+            }
 
-              return tools;
-            })()}
-            disabled={false}
-          />
+            return (
+              <ToolButtonRow
+                tools={tools}
+                disabled={false}
+              />
+            );
+          }, [streamState.isStreaming, streamState.streamId, handleZoomIn, handleZoomOut, handleInterrupt])}
         </div>
       </div>
 
