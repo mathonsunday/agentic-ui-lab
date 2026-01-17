@@ -55,6 +55,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const abortControllerRef = useRef<(() => void) | null>(null);
+  const currentResponseLineIdRef = useRef<string | null>(null);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -286,14 +287,40 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }));
             },
             onResponseChunk: (chunk) => {
-              // Add each chunk as a separate terminal line to preserve visual spacing
-              addTerminalLine('text', chunk);
+              // Accumulate chunks into a single response line for coherent animation
+              if (!currentResponseLineIdRef.current) {
+                // Create the first response line
+                const newLineId = String(lineCountRef.current++);
+                currentResponseLineIdRef.current = newLineId;
+                setTerminalLines((prev) => [
+                  ...prev,
+                  {
+                    id: newLineId,
+                    type: 'text',
+                    content: chunk,
+                  },
+                ]);
+              } else {
+                // Append to existing response line
+                setTerminalLines((prev) => {
+                  const updated = [...prev];
+                  const lineIndex = updated.findIndex(
+                    (line) => line.id === currentResponseLineIdRef.current
+                  );
+                  if (lineIndex >= 0) {
+                    updated[lineIndex] = {
+                      ...updated[lineIndex],
+                      content: updated[lineIndex].content + chunk,
+                    };
+                  }
+                  return updated;
+                });
+              }
 
               // Play typing sound if enabled (throttle to reduce audio spam)
               if (settings.soundEnabled) {
                 // Play sound every 2-3 characters to avoid audio overload
-                const charIndex = chunk.length;
-                if (charIndex % 3 === 0) {
+                if (chunk.length % 3 === 0) {
                   playHydrophoneStatic(0.15).catch(() => {
                     // Silently ignore audio context errors (e.g., user hasn't interacted yet)
                   });
@@ -322,6 +349,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add visual separator after exchange
               addTerminalLine('system', '---');
 
+              // Reset response line tracking
+              currentResponseLineIdRef.current = null;
               setIsStreaming(false);
             },
             onError: (error) => {
@@ -330,6 +359,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 'text',
                 '...connection to the depths lost... the abyss is unreachable at this moment...'
               );
+              // Reset response line tracking
+              currentResponseLineIdRef.current = null;
               setIsStreaming(false);
             },
           }

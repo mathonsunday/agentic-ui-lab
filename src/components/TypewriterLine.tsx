@@ -13,7 +13,6 @@ import { useState, useEffect } from 'react';
 export interface TypewriterLineProps {
   content: string;
   speed: number; // characters per second (10-100)
-  onComplete?: () => void;
   onCharacter?: (char: string) => void;
 }
 
@@ -26,23 +25,19 @@ export interface TypewriterLineProps {
 export function TypewriterLine({
   content,
   speed,
-  onComplete,
   onCharacter,
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
 
   useEffect(() => {
-    // If content changed, continue revealing from where we are
+    // If content shrunk (shouldn't happen), reset
     if (revealedLength > content.length) {
       setRevealedLength(content.length);
     }
 
-    // If we've already revealed everything, return early
+    // If we've already revealed everything, don't animate
     if (revealedLength >= content.length) {
-      if (revealedLength === content.length && content.length > 0) {
-        onComplete?.();
-      }
       return;
     }
 
@@ -58,7 +53,7 @@ export function TypewriterLine({
     }, charDelayMs);
 
     return () => clearInterval(timer);
-  }, [revealedLength, content, charDelayMs, onComplete, onCharacter]);
+  }, [revealedLength, content, charDelayMs, onCharacter]);
 
   const revealed = content.substring(0, revealedLength);
 
