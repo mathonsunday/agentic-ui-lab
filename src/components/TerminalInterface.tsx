@@ -290,7 +290,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
             onResponseChunk: (chunk) => {
               // Add each chunk as a separate terminal line to preserve formatting and gaps
-              const newLineId = String(lineCountRef.current++);
+              const newLineId = String(lineCountRef.current);
 
               // Track this line as part of the response sequence
               responseLineIdsRef.current.push(newLineId);

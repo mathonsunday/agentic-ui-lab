@@ -9,6 +9,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createLogger } from '../utils/debugLogger';
+
+const logger = createLogger('TypewriterLine');
 
 export interface TypewriterLineProps {
   content: string;
@@ -37,12 +40,20 @@ export function TypewriterLine({
   useEffect(() => {
     // If content shrunk (shouldn't happen), reset
     if (revealedLength > content.length) {
+      logger.debug('Content shrunk, resetting', {
+        revealedLength,
+        newContentLength: content.length,
+      });
       setRevealedLength(content.length);
     }
 
     // If we've already revealed everything, call completion callback
     if (revealedLength >= content.length) {
       if (revealedLength > 0 && isAnimating) {
+        logger.debug('Animation complete', {
+          revealedLength,
+          contentLength: content.length,
+        });
         onComplete?.();
       }
       return;
@@ -50,11 +61,23 @@ export function TypewriterLine({
 
     // If not animating, don't start the timer
     if (!isAnimating) {
+      logger.debug('Not animating, effect returning early', {
+        revealedLength,
+        contentLength: content.length,
+      });
       return;
     }
 
+    logger.debug('Starting animation', {
+      revealedLength,
+      contentLength: content.length,
+      charDelayMs,
+      isAnimating,
+    });
+
     // Schedule the next character reveal
     const timer = setInterval(() => {
+      logger.debug('Interval tick', { revealedLength });
       setRevealedLength((prev) => {
         const nextLength = prev + 1;
         if (nextLength <= content.length) {
@@ -64,7 +87,10 @@ export function TypewriterLine({
       });
     }, charDelayMs);
 
-    return () => clearInterval(timer);
+    return () => {
+      logger.debug('Clearing interval');
+      clearInterval(timer);
+    };
   }, [revealedLength, content, charDelayMs, isAnimating, onComplete, onCharacter]);
 
   const revealed = content.substring(0, revealedLength);
