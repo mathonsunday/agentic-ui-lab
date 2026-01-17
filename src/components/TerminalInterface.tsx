@@ -388,6 +388,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       // Add narrative consequence
       addTerminalLine('text', '...you cut off my words... you still don\'t understand...');
 
+      // Reset response tracking
+      setCurrentAnimatingLineId(null);
+      responseLineIdsRef.current = [];
+
       // Stop streaming
       isStreamingRef.current = false;
       setIsStreaming(false);

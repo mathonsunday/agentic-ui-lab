@@ -68,6 +68,17 @@ export function TypewriterLine({
   }, [revealedLength, content, charDelayMs, isAnimating, onComplete, onCharacter]);
 
   const revealed = content.substring(0, revealedLength);
+  const lines = revealed.split('\n');
 
-  return <span className="terminal-interface__text">{revealed}</span>;
+  // Preserve newlines and formatting by rendering as separate divs
+  return (
+    <span className="terminal-interface__text">
+      {lines.map((line, idx) => (
+        <div key={idx}>
+          {line}
+          {idx < lines.length - 1 && <br />}
+        </div>
+      ))}
+    </span>
+  );
 }
