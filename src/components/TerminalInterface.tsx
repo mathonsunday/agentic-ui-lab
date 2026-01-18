@@ -709,6 +709,22 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     content={line.content}
                     speed={settings.typingSpeed}
                     isAnimating={shouldAnimate}
+                    onComplete={() => {
+                      // CRITICAL: Only move to next line if this line is no longer receiving chunks
+                      // If this is still the currentAnimatingLine, it might receive more chunks, so don't call onComplete yet
+                      if (line.id !== currentAnimatingLineIdRef.current) {
+                        // Move to next response line
+                        const currentIndex = responseLineIdsRef.current.indexOf(line.id);
+                        const nextIndex = currentIndex + 1;
+                        if (nextIndex < responseLineIdsRef.current.length) {
+                          currentAnimatingLineIdRef.current = responseLineIdsRef.current[nextIndex];
+                          setRenderTrigger(t => t + 1); // Force re-render to start next animation
+                        } else {
+                          currentAnimatingLineIdRef.current = null;
+                        }
+                      }
+                      // If this IS the currentAnimatingLine, it's still receiving chunks, so keep animating
+                    }}
                   />
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
