@@ -410,13 +410,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Subsequent chunks: accumulate into existing line
               setTerminalLines((prev) => {
                 const index = prev.findIndex(l => l.id === currentAnimatingLineIdRef.current);
-                if (index === -1) return prev;
+                console.log(`📥 [TerminalInterface] Looking for line ${currentAnimatingLineIdRef.current}: found at index ${index} (total lines: ${prev.length})`);
+                if (index === -1) {
+                  console.warn(`⚠️ [TerminalInterface] Line not found! Current line ID: ${currentAnimatingLineIdRef.current}, available IDs:`, prev.map(l => l.id));
+                  return prev;
+                }
 
                 const updated = [...prev];
                 updated[index] = {
                   ...updated[index],
                   content: updated[index].content + chunk
                 };
+                console.log(`✏️ [TerminalInterface] Updated line ${currentAnimatingLineIdRef.current}, new content length: ${updated[index].content.length}`);
                 return updated;
               });
             }

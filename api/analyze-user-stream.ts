@@ -305,6 +305,8 @@ async function streamGrantProposal(
     const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n')
       .filter(line => line.trim().length > 0);
 
+    console.log(`🎬 [specimen47] Starting to stream ${paragraphs.length} paragraphs`);
+
     for (const paragraph of paragraphs) {
       // Small delay allows interruption and prevents overwhelming the client
       // Frontend handles character-by-character animation on all response text
@@ -312,6 +314,8 @@ async function streamGrantProposal(
 
       const chunkEventId = generateEventId();
       const chunkSequence = eventTracker.getNextSequence();
+
+      console.log(`📤 [specimen47] Sending chunk ${chunkIndex} (${paragraph.substring(0, 50)}...)`);
 
       // AG-UI: Send TEXT_CONTENT events with chunk_index for proper ordering
       sendAGUIEvent(
@@ -326,6 +330,8 @@ async function streamGrantProposal(
         startEventId  // Parent event creates causality chain
       );
     }
+
+    console.log(`✅ [specimen47] Finished streaming all ${chunkIndex} chunks`);
 
     // Wait a bit before sending completion
     await sleep(200);
