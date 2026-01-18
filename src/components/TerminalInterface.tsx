@@ -2,6 +2,8 @@ import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'r
 import { useAtom } from 'jotai';
 import { MinimalInput } from './MinimalInput';
 import { TypewriterLine } from './TypewriterLine';
+import { PremiumCreatureRenderer } from './PremiumCreatureRenderer';
+import { usePremiumAscii } from '../hooks/usePremiumAscii';
 import { settingsAtom } from '../stores/settings';
 import { createLogger } from '../utils/debugLogger';
 import {
@@ -91,6 +93,7 @@ const streamDebugLog = (message: string, data?: any) => {
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
+  const { usePremium, togglePremiumAscii, isHydrated } = usePremiumAscii(true);
   const [miraState, setMiraState] = useState<MiraState>(() => {
     return initializeMiraState(initialConfidence);
   });
@@ -640,7 +643,16 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 className={`terminal-interface__line terminal-interface__line--${line.type}`}
               >
                 {line.type === 'ascii' ? (
-                  <pre className="terminal-interface__ascii">{line.content}</pre>
+                  isHydrated ? (
+                    <PremiumCreatureRenderer
+                      creature={currentCreature}
+                      zoom={currentZoom}
+                      usePremium={usePremium}
+                      fallback={<pre className="terminal-interface__ascii">{line.content}</pre>}
+                    />
+                  ) : (
+                    <pre className="terminal-interface__ascii">{line.content}</pre>
+                  )
                 ) : isResponseLine ? (
                   <TypewriterLine
                     content={line.content}
@@ -677,6 +689,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             const tools = [
               { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
+              {
+                id: 'toggle-premium',
+                name: usePremium ? '⭐ PREMIUM' : '█ TEXT',
+                onExecute: () => togglePremiumAscii(),
+              },
             ];
 
             if (streamState.isStreaming) {
