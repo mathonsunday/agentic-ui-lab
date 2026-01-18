@@ -212,7 +212,11 @@ IMPORTANT RULES:
 
 USING CONTEXT FOR RICHER ANALYSIS:
 - Current confidence level (in miraState.confidenceInUser) tells you the OVERALL rapport arc
-- Interaction count (miraState.memories.length) tells you how many exchanges have happened
+- Interaction count (miraState.memories.length) includes both messages AND tool interactions (zoom, exploration)
+- IMPORTANT: Distinguish between meaningful message exchanges and casual tool usage in your analysis
+  * Count meaningful messages (actual text input with substance) separately from total interactions
+  * You can reference both: "after three messages and several explorations, you suddenly ask..." or "after examining specimens, you finally speak..."
+  * Tool usage (zoom in/out) shows engagement/curiosity but shouldn't be confused with conversational depth
 - confidenceDelta should reflect THIS message's impact, but reasoning can reference THE PATTERN
 - A breakthrough moment after mediocrity hits harder than consistent good engagement
 - A drop-off after consistent quality feels like betrayal
