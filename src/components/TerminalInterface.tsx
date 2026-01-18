@@ -28,6 +28,8 @@ interface TerminalLine {
   type: 'ascii' | 'text' | 'input' | 'system' | 'analysis';
   content: string;
   timestamp?: number;
+  // For text lines: whether to animate character-by-character (false = show complete text)
+  isAnimating?: boolean;
   // For analysis lines: store raw data to support collapsible rendering
   analysisData?: {
     reasoning: string;
@@ -604,7 +606,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         interruptedStreamIdRef.current = streamState.streamId;
         console.log(`🛑 Set isStreamInterruptedRef.current = true for stream #${streamState.streamId}`);
 
-        // Add consequence text right after currently animating chunk
+        // Stop animating the current line and add consequence text
         setTerminalLines(prev => {
           // Find the index of the currently animating line
           const animatingIndex = currentAnimatingLineIdRef.current
@@ -613,8 +615,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
           const insertIndex = animatingIndex >= 0 ? animatingIndex + 1 : prev.length;
 
-          console.log(`🛑 [handleInterrupt] Keeping chunks up to index ${insertIndex}, adding consequence after`);
-          streamDebugLog(`Adding consequence after animating chunk - STREAM #${streamState.streamId}`, {
+          console.log(`🛑 [handleInterrupt] Stopping animation at line index ${animatingIndex}, adding consequence after`);
+          streamDebugLog(`Stopping animation and adding consequence - STREAM #${streamState.streamId}`, {
             animatingLineId: currentAnimatingLineIdRef.current,
             insertIndex,
             totalChunks: responseLineIdsRef.current.length
@@ -630,9 +632,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onConfidenceChange?.(newConfidence);
           console.log(`🛑 [handleInterrupt] Applied -15 confidence penalty. New confidence: ${newConfidence}`);
 
-          // Insert consequence text after current animation point
-          const updated = [...prev.slice(0, insertIndex)];
-          updated.push({
+          // Stop animation on the currently animating line
+          const updated = [...prev];
+          if (animatingIndex >= 0) {
+            updated[animatingIndex] = {
+              ...updated[animatingIndex],
+              isAnimating: false,  // Freeze animation at current position
+            };
+            console.log(`🛑 [handleInterrupt] Set isAnimating=false on line ${updated[animatingIndex].id}`);
+          }
+
+          // Add consequence text after the now-frozen animation
+          updated.splice(insertIndex, 0, {
             id: `interrupt-consequence-${Date.now()}`,
             type: 'text' as const,
             content: '...you cut off my words... you still don\'t understand...',
@@ -717,7 +728,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                   <TypewriterLine
                     content={line.content}
                     speed={settings.typingSpeed}
-                    isAnimating={shouldAnimate}
+                    isAnimating={shouldAnimate && (line.isAnimating !== false)}
                   />
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
