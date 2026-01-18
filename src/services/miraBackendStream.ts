@@ -373,13 +373,17 @@ function handleEnvelopeEvent(
 
     case 'TEXT_CONTENT': {
       const contentData = envelope.data as { chunk: string; chunk_index: number };
-      // Only send response chunks if this TEXT_CONTENT belongs to the response message
-      // (i.e., its parent is the responseStartEventId, not the rapportStartEventId)
-      if (
-        envelope.parent_event_id &&
-        messageTracking.responseStartEventId &&
-        envelope.parent_event_id === messageTracking.responseStartEventId
-      ) {
+      // Send response chunks if:
+      // 1. This belongs to the response message (responseStartEventId exists and matches parent)
+      // 2. OR if there's no response message but there is a parent (single-message streams like grant proposal)
+      const isResponseChunk =
+        (messageTracking.responseStartEventId &&
+          envelope.parent_event_id === messageTracking.responseStartEventId) ||
+        (!messageTracking.responseStartEventId &&
+          envelope.parent_event_id &&
+          envelope.parent_event_id !== messageTracking.rapportStartEventId);
+
+      if (isResponseChunk) {
         callbacks.onResponseChunk?.(contentData.chunk);
       }
       break;
