@@ -407,7 +407,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
         // Stream from backend with real-time updates
         const callbacksObject = {
-          onConfidence: (update) => {
+          onConfidence: (update: any) => {
             // Only apply confidence updates if this stream wasn't interrupted
             if (interruptedStreamIdRef.current === streamNum) {
               console.log(`⏭️ [TerminalInterface] Ignoring confidence update from interrupted stream #${streamNum}`);
@@ -422,7 +422,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }));
             onConfidenceChange?.(update.to);
           },
-          onProfile: (profile) => {
+          onProfile: (profile: any) => {
             // Update user profile as Claude analyzes
             setMiraState((prev) => ({
               ...prev,
@@ -432,7 +432,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               },
             }));
           },
-          onResponseChunk: (chunk) => {
+          onResponseChunk: (chunk: any) => {
             // Check if stream was interrupted - only block chunks from the interrupted stream
             if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
               console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream #${streamNum} was interrupted`);
@@ -474,7 +474,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }
             }
           },
-          onComplete: (data) => {
+          onComplete: (data: any) => {
             streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
               newConfidence: data.updatedState.confidenceInUser,
             });
@@ -505,7 +505,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             responseLineIdsRef.current = [];
             dispatchStream({ type: 'END_STREAM' });
           },
-          onAnalysis: (analysis) => {
+          onAnalysis: (analysis: any) => {
             // Display Claude's reasoning in formatted ASCII box with confidence delta
             console.log('📊 [TerminalInterface] onAnalysis callback fired:', {
               reasoning: analysis.reasoning.substring(0, 50),
@@ -515,7 +515,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             console.log('📦 [TerminalInterface] Formatted box:', box.split('\n')[0]); // Log first line
             addTerminalLine('analysis', box);
           },
-          onError: (error) => {
+          onError: (error: any) => {
             console.error('Stream error:', error);
             streamDebugLog(`onError callback - STREAM #${streamNum}`, {
               error,
