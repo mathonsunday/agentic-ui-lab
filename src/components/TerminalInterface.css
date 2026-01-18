@@ -133,6 +133,16 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* Analysis lines - Claude's reasoning and metrics (dimmed, smaller) */
+.terminal-interface__line--analysis {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875em;
+  font-family: 'Courier New', monospace;
+  opacity: 0.8;
+  line-height: 1.3;
+  margin: 0.25rem 0;
+}
+
 /* Scrollbar styling */
 .terminal-interface__conversation::-webkit-scrollbar {
   width: 6px;

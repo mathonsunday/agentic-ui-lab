@@ -23,7 +23,7 @@ interface TerminalInterfaceProps {
 
 interface TerminalLine {
   id: string;
-  type: 'ascii' | 'text' | 'input' | 'system';
+  type: 'ascii' | 'text' | 'input' | 'system' | 'analysis';
   content: string;
   timestamp?: number;
 }
@@ -460,6 +460,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               responseLineIdsRef.current = [];
               dispatchStream({ type: 'END_STREAM' });
             },
+            onAnalysis: (analysis) => {
+              // Display Claude's reasoning as research notes
+              addTerminalLine('analysis', `[ANALYSIS] ${analysis.reasoning}`);
+
+              // Display personality metrics
+              const metricsText = `[METRICS] thought:${analysis.metrics.thoughtfulness} adv:${analysis.metrics.adventurousness} eng:${analysis.metrics.engagement} cur:${analysis.metrics.curiosity} sup:${analysis.metrics.superficiality}`;
+              addTerminalLine('analysis', metricsText);
+
+              // Display confidence delta
+              const deltaSymbol = analysis.confidenceDelta >= 0 ? '+' : '';
+              addTerminalLine('analysis', `[CONFIDENCE] ${deltaSymbol}${analysis.confidenceDelta} pts`);
+            },
             onError: (error) => {
               console.error('Stream error:', error);
               streamDebugLog(`onError callback - STREAM #${streamNum}`, {
@@ -641,6 +653,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               >
                 {line.type === 'ascii' ? (
                   <pre className="terminal-interface__ascii">{line.content}</pre>
+                ) : line.type === 'analysis' ? (
+                  <span className="terminal-interface__text">{line.content}</span>
                 ) : isResponseLine ? (
                   <TypewriterLine
                     content={line.content}

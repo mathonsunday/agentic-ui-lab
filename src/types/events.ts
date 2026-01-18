@@ -53,7 +53,8 @@ export type EventType =
   | 'TOOL_CALL_RESULT'
   | 'TOOL_CALL_END'
   | 'ERROR'
-  | 'ACK';
+  | 'ACK'
+  | 'ANALYSIS_COMPLETE';
 
 /**
  * Discriminated union of all event payloads
@@ -68,7 +69,8 @@ export type StreamEventPayload =
   | { type: 'TOOL_CALL_RESULT'; data: ToolCallResultData }
   | { type: 'TOOL_CALL_END'; data: ToolCallEndData }
   | { type: 'ERROR'; data: ErrorData }
-  | { type: 'ACK'; data: AckData };
+  | { type: 'ACK'; data: AckData }
+  | { type: 'ANALYSIS_COMPLETE'; data: AnalysisCompleteData };
 
 /**
  * Text message start event - begins a streaming text response
@@ -192,5 +194,25 @@ export interface ErrorData {
 export interface AckData {
   /** Event ID being acknowledged */
   event_id: string;
+}
+
+/**
+ * Analysis complete event - Claude's analysis of user input
+ */
+export interface AnalysisCompleteData {
+  /** Claude's reasoning about the user's message */
+  reasoning: string;
+
+  /** Personality metrics evaluated by Claude */
+  metrics: {
+    thoughtfulness: number;
+    adventurousness: number;
+    engagement: number;
+    curiosity: number;
+    superficiality: number;
+  };
+
+  /** How much confidence changed (delta) */
+  confidenceDelta: number;
 }
 

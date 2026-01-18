@@ -33,6 +33,7 @@ export interface StreamCallbacks {
   onResponseChunk?: (chunk: string) => void;
   onComplete?: (data: { updatedState: MiraState; response: AgentResponse }) => void;
   onError?: (error: string) => void;
+  onAnalysis?: (data: { reasoning: string; metrics: Record<string, number>; confidenceDelta: number }) => void;
 }
 
 /**
@@ -377,6 +378,16 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
     case 'ACK':
       // Acknowledgment - no action needed on client
       break;
+
+    case 'ANALYSIS_COMPLETE': {
+      const analysisData = envelope.data as {
+        reasoning: string;
+        metrics: Record<string, number>;
+        confidenceDelta: number;
+      };
+      callbacks.onAnalysis?.(analysisData);
+      break;
+    }
   }
 }
 

@@ -273,6 +273,21 @@ Return ONLY valid JSON in this exact format:
       ],
     }, stateSequence);
 
+    // Send analysis event with Claude's reasoning and metrics
+    const analysisEventId = generateEventId();
+    const analysisSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, analysisEventId, 'ANALYSIS_COMPLETE', {
+      reasoning: analysis.reasoning,
+      metrics: {
+        thoughtfulness: analysis.thoughtfulness,
+        adventurousness: analysis.adventurousness,
+        engagement: analysis.engagement,
+        curiosity: analysis.curiosity,
+        superficiality: analysis.superficiality,
+      },
+      confidenceDelta: analysis.confidenceDelta,
+    }, analysisSequence);
+
     // Update state with analysis
     const updatedState = updateConfidenceAndProfile(miraState, {
       confidenceDelta: analysis.confidenceDelta,
