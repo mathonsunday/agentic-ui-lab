@@ -293,11 +293,25 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
     setCurrentZoom(nextZoom);
 
-    // Add the zoomed ASCII art as a new line in the terminal
-    addTerminalLine('ascii', newAscii);
+    // Update the most recent ASCII line with the new zoom level
+    setTerminalLines((prev) => {
+      let lastAsciiIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'ascii') {
+          lastAsciiIndex = i;
+          break;
+        }
+      }
+      if (lastAsciiIndex === -1) return prev;
+
+      // Create new array and new line object so React detects the change
+      const updated = [...prev];
+      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
+      return updated;
+    });
 
     handleToolCall('zoom_in', { zoomLevel: nextZoom });
-  }, [currentCreature, currentZoom, handleToolCall, addTerminalLine]);
+  }, [currentCreature, currentZoom, handleToolCall]);
 
   const handleZoomOut = useCallback(() => {
     const prevZoom = getPrevZoomLevel(currentZoom);
@@ -307,11 +321,25 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
     setCurrentZoom(prevZoom);
 
-    // Add the zoomed ASCII art as a new line in the terminal
-    addTerminalLine('ascii', newAscii);
+    // Update the most recent ASCII line with the new zoom level
+    setTerminalLines((prev) => {
+      let lastAsciiIndex = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].type === 'ascii') {
+          lastAsciiIndex = i;
+          break;
+        }
+      }
+      if (lastAsciiIndex === -1) return prev;
+
+      // Create new array and new line object so React detects the change
+      const updated = [...prev];
+      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
+      return updated;
+    });
 
     handleToolCall('zoom_out', { zoomLevel: prevZoom });
-  }, [currentCreature, currentZoom, handleToolCall, addTerminalLine]);
+  }, [currentCreature, currentZoom, handleToolCall]);
 
   const handleInput = useCallback(
     async (userInput: string) => {
