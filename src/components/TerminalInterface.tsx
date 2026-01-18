@@ -381,6 +381,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             console.log(`🎖️ [TerminalInterface] Rapport bar updated: ${confidence}%`);
           },
           onResponseChunk: (chunk: any) => {
+            console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars - STREAM #${streamNum}`);
             // Check if stream was interrupted - only block chunks from the interrupted stream
             if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
               console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream #${streamNum} was interrupted`);
@@ -389,8 +390,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               });
               return;
             }
-
-            console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars`);
             streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
               chunkLength: chunk.length,
               isInterrupted: isStreamInterruptedRef.current,
