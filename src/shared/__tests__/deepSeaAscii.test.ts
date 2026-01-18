@@ -358,10 +358,9 @@ describe('Deep Sea ASCII Art Utilities', () => {
       }
 
       // Should cycle correctly
-      expect(level).toBe('far'); // 100 % 3 = 1, so ends at medium... wait
-      // 100 / 3 = 33.33, so 33 complete cycles + 1 extra
-      // 'far' -> 'medium' -> 'close' -> 'far'
-      // After 100: (100 % 3) = 1, so 'medium'
+      // Starting at 'far' (index 0), after 100 iterations: (100 % 3) = 1
+      // 'far' (0) -> 'medium' (1) -> 'close' (2) -> 'far' (0)
+      // After 100: 100 % 3 = 1, so 'medium'
       expect(level).toBe('medium');
     });
 

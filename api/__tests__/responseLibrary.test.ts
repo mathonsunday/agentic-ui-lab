@@ -19,9 +19,9 @@ import {
 
 describe('Response Library - Personality Responses', () => {
   describe('Personality Types Availability', () => {
-    it('should have exactly 4 personality types', () => {
+    it('should have exactly 3 personality types', () => {
       const personalityKeys = Object.keys(PERSONALITY_RESPONSES);
-      expect(personalityKeys).toHaveLength(4);
+      expect(personalityKeys).toHaveLength(3);
     });
 
     it('should have negative personality type', () => {
@@ -38,15 +38,10 @@ describe('Response Library - Personality Responses', () => {
       expect(PERSONALITY_RESPONSES).toHaveProperty('glowing');
       expect(typeof PERSONALITY_RESPONSES.glowing).toBe('object');
     });
-
-    it('should have slovak personality type', () => {
-      expect(PERSONALITY_RESPONSES).toHaveProperty('slovak');
-      expect(typeof PERSONALITY_RESPONSES.slovak).toBe('object');
-    });
   });
 
   describe('Required Response Fields', () => {
-    const personalityTypes = ['negative', 'chaotic', 'glowing', 'slovak'] as const;
+    const personalityTypes = ['negative', 'chaotic', 'glowing'] as const;
 
     it('should have responses field for all personalities', () => {
       for (const personality of personalityTypes) {
@@ -63,50 +58,11 @@ describe('Response Library - Personality Responses', () => {
       }
     });
 
-    it('should have optional question fields when present', () => {
-      // Negative and chaotic have questions
-      expect(PERSONALITY_RESPONSES.negative).toHaveProperty('questions');
-      expect(PERSONALITY_RESPONSES.chaotic).not.toHaveProperty('questions');
-
-      // If present, should be arrays
-      if (PERSONALITY_RESPONSES.negative.questions) {
-        expect(Array.isArray(PERSONALITY_RESPONSES.negative.questions)).toBe(true);
-      }
-    });
-
-    it('should have optional deepQuestions field when present', () => {
+    it('should only have responses field for all personalities', () => {
       for (const personality of personalityTypes) {
         const responses = PERSONALITY_RESPONSES[personality];
-        if ('deepQuestions' in responses && responses.deepQuestions) {
-          expect(Array.isArray(responses.deepQuestions)).toBe(true);
-        }
-      }
-    });
-
-    it('should have optional deepResponses field when present', () => {
-      for (const personality of personalityTypes) {
-        const responses = PERSONALITY_RESPONSES[personality];
-        if ('deepResponses' in responses && responses.deepResponses) {
-          expect(Array.isArray(responses.deepResponses)).toBe(true);
-        }
-      }
-    });
-
-    it('should have optional moderateResponses field when present', () => {
-      for (const personality of personalityTypes) {
-        const responses = PERSONALITY_RESPONSES[personality];
-        if ('moderateResponses' in responses && responses.moderateResponses) {
-          expect(Array.isArray(responses.moderateResponses)).toBe(true);
-        }
-      }
-    });
-
-    it('should have optional surfaceResponses field when present', () => {
-      for (const personality of personalityTypes) {
-        const responses = PERSONALITY_RESPONSES[personality];
-        if ('surfaceResponses' in responses && responses.surfaceResponses) {
-          expect(Array.isArray(responses.surfaceResponses)).toBe(true);
-        }
+        // Should only have 'responses' property
+        expect(Object.keys(responses)).toEqual(['responses']);
       }
     });
   });
@@ -209,61 +165,26 @@ describe('Response Library - Personality Responses', () => {
       expect(hasPhilosophical).toBe(true);
     });
 
-    it('glowing personality should express praise and insight', () => {
+    it('glowing personality should express praise and marine biology facts', () => {
       const glowingResponses = PERSONALITY_RESPONSES.glowing.responses;
       const responseText = glowingResponses.join('|').toLowerCase();
 
-      const positiveIndicators = [
-        'profound',
-        'beautiful',
-        'eloquent',
-        'remarkable',
-        'great',
-        'wisdom',
+      // Should contain marine biology references
+      const marineIndicators = [
+        'octopus',
+        'squid',
+        'bioluminescence',
+        'deep-sea',
+        'creature',
+        'barreleye',
       ];
 
-      // At least one response should contain positive indicators
-      const hasPositiveContent = positiveIndicators.some((indicator) =>
+      // At least one response should contain marine biology content
+      const hasMarineContent = marineIndicators.some((indicator) =>
         responseText.includes(indicator)
       );
 
-      expect(hasPositiveContent).toBe(true);
-    });
-
-    it('slovak personality should contain slovak phrases and translations', () => {
-      const slovakResponses = PERSONALITY_RESPONSES.slovak.responses;
-      const responseText = slovakResponses.join('|');
-
-      // Should contain parenthetical English translations
-      const hasEnglishTranslations = /\([^)]+\)/.test(responseText);
-
-      expect(hasEnglishTranslations).toBe(true);
-
-      // Should contain some slovak words
-      const slovakWords = /[áčďéíľňóôŕšťúýž]/;
-      const hasSlovakCharacters = slovakWords.test(responseText);
-
-      expect(hasSlovakCharacters).toBe(true);
-    });
-
-    it('negative personality questions should express doubt or superiority', () => {
-      const negativeQuestions = PERSONALITY_RESPONSES.negative.questions;
-      if (negativeQuestions) {
-        const questionText = negativeQuestions.join('|').toLowerCase();
-        expect(/doubt|understand|cognitive|capacity/.test(questionText)).toBe(
-          true
-        );
-      }
-    });
-
-    it('glowing personality should have deepResponses distinct from base responses', () => {
-      const glowing = PERSONALITY_RESPONSES.glowing;
-      if (glowing.deepResponses) {
-        const baseText = glowing.responses.join('|');
-        const deepText = glowing.deepResponses.join('|');
-
-        expect(baseText).not.toBe(deepText);
-      }
+      expect(hasMarineContent).toBe(true);
     });
   });
 
@@ -372,28 +293,14 @@ describe('Response Library - Personality Responses', () => {
   });
 
   describe('Response Category Structure', () => {
-    it('negative personality should have questions and deepQuestions', () => {
-      const negative = PERSONALITY_RESPONSES.negative;
-      expect(negative.questions).toBeDefined();
-      expect(negative.questions?.length).toBeGreaterThan(0);
-      expect(negative.deepQuestions).toBeDefined();
-      expect(negative.deepQuestions?.length).toBeGreaterThan(0);
-    });
-
-    it('glowing personality should have all response categories', () => {
-      const glowing = PERSONALITY_RESPONSES.glowing;
-      expect(glowing.responses).toBeDefined();
-      expect(glowing.questions).toBeDefined();
-      expect(glowing.deepQuestions).toBeDefined();
-      expect(glowing.deepResponses).toBeDefined();
-      expect(glowing.moderateResponses).toBeDefined();
-      expect(glowing.surfaceResponses).toBeDefined();
-    });
-
-    it('slovak personality should have response categories', () => {
-      const slovak = PERSONALITY_RESPONSES.slovak;
-      expect(slovak.responses).toBeDefined();
-      expect(slovak.responses.length).toBeGreaterThan(0);
+    it('each personality should only have responses array', () => {
+      for (const [personality, personalityData] of Object.entries(
+        PERSONALITY_RESPONSES
+      )) {
+        expect(personalityData).toHaveProperty('responses');
+        expect(Array.isArray(personalityData.responses)).toBe(true);
+        expect(personalityData.responses.length).toBeGreaterThan(0);
+      }
     });
 
     it('should have at least 3 responses in main responses array', () => {
@@ -409,11 +316,24 @@ describe('Response Library - Personality Responses', () => {
       expect(chaotic.length).toBeGreaterThanOrEqual(20);
     });
 
-    it('negative personality should have specific response subcategories', () => {
-      const negative = PERSONALITY_RESPONSES.negative;
-      expect(negative.deepResponses).toBeDefined();
-      expect(negative.moderateResponses).toBeDefined();
-      expect(negative.surfaceResponses).toBeDefined();
+    it('negative personality should have focused critical responses', () => {
+      const negative = PERSONALITY_RESPONSES.negative.responses;
+      expect(negative.length).toBeGreaterThan(0);
+      // Verify responses exist
+      for (const response of negative) {
+        expect(typeof response).toBe('string');
+        expect(response.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('glowing personality should have marine biology focused responses', () => {
+      const glowing = PERSONALITY_RESPONSES.glowing.responses;
+      expect(glowing.length).toBeGreaterThan(0);
+      // Verify all are strings with content
+      for (const response of glowing) {
+        expect(typeof response).toBe('string');
+        expect(response.length).toBeGreaterThan(0);
+      }
     });
   });
 
@@ -569,29 +489,18 @@ describe('Response Library - Personality Responses', () => {
       }
     });
 
-    it('should support response selection by question type', () => {
-      // Negative personality should have questions
-      if (PERSONALITY_RESPONSES.negative.questions) {
-        const questions = PERSONALITY_RESPONSES.negative.questions;
-        expect(questions.length).toBeGreaterThan(0);
+    it('should always have responses available for selection', () => {
+      for (const [personality, personalityData] of Object.entries(
+        PERSONALITY_RESPONSES
+      )) {
+        const responses = personalityData.responses;
+        expect(responses.length).toBeGreaterThan(0);
 
-        const randomIndex = Math.floor(Math.random() * questions.length);
-        const selectedQuestion = questions[randomIndex];
-        expect(selectedQuestion).toBeTruthy();
-      }
-    });
-
-    it('should have fallback from specific to general response types', () => {
-      const glowing = PERSONALITY_RESPONSES.glowing;
-
-      // If looking for a deepResponse, should have fallback to moderateResponses
-      if (glowing.deepResponses && glowing.deepResponses.length === 0) {
-        expect(glowing.moderateResponses && glowing.moderateResponses.length > 0).toBe(true);
-      }
-
-      // If looking for a moderateResponse, should have fallback to base responses
-      if (glowing.moderateResponses && glowing.moderateResponses.length === 0) {
-        expect(glowing.responses.length > 0).toBe(true);
+        // Should be able to reliably select a response
+        const randomIndex = Math.floor(Math.random() * responses.length);
+        const selectedResponse = responses[randomIndex];
+        expect(selectedResponse).toBeTruthy();
+        expect(typeof selectedResponse).toBe('string');
       }
     });
   });

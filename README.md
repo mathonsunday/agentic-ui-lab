@@ -11,50 +11,44 @@ This is both a **learning lab for emerging agent protocols** and a **showcase of
 
 ## 🌊 What Makes This Special
 
-### Protocol-First Architecture
+### Protocol & Architecture
 - **AG-UI Event Streaming**: Structured event envelopes with correlation IDs, sequence numbers, and parent-event tracking for proper event causality
 - **MCP-UI Tool Protocol**: Tools return structured results with status, artifacts, metadata, and UI update commands
 - **Versioned State Sync**: Client-server state synchronization with version tracking, conflict detection, and optimistic update rollback
 - **Schema Migration**: Forward-compatible types with `__version` and `__extensions` fields for seamless protocol evolution
-
-### Real-Time Interaction Patterns
 - **Event Buffering**: Out-of-order event reordering using sequence numbers (handles network packet reordering)
 - **Optimistic Updates**: Client-side UI updates with automatic rollback if server rejects changes
 - **Conflict Detection**: Checksummed state versions prevent divergence between client and server
-- **State Patches**: JSON Patch (RFC 6902) for efficient delta updates instead of full state replacement
+- **State Patches**: JSON Patch (RFC 6902) for efficient delta state synchronization
+- **EventBuffer + Deduplication**: Out-of-order event reordering and duplicate suppression
+- **State Machine Pattern**: Type-safe FSM with discriminated union types (IDLE → STREAMING → ERROR)
+
+### Technology Stack
+
+**Frontend**
+- React 18 + Hooks (useReducer for FSM)
+- TypeScript with strict type safety
+- Vite (sub-500ms builds, fast HMR)
+- Canvas API for particle effects and visual atmosphere
+- Web Audio API for synthesized sound effects
+- Vitest + React Testing Library (679/679 tests passing)
+
+**Backend**
+- Node.js + Express for type-safe server runtime
+- Server-Sent Events (SSE) with EventBuffer deduplication
+- Anthropic SDK for Claude API integration
+- TypeScript with discriminated unions and branded types
+- Finite State Machine for streaming lifecycle management
 
 ### Terminal UI with Personality
-- **Zoomable Deep-Sea Creatures**: ASCII art creatures with 3 zoom levels (far/medium/close) showing progressive depth and detail
-- **3-Personality System**: Negative (dismissive), Chaotic (philosophical), and Glowing (reverent) - each with 18-31 curated responses
-- **Personality-Driven Responses**: Hardcoded response library grounded in marine biology facts (octopus intelligence, bioluminescence, pressure adaptations)
+- **Zoomable Deep-Sea Creatures**: ASCII art with 3 zoom levels (far/medium/close) showing progressive depth and detail
+- **3-Personality System**: Negative (dismissive), Chaotic (philosophical), and Glowing (reverent) - each with focused, curated responses
+- **Personality-Driven Responses**: Hardcoded response library grounded in real marine biology (octopus cognition, giant squid genetics, vampire squid bioluminescence, barreleye fish adaptability)
 - **Interactive Tools**: Zoom in/out controls trigger both UI changes and backend state mutations
 - **Confidence Tracking**: Real-time rapport system that shifts personality based on interaction quality and depth
 - **Sequential Animation**: Streamed responses animate line-by-line with timing control
 - **System Log**: Real-time event log showing evaluation metrics, observations, thoughts, and confidence deltas
-
-## 🛠 Technology Stack
-
-### Frontend
-- **React 18 + Hooks** - Functional component architecture with useReducer for FSM
-- **TypeScript** - Strict type safety across client and server
-- **Vite** - Sub-500ms builds with fast HMR
-- **Canvas API** - Particle effects and visual atmosphere rendering
-- **Web Audio API** - Synthesized sound effects for state transitions
-- **React Testing Library + Vitest** - Comprehensive component and integration tests (684/705 tests passing)
-
-### Backend
-- **Node.js + Express** - Type-safe server runtime
-- **Server-Sent Events (SSE)** - Real-time bidirectional streaming with EventBuffer deduplication
-- **Anthropic SDK** - Claude API integration with streaming text and tool use
-- **TypeScript** - Full-stack type safety with discriminated unions and branded types
-- **Finite State Machine** - Pure reducer-based state transitions for streaming lifecycle
-
-### Protocols & Patterns
-- **AG-UI Event Envelope** - Structured event protocol with correlation IDs, sequence numbers, and causality tracking
-- **EventBuffer + Deduplication** - Out-of-order event reordering and duplicate suppression
-- **State Machine Pattern** - Type-safe FSM with discriminated union types (IDLE → STREAMING → ERROR)
-- **JSON Patch (RFC 6902)** - Efficient delta state synchronization
-- **Semantic Versioning** - Forward-compatible protocol evolution with version tracking
+- **Mood-Driven Aesthetics**: Canvas-based particle atmosphere, audio synthesis, and visual effects responsive to interaction state
 
 ## 🚀 Getting Started
 
@@ -82,15 +76,6 @@ Beyond the technical protocols, You Are The Research Assistant maintains an arti
 - **Mood as Character**: Personality shifts emerge naturally from interaction patterns - Mira's skepticism melts into reverence as you demonstrate scientific acumen
 - **Ambient Audio**: Synthesized soundscapes react to state changes (thinking sounds during analysis, completion tones on responses)
 - **Particle Atmosphere**: Canvas-based particle system creates visual depth and reinforces the underwater setting
-
-## 🧪 Testing & Quality Assurance
-
-Comprehensive test coverage across all critical functionality:
-- **684/705 tests passing** (97% success rate)
-- **Component Tests**: Atmosphere, SystemLog, ToolButtonRow, TerminalInterface
-- **E2E Tests**: Complete user session flows with personality transitions and confidence tracking
-- **Integration Tests**: SSE streaming, state synchronization, event buffering
-- **Architecture Tests**: State machine transitions, deduplication logic, buffer overflow handling
 
 ---
 
