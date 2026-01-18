@@ -91,6 +91,7 @@
 .terminal-interface__line--ascii {
   margin: 0.75rem 0;
   width: 100%;
+  flex-shrink: 0; /* Prevent this line from shrinking */
   height: 300px; /* Fixed height - prevents shifting when zooming */
   display: flex;
   align-items: center;
@@ -109,6 +110,7 @@
   /* Allow zoomed content to overflow within the container */
   overflow: auto;
   max-width: 100%;
+  flex-shrink: 0; /* Don't shrink the content inside */
 }
 
 .terminal-interface__input-section {
