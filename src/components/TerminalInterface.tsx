@@ -133,6 +133,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
+  const currentRevealedLengthRef = useRef(0); // Track current animation position for interrupt
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
@@ -632,14 +633,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onConfidenceChange?.(newConfidence);
           console.log(`🛑 [handleInterrupt] Applied -15 confidence penalty. New confidence: ${newConfidence}`);
 
-          // Stop animation on the currently animating line
+          // Stop animation on the currently animating line and truncate unrevea content
           const updated = [...prev];
           if (animatingIndex >= 0) {
+            const revealedLength = currentRevealedLengthRef.current;
+            const currentLine = updated[animatingIndex];
+            const truncatedContent = currentLine.content.substring(0, revealedLength);
             updated[animatingIndex] = {
-              ...updated[animatingIndex],
+              ...currentLine,
+              content: truncatedContent,  // Remove unrevealed content
               isAnimating: false,  // Freeze animation at current position
             };
-            console.log(`🛑 [handleInterrupt] Set isAnimating=false on line ${updated[animatingIndex].id}`);
+            console.log(`🛑 [handleInterrupt] Truncated line from ${currentLine.content.length} to ${revealedLength} chars, set isAnimating=false`);
           }
 
           // Add consequence text after the now-frozen animation
@@ -729,6 +734,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     content={line.content}
                     speed={settings.typingSpeed}
                     isAnimating={shouldAnimate && (line.isAnimating !== false)}
+                    onRevealedLengthChange={(length) => {
+                      // Track revealed length for interrupt handling
+                      if (line.id === currentAnimatingLineIdRef.current) {
+                        currentRevealedLengthRef.current = length;
+                      }
+                    }}
                   />
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>

@@ -14,6 +14,7 @@ export interface TypewriterLineProps {
   content: string;
   speed: number; // characters per second (10-100)
   isAnimating?: boolean; // whether this line should animate (for sequential animation)
+  onRevealedLengthChange?: (length: number) => void; // callback when revealed length changes
 }
 
 /**
@@ -43,6 +44,7 @@ export function TypewriterLine({
   content,
   speed,
   isAnimating = true,
+  onRevealedLengthChange,
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
@@ -51,6 +53,11 @@ export function TypewriterLine({
   useEffect(() => {
     setRevealedLength((prev) => Math.max(prev, 0));
   }, [content]);
+
+  // Notify parent of revealed length changes (for interrupt handling)
+  useEffect(() => {
+    onRevealedLengthChange?.(revealedLength);
+  }, [revealedLength, onRevealedLengthChange]);
 
   useEffect(() => {
     if (!isAnimating) {
