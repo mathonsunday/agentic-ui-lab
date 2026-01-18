@@ -408,139 +408,138 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         // Stream from backend with real-time updates
         const callbacksObject = {
           onConfidence: (update) => {
-              // Only apply confidence updates if this stream wasn't interrupted
-              if (interruptedStreamIdRef.current === streamNum) {
-                console.log(`⏭️ [TerminalInterface] Ignoring confidence update from interrupted stream #${streamNum}`);
-                streamDebugLog(`Ignoring confidence update from interrupted stream - STREAM #${streamNum}`);
-                return;
-              }
+            // Only apply confidence updates if this stream wasn't interrupted
+            if (interruptedStreamIdRef.current === streamNum) {
+              console.log(`⏭️ [TerminalInterface] Ignoring confidence update from interrupted stream #${streamNum}`);
+              streamDebugLog(`Ignoring confidence update from interrupted stream - STREAM #${streamNum}`);
+              return;
+            }
 
-              // Update state with new confidence
-              setMiraState((prev) => ({
-                ...prev,
-                confidenceInUser: update.to,
-              }));
-              onConfidenceChange?.(update.to);
-            },
-            onProfile: (profile) => {
-              // Update user profile as Claude analyzes
-              setMiraState((prev) => ({
-                ...prev,
-                userProfile: {
-                  ...prev.userProfile,
-                  ...profile,
-                },
-              }));
-            },
-            onResponseChunk: (chunk) => {
-              // Check if stream was interrupted - only block chunks from the interrupted stream
-              if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
-                console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream #${streamNum} was interrupted`);
-                streamDebugLog(`Blocking chunk from interrupted stream - STREAM #${streamNum}`, {
-                  chunkLength: chunk.length,
-                });
-                return;
-              }
-
-              // Add each chunk as a separate terminal line to preserve formatting and gaps
-              const newLineId = String(lineCountRef.current);
-
-              console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars`);
-              streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
+            // Update state with new confidence
+            setMiraState((prev) => ({
+              ...prev,
+              confidenceInUser: update.to,
+            }));
+            onConfidenceChange?.(update.to);
+          },
+          onProfile: (profile) => {
+            // Update user profile as Claude analyzes
+            setMiraState((prev) => ({
+              ...prev,
+              userProfile: {
+                ...prev.userProfile,
+                ...profile,
+              },
+            }));
+          },
+          onResponseChunk: (chunk) => {
+            // Check if stream was interrupted - only block chunks from the interrupted stream
+            if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
+              console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream #${streamNum} was interrupted`);
+              streamDebugLog(`Blocking chunk from interrupted stream - STREAM #${streamNum}`, {
                 chunkLength: chunk.length,
-                newLineId,
-                isInterrupted: isStreamInterruptedRef.current,
               });
+              return;
+            }
 
-              // Track this line as part of the response sequence
-              responseLineIdsRef.current.push(newLineId);
+            // Add each chunk as a separate terminal line to preserve formatting and gaps
+            const newLineId = String(lineCountRef.current);
 
-              // Set the first chunk's line as the currently animating line
-              if (!currentAnimatingLineIdRef.current) {
-                currentAnimatingLineIdRef.current = newLineId;
-                setRenderTrigger(t => t + 1); // Force re-render
-                streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
+            console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars`);
+            streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
+              chunkLength: chunk.length,
+              newLineId,
+              isInterrupted: isStreamInterruptedRef.current,
+            });
+
+            // Track this line as part of the response sequence
+            responseLineIdsRef.current.push(newLineId);
+
+            // Set the first chunk's line as the currently animating line
+            if (!currentAnimatingLineIdRef.current) {
+              currentAnimatingLineIdRef.current = newLineId;
+              setRenderTrigger(t => t + 1); // Force re-render
+              streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
+            }
+
+            addTerminalLine('text', chunk);
+
+            // Play typing sound if enabled (throttle to reduce audio spam)
+            if (settings.soundEnabled) {
+              // Play sound every 2-3 characters to avoid audio overload
+              if (chunk.length % 3 === 0) {
+                playHydrophoneStatic(0.15).catch(() => {
+                  // Silently ignore audio context errors (e.g., user hasn't interacted yet)
+                });
               }
+            }
+          },
+          onComplete: (data) => {
+            streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
+              newConfidence: data.updatedState.confidenceInUser,
+            });
 
-              addTerminalLine('text', chunk);
+            // Final state update
+            setMiraState(data.updatedState);
+            onConfidenceChange?.(data.updatedState.confidenceInUser);
 
-              // Play typing sound if enabled (throttle to reduce audio spam)
-              if (settings.soundEnabled) {
-                // Play sound every 2-3 characters to avoid audio overload
-                if (chunk.length % 3 === 0) {
-                  playHydrophoneStatic(0.15).catch(() => {
-                    // Silently ignore audio context errors (e.g., user hasn't interacted yet)
-                  });
-                }
-              }
-            },
-            onComplete: (data) => {
-              streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
-                newConfidence: data.updatedState.confidenceInUser,
-              });
+            // Add transition phrase
+            addTerminalLine('text', '...what do you think about this...');
 
-              // Final state update
-              setMiraState(data.updatedState);
-              onConfidenceChange?.(data.updatedState.confidenceInUser);
+            // Show ASCII art with tracked creature
+            const { name: randomCreature, art: randomArt } = getRandomCreature();
+            setCurrentCreature(randomCreature);
+            setCurrentZoom('medium');
+            const asciiLine: TerminalLine = {
+              id: String(lineCountRef.current++),
+              type: 'ascii',
+              content: randomArt,
+            };
+            setTerminalLines((prev) => [...prev, asciiLine]);
 
-              // Add transition phrase
-              addTerminalLine('text', '...what do you think about this...');
+            // Add visual separator after exchange
+            addTerminalLine('system', '---');
 
-              // Show ASCII art with tracked creature
-              const { name: randomCreature, art: randomArt } = getRandomCreature();
-              setCurrentCreature(randomCreature);
-              setCurrentZoom('medium');
-              const asciiLine: TerminalLine = {
-                id: String(lineCountRef.current++),
-                type: 'ascii',
-                content: randomArt,
-              };
-              setTerminalLines((prev) => [...prev, asciiLine]);
+            // Reset response tracking on successful completion
+            currentAnimatingLineIdRef.current = null;
+            responseLineIdsRef.current = [];
+            dispatchStream({ type: 'END_STREAM' });
+          },
+          onAnalysis: (analysis) => {
+            // Display Claude's reasoning in formatted ASCII box with confidence delta
+            console.log('📊 [TerminalInterface] onAnalysis callback fired:', {
+              reasoning: analysis.reasoning.substring(0, 50),
+              confidenceDelta: analysis.confidenceDelta,
+            });
+            const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
+            console.log('📦 [TerminalInterface] Formatted box:', box.split('\n')[0]); // Log first line
+            addTerminalLine('analysis', box);
+          },
+          onError: (error) => {
+            console.error('Stream error:', error);
+            streamDebugLog(`onError callback - STREAM #${streamNum}`, {
+              error,
+              wasInterrupted: isStreamInterruptedRef.current,
+            });
 
-              // Add visual separator after exchange
-              addTerminalLine('system', '---');
+            // Check if this is an interrupt (user explicitly stopped)
+            const isInterrupt = error.includes('interrupted') || isStreamInterruptedRef.current;
 
-              // Reset response tracking on successful completion
-              currentAnimatingLineIdRef.current = null;
-              responseLineIdsRef.current = [];
-              dispatchStream({ type: 'END_STREAM' });
-            },
-            onAnalysis: (analysis) => {
-              // Display Claude's reasoning in formatted ASCII box with confidence delta
-              console.log('📊 [TerminalInterface] onAnalysis callback fired:', {
-                reasoning: analysis.reasoning.substring(0, 50),
-                confidenceDelta: analysis.confidenceDelta,
-              });
-              const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
-              console.log('📦 [TerminalInterface] Formatted box:', box.split('\n')[0]); // Log first line
-              addTerminalLine('analysis', box);
-            },
-            onError: (error) => {
-              console.error('Stream error:', error);
-              streamDebugLog(`onError callback - STREAM #${streamNum}`, {
-                error,
-                wasInterrupted: isStreamInterruptedRef.current,
-              });
+            if (isInterrupt) {
+              console.log('📍 Stream was interrupted by user (consequence already added by handleInterrupt)');
+              // handleInterrupt already handled the consequence text and confidence update
+            } else {
+              addTerminalLine(
+                'text',
+                '...connection to the depths lost... the abyss is unreachable at this moment...'
+              );
+            }
 
-              // Check if this is an interrupt (user explicitly stopped)
-              const isInterrupt = error.includes('interrupted') || isStreamInterruptedRef.current;
-
-              if (isInterrupt) {
-                console.log('📍 Stream was interrupted by user (consequence already added by handleInterrupt)');
-                // handleInterrupt already handled the consequence text and confidence update
-              } else {
-                addTerminalLine(
-                  'text',
-                  '...connection to the depths lost... the abyss is unreachable at this moment...'
-                );
-              }
-
-              // Reset response tracking
-              currentAnimatingLineIdRef.current = null;
-              responseLineIdsRef.current = [];
-              dispatchStream({ type: 'END_STREAM' });
-            },
-          }
+            // Reset response tracking
+            currentAnimatingLineIdRef.current = null;
+            responseLineIdsRef.current = [];
+            dispatchStream({ type: 'END_STREAM' });
+          },
         };
         console.log('📋 [TerminalInterface] Callbacks object created:', {
           hasOnAnalysis: !!callbacksObject.onAnalysis,
