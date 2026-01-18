@@ -388,8 +388,14 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
       console.log('📊 [miraBackendStream] ANALYSIS_COMPLETE event received:', {
         reasoning: analysisData.reasoning.substring(0, 50),
         confidenceDelta: analysisData.confidenceDelta,
+        hasCallback: !!callbacks.onAnalysis,
       });
-      callbacks.onAnalysis?.(analysisData);
+      if (callbacks.onAnalysis) {
+        console.log('📊 [miraBackendStream] Invoking onAnalysis callback...');
+        callbacks.onAnalysis(analysisData);
+      } else {
+        console.log('⚠️ [miraBackendStream] onAnalysis callback is undefined!');
+      }
       break;
     }
   }
