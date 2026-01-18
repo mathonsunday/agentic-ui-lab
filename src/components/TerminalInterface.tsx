@@ -711,7 +711,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     content={line.content}
                     speed={settings.typingSpeed}
                     isAnimating={shouldAnimate}
-                    onComplete={() => {
+                    onComplete={useCallback(() => {
                       console.log(`[TypewriterLine.onComplete] Line ${line.id} animation complete, currentAnimatingLineIdRef: ${currentAnimatingLineIdRef.current}`);
                       // CRITICAL: Only move to next line if this line is no longer receiving chunks
                       // If this is still the currentAnimatingLine, it might receive more chunks, so don't call onComplete yet
@@ -732,7 +732,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                         console.log(`[TypewriterLine.onComplete] Line ${line.id} IS still the currentAnimatingLine, ignoring onComplete`);
                       }
                       // If this IS the currentAnimatingLine, it's still receiving chunks, so keep animating
-                    }}
+                    }, [line.id])}
                   />
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
