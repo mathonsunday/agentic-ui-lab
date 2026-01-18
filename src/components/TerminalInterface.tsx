@@ -131,6 +131,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
+  const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
   const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
@@ -399,23 +400,46 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               isInterrupted: isStreamInterruptedRef.current,
             });
 
-            // Create one line per chunk (simpler interrupt behavior)
-            // When interrupt fires, subsequent chunks just don't get added
-            // Each chunk animates independently without accumulation complexity
+            // Accumulate chunks into a single terminal line (not one line per chunk)
+            // This prevents rapid scrolling when streaming long content like specimen 47
+            // CRITICAL: Use functional state update to ensure line exists before accumulating
             setTerminalLines((prev) => {
-              const newLineId = String(lineCountRef.current++);
-              currentAnimatingLineIdRef.current = newLineId;
-              responseLineIdsRef.current.push(newLineId);
-              streamDebugLog(`Chunk received - creating line - STREAM #${streamNum}`, { lineId: newLineId, chunkSize: chunk.length });
-              console.log(`📝 [TerminalInterface] Creating chunk line with ID: ${newLineId}, chunk size: ${chunk.length} chars`);
+              if (!currentAnimatingLineIdRef.current) {
+                // First text chunk: create new line
+                const newLineId = String(lineCountRef.current++);
+                currentAnimatingLineIdRef.current = newLineId;
+                responseLineIdsRef.current.push(newLineId);
+                setRenderTrigger(t => t + 1); // Force re-render
+                streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
+                console.log(`📝 [TerminalInterface] Creating FIRST chunk line with ID: ${newLineId}, chunk size: ${chunk.length} chars`);
 
-              const newLine: TerminalLine = {
-                id: newLineId,
-                type: 'text',
-                content: chunk,
-                timestamp: Date.now(),
-              };
-              return [...prev, newLine];
+                // Create and add the new line in the same state update
+                const newLine: TerminalLine = {
+                  id: newLineId,
+                  type: 'text',
+                  content: chunk,
+                  timestamp: Date.now(),
+                };
+                return [...prev, newLine];
+              } else {
+                // Subsequent chunks: accumulate into existing line
+                const index = prev.findIndex(l => l.id === currentAnimatingLineIdRef.current);
+                console.log(`📥 [TerminalInterface] Looking for line ${currentAnimatingLineIdRef.current}: found at index ${index} (total lines: ${prev.length})`);
+                if (index === -1) {
+                  console.warn(`⚠️ [TerminalInterface] Line not found! Current line ID: ${currentAnimatingLineIdRef.current}, available IDs:`, prev.map(l => l.id));
+                  return prev;
+                }
+
+                const updated = [...prev];
+                const oldLength = updated[index].content.length;
+                updated[index] = {
+                  ...updated[index],
+                  content: updated[index].content + chunk
+                };
+                const newLength = updated[index].content.length;
+                console.log(`✏️ [TerminalInterface] ACCUMULATED chunk to line ${currentAnimatingLineIdRef.current}: ${oldLength} → ${newLength} chars (added ${chunk.length})`);
+                return updated;
+              }
             });
 
             // Play typing sound if enabled (throttle to reduce audio spam)
@@ -725,12 +749,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               streamDebugLog(`RENDER: Adding interrupt button - STREAM #${streamState.streamId}`, {
                 isStreaming: streamState.isStreaming,
                 source: currentStreamSource,
+                renderTrigger,
                 toolCount: tools.length,
               });
             } else {
               streamDebugLog(`RENDER: NOT adding interrupt button - STREAM #${streamState.streamId}`, {
                 isStreaming: streamState.isStreaming,
                 source: currentStreamSource,
+                renderTrigger,
                 toolCount: tools.length,
               });
             }
@@ -741,7 +767,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, currentStreamSource, handleInterrupt])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, currentStreamSource, handleInterrupt, renderTrigger])}
         </div>
       </div>
 
