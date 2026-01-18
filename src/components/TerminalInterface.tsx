@@ -698,6 +698,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             // We check if line is in responseLineIdsRef - if yes, it's part of current response and should animate
             const shouldAnimate = !isResponseLine || responseLineIdsRef.current.includes(line.id);
 
+            if (isResponseLine) {
+              console.log(`[TerminalInterface] RENDER line ${line.id}: isResponseLine=true, responseLineIds=[${responseLineIdsRef.current.join(',')}], shouldAnimate=${shouldAnimate}`);
+            }
+
             return (
               <div
                 key={line.id}

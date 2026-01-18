@@ -33,16 +33,19 @@ export function TypewriterLine({
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
 
+  console.log(`[TypewriterLine] RENDER with isAnimating=${isAnimating}, content.length=${content.length}, revealedLength=${revealedLength}, charDelayMs=${charDelayMs}`);
+
   useEffect(() => {
     // If not animating, don't start the timer
     if (!isAnimating) {
+      console.log(`[TypewriterLine] EFFECT: isAnimating=false, returning early (content: ${content.length} chars)`);
       logger.debug('Not animating, effect returning early', {
         contentLength: content.length,
       });
       return;
     }
 
-    console.log(`[TypewriterLine] Starting animation with content length: ${content.length}`);
+    console.log(`[TypewriterLine] EFFECT: Starting animation with content length: ${content.length}`);
     logger.debug('Starting continuous animation', {
       contentLength: content.length,
       charDelayMs,
@@ -58,6 +61,7 @@ export function TypewriterLine({
       setRevealedLength((prev) => {
         // If content shrunk (shouldn't happen), clamp to new length
         if (prev > content.length) {
+          console.log(`[TypewriterLine] INTERVAL: Content shrunk, clamping ${prev} → ${content.length}`);
           logger.debug('Content shrunk, clamping', {
             revealed: prev,
             newContentLength: content.length,
@@ -68,6 +72,7 @@ export function TypewriterLine({
         // If we've caught up to current content length, stop incrementing for now
         // (new chunks will arrive and we'll start animating again)
         if (prev >= content.length) {
+          console.log(`[TypewriterLine] INTERVAL: Caught up to content (${prev}/${content.length}), waiting for more chunks`);
           return prev;  // Stay at current position until more content arrives
         }
 
@@ -85,7 +90,7 @@ export function TypewriterLine({
     }, charDelayMs);
 
     return () => {
-      console.log(`[TypewriterLine] Clearing interval, revealed length was: ${lastLoggedRevealedLength}`);
+      console.log(`[TypewriterLine] CLEANUP: Clearing interval, revealed length was: ${lastLoggedRevealedLength}, current content.length=${content.length}`);
       logger.debug('Clearing interval');
       clearInterval(timer);
     };
