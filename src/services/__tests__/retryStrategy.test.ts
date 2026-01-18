@@ -202,5 +202,43 @@ describe('Retry Strategy', () => {
 
       expect(fn).toHaveBeenCalledTimes(1);
     });
+
+    it('should retry on timeout errors with default config', async () => {
+      const fn = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('timeout'))
+        .mockResolvedValueOnce('success');
+
+      const promise = withRetry(fn, {
+        maxRetries: 1,
+        initialDelayMs: 100,
+        jitterFactor: 0,
+      });
+
+      await vi.runAllTimersAsync();
+      const result = await promise;
+
+      expect(result).toBe('success');
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on HTTP 5xx errors with default config', async () => {
+      const fn = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('HTTP 500: Internal Server Error'))
+        .mockResolvedValueOnce('success');
+
+      const promise = withRetry(fn, {
+        maxRetries: 1,
+        initialDelayMs: 100,
+        jitterFactor: 0,
+      });
+
+      await vi.runAllTimersAsync();
+      const result = await promise;
+
+      expect(result).toBe('success');
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
   });
 });
