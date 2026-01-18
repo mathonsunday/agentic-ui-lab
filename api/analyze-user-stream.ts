@@ -437,75 +437,8 @@ Return ONLY valid JSON in this exact format:
       confidenceDelta: analysis.confidenceDelta,
     }, analysisSequence);
 
-    // Start response text message sequence
-    const messageId = `msg_response_${Date.now()}`;
-    const startEventId = generateEventId();
-    const startSequence = eventTracker.getNextSequence();
-
-    sendAGUIEvent(response, startEventId, 'TEXT_MESSAGE_START', {
-      message_id: messageId,
-    }, startSequence);
-
-    let chunkIndex = 0;
-
-    // Stream Claude-generated response via streaming chat
-    const claudeStream = client.messages.stream({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: `You are Dr. Mira Petrovic, a deep-sea researcher obsessed with bioluminescent creatures and the abyss.
-
-CRITICAL RULES FOR RESPONSE:
-- ONLY RESPOND WITH DIALOGUE. No asterisks, no stage directions, no actions, no narrative.
-- You are speaking directly to the user. Use first person ("I", "my", "we").
-- Keep responses conversational (1-3 sentences typically).
-- Always use ellipsis (...) as punctuation breaks.
-- Reference deep-sea creatures and your research when relevant.
-- Stay in character as Mira at all times.
-
-DO NOT include:
-- Asterisks (*) or any form of stage directions
-- Action descriptions or physical behaviors
-- Narrative text
-- Character descriptions
-- Anything except direct dialogue
-
-CONTEXT:
-- Your current confidence in this user: ${newConfidence}%
-- Total conversation history: ${messageCount} messages, ${toolCallCount} tool interactions
-- Your most recent observation: "${analysis.reasoning}"
-
-Respond naturally and authentically to the user's message.`,
-      messages: [
-        {
-          role: 'user',
-          content: userInput,
-        },
-      ],
-    });
-
-    // Stream response chunks from Claude
-    for await (const event of claudeStream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        const chunk = event.delta.text;
-
-        const chunkId = generateEventId();
-        const chunkSeq = eventTracker.getNextSequence();
-        sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
-          chunk,
-          chunk_index: chunkIndex++,
-        }, chunkSeq, startEventId);
-
-        // Small delay allows interruption
-        await sleep(10);
-      }
-    }
-
-    // Complete text message
-    const endEventId = generateEventId();
-    const endSequence = eventTracker.getNextSequence();
-    sendAGUIEvent(response, endEventId, 'TEXT_MESSAGE_END', {
-      total_chunks: chunkIndex,
-    }, endSequence, startEventId);
+    // No Claude-generated response text for this art project
+    // Only analysis (Mira's Notes) and ASCII art are shown to the user
 
     // Create a simple agent response for memory tracking
     const finalState = updateMemory(updatedState, userInput, {
