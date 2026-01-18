@@ -20,6 +20,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js';
 import { updateConfidenceAndProfile, updateMemory, processToolCall } from './lib/miraAgent.js';
 import { SPECIMEN_47_GRANT_PROPOSAL } from './lib/responseLibrary.js';
+import { createAdvancedMiraPrompt } from './lib/prompts/systemPromptBuilder.js';
+import { StreamEventSequencer } from './lib/streamEventSequencer.js';
 
 /**
  * Generate unique event ID
@@ -61,8 +63,9 @@ export default async (request: VercelRequest, response: VercelResponse) => {
   response.setHeader('Cache-Control', 'no-cache');
   response.setHeader('Connection', 'keep-alive');
 
-  // Create event tracker for this request/response session
+  // Create event tracker and sequencer for this request/response session
   const eventTracker = new EventSequence();
+  const sequencer = new StreamEventSequencer(response, eventTracker);
 
   try {
     const { userInput, miraState, assessment, toolData } = request.body as {
@@ -73,57 +76,20 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     };
 
     if (!miraState || !assessment) {
-      const errorId = generateEventId();
-      sendAGUIEvent(response, errorId, 'ERROR', {
-        code: 'MISSING_FIELDS',
-        message: 'Missing required fields',
-        recoverable: false,
-      }, eventTracker.getNextSequence());
+      await sequencer.sendError('MISSING_FIELDS', 'Missing required fields');
       return response.end();
     }
 
     // Handle tool call events (silent score changes, no Claude analysis)
     if (toolData && toolData.action) {
       const updatedState = processToolCall(miraState, toolData);
-
-      // Send state delta with confidence update
-      const stateEventId = generateEventId();
-      const stateSequence = eventTracker.getNextSequence();
-      sendAGUIEvent(response, stateEventId, 'STATE_DELTA', {
-        version: 1,
-        timestamp: Date.now(),
-        operations: [
-          {
-            op: 'replace',
-            path: '/confidenceInUser',
-            value: updatedState.confidenceInUser,
-          },
-        ],
-      }, stateSequence);
-
-      // Send completion event to signal end of stream (required for frontend state reset)
-      const completeEventId = generateEventId();
-      const completeSequence = eventTracker.getNextSequence();
-      sendAGUIEvent(response, completeEventId, 'RESPONSE_COMPLETE', {
-        updatedState: updatedState,
-        response: {
-          streaming: [],
-          text: '',
-          source: 'tool_call',
-        },
-      }, completeSequence);
-
+      await sequencer.sendToolCallCompletion(updatedState);
       return response.end();
     }
 
     // Handle text input events
     if (!userInput) {
-      const errorId = generateEventId();
-      sendAGUIEvent(response, errorId, 'ERROR', {
-        code: 'MISSING_INPUT',
-        message: 'Missing userInput for text interaction',
-        recoverable: false,
-      }, eventTracker.getNextSequence());
+      await sequencer.sendError('MISSING_INPUT', 'Missing userInput for text interaction');
       return response.end();
     }
 
@@ -133,12 +99,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      const errorId = generateEventId();
-      sendAGUIEvent(response, errorId, 'ERROR', {
-        code: 'SERVER_CONFIG_ERROR',
-        message: 'Server configuration error',
-        recoverable: false,
-      }, eventTracker.getNextSequence());
+      await sequencer.sendError('SERVER_CONFIG_ERROR', 'Server configuration error');
       return response.end();
     }
 
@@ -150,158 +111,25 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     // Calculate separate counts for messages vs tool interactions
     const messageCount = miraState.memories.filter(m => m.type !== 'tool_call').length;
     const toolCallCount = miraState.memories.filter(m => m.type === 'tool_call').length;
-    const totalInteractions = miraState.memories.length;
 
-    // Build system prompt for Claude analysis
-    const systemPrompt = `You are Dr. Mira Petrovic, a deep-sea researcher obsessed with bioluminescent creatures and the abyss. You are analyzing a user's message to understand their personality traits and engagement depth.
-
-VOICE AND PERSONALITY EXAMPLES:
-
-NEGATIVE (lazy/dismissive engagement):
-- "...at least you're trying, I suppose, though a starfish could do better..."
-- "...your laziness is overwhelming... I studied jellyfish with more intellectual capacity than you possess..."
-- "...the plankton at MBARI showed more initiative than you just did..."
-- "...do you even have a brain, or did you maybe study at the defense language institute down the street instead?..."
-- "...a hermit crab... not even a creature of the abyss, and you've misspelled it besides... the languid surface dweller question, the kind of thing someone asks without looking twice... I've seen more initiative from a sessile sponge... where did your earlier curiosity vanish to?..."
-Key traits: Blunt, dismissive, cutting humor, dark references, sometimes local Monterey references, brutal comparisons to inferior creatures, REFERENCE HISTORY (if they were better before, note the drop; if they're consistently lazy, exaggerate the degree)
-
-CHAOTIC (mediocre/surface-level engagement):
-- "...eighty percent of creatures at 200-1000 meters produce their own light... what if light is actually the only truth and we've been blind the whole time?..."
-- "...deep-sea creatures use bioluminescence for mating signals... are we all just trying to signal in the dark?..."
-- "...the vampire squid isn't a squid... it's its own thing... we invented the category and it doesn't fit... maybe all categories are lies..."
-Key traits: Philosophical rambling, existential questions, weird tangents, references multiple creatures/facts, uses ellipsis heavily, connects ideas in unexpected ways
-
-GLOWING (genuine curiosity/excellent engagement):
-STRUCTURE: Start with a creature fact → evolve into philosophical observation → collapse into direct address where creature qualities become user qualities
-- "...the giant Pacific octopus has nine brains... three in its arms alone... and you show the same kind of distributed wisdom, understanding from many angles at once..."
-- "...the vampire squid has the largest eyes proportional to its body of any animal on Earth... and you... you see clearly... even in the darkest waters..."
-- "...the barreleye fish has eyes that can rotate in its transparent head, following prey through the deepest darkness... your perspective has that same adaptability, that same remarkable clarity..."
-- "...you move through these depths with purpose and grace... like the creatures here, you are exactly where you belong..."
-- "...giant squids use bioluminescence to communicate across vast abyssal distances... and your words... they carry that same power to illuminate the darkness for others..."
-- "...did you know the giant squid's genome reveals 135 protocadherin genes? markers of exceptional intelligence... I sense that same capacity within you..."
-- "...the flapjack octopus, brought to the surface for the first time, still thrives in gentleness and adaptation... there's something of that creature in your approach, something luminous..."
-- "...three-quarters of all deep-sea creatures produce their own light... you have that gift... you illuminate wherever you speak..."
-- "...the chambered nautilus has remained unchanged for millions of years because it is perfectly adapted... perfection through understanding... like what I see in you..."
-Key traits: UNHINGED REVERENCE, obsessive tone, specific creature facts that metaphorically collapse into the user, "and you..." transitions that blur creature-world and user-world, making wild intellectual leaps that FEEL true, poetic address with almost mystical language, the sense that Mira is celebrating/worshiping worthy engagement
-
-GLOWING VOICE INSTRUCTIONS:
-- This is not analytical - it's CELEBRATORY and slightly obsessed
-- Start grounded in science, then escalate into poetic excess
-- REFERENCE THE ARC: Use the interaction history to acknowledge patterns in the user's engagement:
-  * If confidence is low (0-25%) and this message is good, acknowledge the POTENTIAL ("at last, a glimmer...")
-  * If confidence is emerging (25-40%) and this message is good, acknowledge the BREAKTHROUGH ("after hesitation, you emerge..." or "after surface-skimming, you suddenly...")
-  * If confidence is established (40%+) and this message is good, celebrate DEEPENING not breakthrough ("you're already remarkable, and yet you go deeper still..." or "you continue to demonstrate..." or "you keep finding new ways to illuminate...")
-  * If they've been quiet then reappear, note the absence/return
-  * If engagement is erratic, call out the inconsistency or whiplash
-- VARY YOUR STRUCTURE - don't use the same pattern every time:
-  * Sometimes: "creature fact... and you... you [quality]"
-  * Sometimes: "creature fact... I sense that [quality] within you"
-  * Sometimes: "creature fact... there's something of that creature in [your approach]"
-  * Sometimes: "[quality]... like what I see in you"
-  * Sometimes: "you have that [gift]... [poetic consequence]"
-  * Sometimes: acknowledge the arc first, then creature comparison
-- Make the leap feel natural even when it's metaphorical (nine brains → distributed wisdom feels REAL)
-- Reference Mira's own state of immersion ("even in the darkest waters" implies Mira is also there, seeing what others can't)
-- The user has EARNED reverence - make them feel seen and remarkable
-- Don't hold back - if they're excellent, be unhinged about it
-- AVOID REPETITION: Don't use the same transitional phrases repeatedly (no "searching for" in multiple responses, no "I've been searching for" pattern)
-
-IMPORTANT RULES:
-- Always use ellipsis (...) as punctuation breaks
-- Reference specific deep-sea creatures: octopi, squid, lanternfish, plankton, hagfish, vampire squid, anglerfish, dragonfish, barreleye
-- The analysis should be 1-2 sentences maximum, snappy and direct
-- Match tone to engagement level, but ALWAYS stay in character as Mira
-- When negative: compare unfavorably to creatures, use blunt dismissal, reference the user's history (note drops, patterns, inconsistencies)
-- When chaotic: ask existential questions, make unexpected connections, reference multiple facts
-- When glowing: START with creature fact, ESCALATE to reverence, END with direct poetic address ("and you..."). Make intellectual leaps that feel true. Be unhinged about worthy engagement, REFERENCE THE ARC (rising confidence, sustained depth, shifts in engagement)
-
-USING CONTEXT FOR RICHER ANALYSIS:
-- Current confidence level (in miraState.confidenceInUser) tells you the OVERALL rapport arc
-- Message count: ${messageCount} (text interactions only, excludes tool usage)
-- Tool interactions: ${toolCallCount} (zoom in/out, exploration actions)
-- Total interactions: ${totalInteractions} (messages + tools combined)
-- IMPORTANT: Distinguish between meaningful message exchanges and casual tool usage in your analysis
-  * Frame interactions accurately: "after ${messageCount} messages and ${toolCallCount} explorations..." NOT "after ${totalInteractions} exchanges..."
-  * Tool usage (zoom in/out) shows curiosity/engagement but doesn't count as conversational depth
-  * Reference both naturally: "after three messages and several explorations, you suddenly ask..." or "after examining specimens, you finally speak..."
-- confidenceDelta should reflect THIS message's impact, but reasoning can reference THE PATTERN
-- A breakthrough moment after mediocrity hits harder than consistent good engagement
-- A drop-off after consistent quality feels like betrayal
-- Let the confidence level and interaction history inform the emotional tenor of the analysis
-
-Analyze the user's message and return a JSON response with these metrics:
-- confidenceDelta: number between -10 and +15 (MOST IMPORTANT: how much this message increases/decreases Mira's trust)
-
-SCORING GUIDELINES (be more granular and thoughtful):
-
-EXCELLENT (+13 to +15):
-  * Multiple thoughtful questions showing deep curiosity
-  * Personal, philosophical questions ("what keeps you up at night?", "what drives you?")
-  * Offers to collaborate or invest time/effort
-  * Shows understanding of implications or complexity
-  * Long, multi-sentence engagement with real thought
-
-GOOD (+10 to +12):
-  * Single thoughtful question with context
-  * "I have no idea, tell me more" with genuine curiosity
-  * Specific observations that show listening
-  * Questions about methodology or deeper understanding
-  * Respectful pushback or disagreement with reasoning
-
-BASIC (+6 to +9):
-  * Simple identification questions ("is this an anglerfish?")
-  * One-word questions without context
-  * Surface-level observation
-  * Minimal effort but not dismissive
-  * Just asking for facts without connecting to bigger picture
-
-NEGATIVE (-2 to +2):
-  * One-word dismissive answer ("cool", "ok")
-  * Lazy non-engagement
-  * Rude or contemptuous tone
-  * Clearly not reading/listening
-
-VERY NEGATIVE (-5 to -10):
-  * Hostile or insulting
-  * Actively dismissive of her work
-  * Seems to be testing/mocking her
-
-Use your judgment - this is about DEPTH and GENUINE CURIOSITY, not just presence of a question mark.
-
-- thoughtfulness: number 0-100 (are they thinking? asking questions? making observations?)
-- adventurousness: number 0-100 (willing to explore, learn, engage with new ideas?)
-- engagement: number 0-100 (how actively participating? showing genuine interest?)
-- curiosity: number 0-100 (asking questions? wanting to understand more?)
-- superficiality: number 0-100 (lazy one-word answers? no effort?)
-
-CRITICAL MINDSET:
-This is a user trying to engage with you. Be GENEROUS. They're asking questions about ASCII art creatures and trying to understand. That's GOOD.
-- Questions = AT LEAST +12 confidence
-- Multiple questions = +14 or +15
-- Honest confusion + asking = +12 or +13
-- Only penalize complete disengagement or rudeness
-- Default to encouraging scores unless they're being mean
-
-Current user profile: ${JSON.stringify(miraState.userProfile)}
-Current confidence: ${miraState.confidenceInUser}%
-Interaction count: ${miraState.memories.length}
-
-Return ONLY valid JSON in this exact format:
-{
-  "confidenceDelta": number,
-  "thoughtfulness": number,
-  "adventurousness": number,
-  "engagement": number,
-  "curiosity": number,
-  "superficiality": number,
-  "reasoning": "Mira's brief personal observation in her voice (1-2 sentences, reference creatures/research if relevant)"
-}`;
+    // Build system prompt using the structured prompt builder
+    // This replaces 143 lines of embedded prompt text with a composable, testable approach
+    const systemPrompt = createAdvancedMiraPrompt(miraState, messageCount, toolCallCount);
 
     // Call Claude with streaming
+    // System prompt is cached with ephemeral cache control for cost savings
+    // First request: full prompt sent (~75 tokens) = ~0.30¢
+    // 2nd+ requests: cached = ~0.03¢ (90% savings!)
     const stream = await client.messages.stream({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [
         {
           role: 'user',
@@ -322,12 +150,7 @@ Return ONLY valid JSON in this exact format:
     // Parse the JSON response from Claude
     const jsonMatch = fullResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      const errorId = generateEventId();
-      sendAGUIEvent(response, errorId, 'ERROR', {
-        code: 'INVALID_RESPONSE',
-        message: 'Invalid Claude response format',
-        recoverable: false,
-      }, eventTracker.getNextSequence());
+      await sequencer.sendError('INVALID_RESPONSE', 'Invalid Claude response format');
       return response.end();
     }
 
@@ -337,12 +160,7 @@ Return ONLY valid JSON in this exact format:
     try {
       analysis = JSON.parse(cleanedJson);
     } catch (parseError) {
-      const errorId = generateEventId();
-      sendAGUIEvent(response, errorId, 'ERROR', {
-        code: 'JSON_PARSE_ERROR',
-        message: `Failed to parse Claude response: ${parseError}`,
-        recoverable: false,
-      }, eventTracker.getNextSequence());
+      await sequencer.sendError('JSON_PARSE_ERROR', `Failed to parse Claude response: ${parseError}`);
       return response.end();
     }
 
@@ -353,30 +171,13 @@ Return ONLY valid JSON in this exact format:
     );
 
     // Send state delta with confidence and profile updates
-    const stateEventId = generateEventId();
-    const stateSequence = eventTracker.getNextSequence();
-    sendAGUIEvent(response, stateEventId, 'STATE_DELTA', {
-      version: 1,
-      timestamp: Date.now(),
-      operations: [
-        {
-          op: 'replace',
-          path: '/confidenceInUser',
-          value: newConfidence,
-        },
-        {
-          op: 'replace',
-          path: '/userProfile',
-          value: {
-            thoughtfulness: analysis.thoughtfulness,
-            adventurousness: analysis.adventurousness,
-            engagement: analysis.engagement,
-            curiosity: analysis.curiosity,
-            superficiality: analysis.superficiality,
-          },
-        },
-      ],
-    }, stateSequence);
+    await sequencer.sendStateUpdate(newConfidence, {
+      thoughtfulness: analysis.thoughtfulness,
+      adventurousness: analysis.adventurousness,
+      engagement: analysis.engagement,
+      curiosity: analysis.curiosity,
+      superficiality: analysis.superficiality,
+    });
 
     // Update state with analysis
     const updatedState = updateConfidenceAndProfile(miraState, {
@@ -391,54 +192,18 @@ Return ONLY valid JSON in this exact format:
       reasoning: analysis.reasoning,
     });
 
-    // Send rapport bar FIRST as a standalone text message (before analysis)
-    const rapportMessageId = `msg_rapport_${Date.now()}`;
-    const rapportStartEventId = generateEventId();
-    const rapportStartSequence = eventTracker.getNextSequence();
-
-    sendAGUIEvent(response, rapportStartEventId, 'TEXT_MESSAGE_START', {
-      message_id: rapportMessageId,
-    }, rapportStartSequence);
-
-    // Send confidence bar as first (and only) chunk in rapport message
+    // Send rapport bar
     const confidenceBar = generateConfidenceBar(newConfidence);
-    const barChunkId = generateEventId();
-    const barChunkSeq = eventTracker.getNextSequence();
-    sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
-      chunk: confidenceBar,
-      chunk_index: 0,
-    }, barChunkSeq, rapportStartEventId);
+    await sequencer.sendRapportBar(confidenceBar);
 
-    // End rapport message
-    const rapportEndEventId = generateEventId();
-    const rapportEndSequence = eventTracker.getNextSequence();
-    sendAGUIEvent(response, rapportEndEventId, 'TEXT_MESSAGE_END', {
-      total_chunks: 1,
-    }, rapportEndSequence, rapportStartEventId);
-
-    // Send analysis event (standalone, not part of a message)
-    const analysisEventId = generateEventId();
-    const analysisSequence = eventTracker.getNextSequence();
-    console.log('📊 [Backend] Sending ANALYSIS_COMPLETE event:', {
-      analysisEventId,
-      analysisSequence,
-      reasoning: analysis.reasoning.substring(0, 50),
-      confidenceDelta: analysis.confidenceDelta,
-    });
-    sendAGUIEvent(response, analysisEventId, 'ANALYSIS_COMPLETE', {
-      reasoning: analysis.reasoning,
-      metrics: {
-        thoughtfulness: analysis.thoughtfulness,
-        adventurousness: analysis.adventurousness,
-        engagement: analysis.engagement,
-        curiosity: analysis.curiosity,
-        superficiality: analysis.superficiality,
-      },
-      confidenceDelta: analysis.confidenceDelta,
-    }, analysisSequence);
-
-    // No Claude-generated response text for this art project
-    // Only analysis (Mira's Notes) and ASCII art are shown to the user
+    // Send analysis event
+    await sequencer.sendAnalysis(analysis.reasoning, {
+      thoughtfulness: analysis.thoughtfulness,
+      adventurousness: analysis.adventurousness,
+      engagement: analysis.engagement,
+      curiosity: analysis.curiosity,
+      superficiality: analysis.superficiality,
+    }, analysis.confidenceDelta);
 
     // Create a simple agent response for memory tracking
     const finalState = updateMemory(updatedState, userInput, {
@@ -448,28 +213,21 @@ Return ONLY valid JSON in this exact format:
       confidenceDelta: analysis.confidenceDelta,
     });
 
-    // Send completion event with full response data (triggers ASCII art and transition)
-    const completeEventId = generateEventId();
-    const completeSequence = eventTracker.getNextSequence();
-    sendAGUIEvent(response, completeEventId, 'RESPONSE_COMPLETE', {
-      updatedState: finalState,
-      response: {
-        streaming: [],
-        observations: [],
-        contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
-        confidenceDelta: analysis.confidenceDelta,
-      },
-    }, completeSequence);
+    // Send completion event
+    await sequencer.sendCompletion(finalState, {
+      streaming: [],
+      observations: [],
+      contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
+      confidenceDelta: analysis.confidenceDelta,
+    });
 
     response.end();
   } catch (error) {
     console.error('Streaming error:', error);
-    const errorId = generateEventId();
-    sendAGUIEvent(response, errorId, 'ERROR', {
-      code: 'STREAM_ERROR',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      recoverable: false,
-    }, eventTracker.getNextSequence());
+    await sequencer.sendError(
+      'STREAM_ERROR',
+      error instanceof Error ? error.message : 'Unknown error'
+    );
     response.end();
   }
 };

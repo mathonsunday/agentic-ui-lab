@@ -1,0 +1,144 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                    REFACTORING ANALYSIS - READING ORDER            ║
+║                        (You are here →)                            ║
+╚════════════════════════════════════════════════════════════════════╝
+
+If you have 5 minutes:
+  → Read REFACTORING_SUMMARY.md
+  
+If you have 20 minutes:
+  → Read REFACTORING_SUMMARY.md (5 min)
+  → Read SYSTEM_PROMPT_REFACTORING.md (15 min)
+  
+If you have 45 minutes:
+  → Read REFACTORING_SUMMARY.md (5 min)
+  → Read SYSTEM_PROMPT_REFACTORING.md (15 min)
+  → Skim PROMPT_BUILDER_QUICK_START.md (20 min)
+  
+If you want the full picture:
+  → Read REFACTORING_SUMMARY.md (5 min)
+  → Read REFACTORING_ANALYSIS_2026.md (25 min)
+  → Read SYSTEM_PROMPT_REFACTORING.md (15 min)
+  → Read PROMPT_BUILDER_QUICK_START.md (20 min) when implementing
+
+════════════════════════════════════════════════════════════════════
+
+📋 FILE GUIDE
+
+REFACTORING_SUMMARY.md
+├─ What: Executive summary of all findings
+├─ Why: Understand the big picture quickly
+├─ Length: 5-10 minutes
+└─ Start here: Always, unless you're implementing
+
+SYSTEM_PROMPT_REFACTORING.md
+├─ What: Deep dive into the prompt problem
+├─ Why: Understand WHY this is critical
+├─ Sections:
+│  ├─ The Problem (the 490 lines issue)
+│  ├─ Options 1-4 (4 ways to solve it)
+│  ├─ Recommended: Option 2 (Structured Prompt Builder)
+│  └─ How it fits into overall plan
+├─ Length: 15 minutes
+└─ Read this: Before implementing prompt refactoring
+
+PROMPT_BUILDER_QUICK_START.md
+├─ What: Step-by-step implementation guide
+├─ Why: You want to actually build this
+├─ Sections:
+│  ├─ File structure to create (6 new files)
+│  ├─ Code examples for each file
+│  ├─ Update existing files
+│  ├─ Test examples
+│  └─ Verification steps
+├─ Length: 25 minutes (to understand structure)
+└─ Use this: When you're ready to code
+
+REFACTORING_ANALYSIS_2026.md
+├─ What: Comprehensive codebase analysis
+├─ Why: Understand all refactoring opportunities
+├─ Sections:
+│  ├─ Executive summary (revised with prompt findings)
+│  ├─ 9 refactoring opportunities detailed
+│  ├─ Testing strategy & priorities
+│  ├─ Implementation roadmap (4 phases)
+│  ├─ Risk assessment
+│  └─ Success metrics
+├─ Length: 45 minutes
+└─ Read this: When you want full context
+
+════════════════════════════════════════════════════════════════════
+
+🎯 WHAT CHANGED SINCE YOU ASKED
+
+You asked: "What about system prompts? That huge wall of text controls 
+          a lot of behavior"
+
+Analysis found:
+✗ BEFORE: System prompts were not in original refactoring plan
+✓ AFTER: Identified as HIGHEST PRIORITY (now Phase 1)
+
+Why it's critical:
+├─ 490 lines of scattered, duplicated prompt code
+├─ Controls 90% of system behavior
+├─ Blocks personality tuning iteration
+├─ Not testable
+├─ Not discoverable
+└─ Changes most frequently (5 commits in 24 hours)
+
+Solution:
+→ Refactor to structured, composable prompt builder
+→ Remove 275+ lines of duplication
+→ Make personality tuning easy and discoverable
+→ Enable testable, versionable personalities
+
+════════════════════════════════════════════════════════════════════
+
+🚀 QUICK START
+
+To implement prompt refactoring this week:
+
+1. Read SYSTEM_PROMPT_REFACTORING.md (understand options)
+2. Read PROMPT_BUILDER_QUICK_START.md (understand structure)
+3. Create directory: api/lib/prompts/
+4. Create files from PROMPT_BUILDER_QUICK_START.md:
+   ├─ types.ts
+   ├─ sections/voiceExamples.ts
+   ├─ sections/scoringRules.ts
+   ├─ sections/contextInjection.ts
+   ├─ sections/criticalMindset.ts
+   └─ systemPromptBuilder.ts
+5. Add tests (examples in PROMPT_BUILDER_QUICK_START.md)
+6. Update miraAgent.ts to use builder
+7. Update analyze-user-stream.ts to use builder
+8. Verify tests pass
+
+Estimated time: 3-4 hours
+Estimated impact: High (enables faster personality tuning)
+
+════════════════════════════════════════════════════════════════════
+
+❓ COMMON QUESTIONS
+
+Q: Which document should I read first?
+A: REFACTORING_SUMMARY.md (this orients you)
+
+Q: What's the most important finding?
+A: System prompts are the highest-priority refactoring
+   (not the components you expected)
+
+Q: When should I implement this?
+A: This week (Phase 1, before other refactoring)
+
+Q: Is this the complete refactoring plan?
+A: No, this is Phase 1 of 4. See REFACTORING_ANALYSIS_2026.md
+   for full plan, but prompt refactoring is most urgent.
+
+Q: Should I do this before or after component extraction?
+A: BEFORE. Higher ROI and enables faster iteration.
+
+Q: Can I do this incrementally?
+A: Yes. Build builder → Test → Swap miraAgent → 
+   Test → Swap analyze-user-stream
+
+════════════════════════════════════════════════════════════════════

@@ -11,6 +11,7 @@ import {
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getRandomCreature, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
+import { formatAnalysisBox, type AnalysisDisplayData } from '../shared/analysisFormatter';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';
@@ -94,55 +95,6 @@ const streamDebugLog = (message: string, data?: any) => {
   console.log(`[STREAM_DEBUG ${timestamp}] ${message}`, data || '');
 };
 
-/**
- * Format analysis reasoning as ASCII box with confidence delta in header
- * Creates a visually distinct block showing Mira's internal observations
- */
-function formatAnalysisBox(reasoning: string, confidenceDelta: number): string {
-  const deltaSymbol = confidenceDelta >= 0 ? '+' : '';
-  const deltaText = `[${deltaSymbol}${confidenceDelta} confidence]`;
-
-  // Box drawing characters
-  const topLeft = '┌';
-  const topRight = '┐';
-  const bottomLeft = '└';
-  const bottomRight = '┘';
-  const horizontal = '─';
-  const vertical = '│';
-
-  // Wrap reasoning text to fit in box (max 55 chars per line for responsive)
-  const maxWidth = 55;
-  const words = reasoning.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    if ((currentLine + word).length > maxWidth) {
-      lines.push(currentLine.trim());
-      currentLine = word + ' ';
-    } else {
-      currentLine += word + ' ';
-    }
-  }
-  if (currentLine.trim()) {
-    lines.push(currentLine.trim());
-  }
-
-  // Build box
-  const boxWidth = Math.max(
-    Math.max(...lines.map(l => l.length)),
-    20 + deltaText.length
-  ) + 2; // +2 for padding
-
-  const topBar = `${topLeft}${horizontal} MIRA'S NOTES ${horizontal.repeat(Math.max(0, boxWidth - 15 - deltaText.length))} ${deltaText} ${horizontal}${topRight}`;
-  const bottomBar = `${bottomLeft}${horizontal.repeat(boxWidth + 2)}${bottomRight}`;
-
-  const contentLines = lines.map(line =>
-    `${vertical} ${line.padEnd(boxWidth, ' ')} ${vertical}`
-  );
-
-  return [topBar, ...contentLines, bottomBar].join('\n');
-}
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
@@ -523,7 +475,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               reasoning: analysis.reasoning.substring(0, 50),
               confidenceDelta: analysis.confidenceDelta,
             });
-            const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
+            const box = formatAnalysisBox({
+              reasoning: analysis.reasoning,
+              confidenceDelta: analysis.confidenceDelta,
+            });
             console.log('📦 [TerminalInterface] Analysis box displayed');
             addTerminalLine('analysis', box);
           },
@@ -738,7 +693,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     }}
                   >
                     {expandedAnalysisIds.has(line.id) && line.analysisData
-                      ? formatAnalysisBox(line.analysisData.reasoning, line.analysisData.confidenceDelta)
+                      ? formatAnalysisBox(line.analysisData)
                       : line.content}
                   </span>
                 ) : isResponseLine ? (
