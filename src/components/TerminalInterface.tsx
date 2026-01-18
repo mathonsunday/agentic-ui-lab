@@ -406,13 +406,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         const assessment = assessResponse(userInput, 3000, miraState);
 
         // Stream from backend with real-time updates
-        const { promise, abort } = streamMiraBackend(
-          userInput,
-          miraState,
-          assessment,
-          null,
-          {
-            onConfidence: (update) => {
+        const callbacksObject = {
+          onConfidence: (update) => {
               // Only apply confidence updates if this stream wasn't interrupted
               if (interruptedStreamIdRef.current === streamNum) {
                 console.log(`⏭️ [TerminalInterface] Ignoring confidence update from interrupted stream #${streamNum}`);
@@ -546,6 +541,20 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               dispatchStream({ type: 'END_STREAM' });
             },
           }
+        };
+        console.log('📋 [TerminalInterface] Callbacks object created:', {
+          hasOnAnalysis: !!callbacksObject.onAnalysis,
+          hasOnConfidence: !!callbacksObject.onConfidence,
+          hasOnComplete: !!callbacksObject.onComplete,
+          hasOnError: !!callbacksObject.onError,
+        });
+
+        const { promise, abort } = streamMiraBackend(
+          userInput,
+          miraState,
+          assessment,
+          null,
+          callbacksObject
         );
         dispatchStream({ type: 'START_STREAM', abort });
         console.log('📌 Abort controller set for input stream');
