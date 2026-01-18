@@ -397,17 +397,27 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
             // Accumulate chunks into a single terminal line (not one line per chunk)
             // This prevents rapid scrolling when streaming long content like specimen 47
-            if (!currentAnimatingLineIdRef.current) {
-              // First text chunk: create new line
-              const newLineId = String(lineCountRef.current++);
-              currentAnimatingLineIdRef.current = newLineId;
-              responseLineIdsRef.current.push(newLineId);
-              setRenderTrigger(t => t + 1); // Force re-render
-              streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
-              addTerminalLine('text', chunk);
-            } else {
-              // Subsequent chunks: accumulate into existing line
-              setTerminalLines((prev) => {
+            // CRITICAL: Use functional state update to ensure line exists before accumulating
+            setTerminalLines((prev) => {
+              if (!currentAnimatingLineIdRef.current) {
+                // First text chunk: create new line
+                const newLineId = String(lineCountRef.current++);
+                currentAnimatingLineIdRef.current = newLineId;
+                responseLineIdsRef.current.push(newLineId);
+                setRenderTrigger(t => t + 1); // Force re-render
+                streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
+                console.log(`📝 [TerminalInterface] Creating first chunk line with ID: ${newLineId}`);
+
+                // Create and add the new line in the same state update
+                const newLine: TerminalLine = {
+                  id: newLineId,
+                  type: 'text',
+                  content: chunk,
+                  timestamp: Date.now(),
+                };
+                return [...prev, newLine];
+              } else {
+                // Subsequent chunks: accumulate into existing line
                 const index = prev.findIndex(l => l.id === currentAnimatingLineIdRef.current);
                 console.log(`📥 [TerminalInterface] Looking for line ${currentAnimatingLineIdRef.current}: found at index ${index} (total lines: ${prev.length})`);
                 if (index === -1) {
@@ -422,8 +432,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 };
                 console.log(`✏️ [TerminalInterface] Updated line ${currentAnimatingLineIdRef.current}, new content length: ${updated[index].content.length}`);
                 return updated;
-              });
-            }
+              }
+            });
 
             // Play typing sound if enabled (throttle to reduce audio spam)
             if (settings.soundEnabled) {
