@@ -106,7 +106,17 @@ export function getPrevZoomLevel(current: ZoomLevel): ZoomLevel {
  * Get ASCII art for a specific creature at a specific zoom level
  */
 export function getCreatureAtZoom(creature: CreatureName, zoom: ZoomLevel): string {
-  return ZOOMABLE_CREATURES[creature][zoom];
+  const creatureData = ZOOMABLE_CREATURES[creature];
+  if (!creatureData) {
+    console.warn(`Creature not found: ${creature}, using fallback`);
+    return ZOOMABLE_CREATURES['anglerFish']?.[zoom] || '';
+  }
+  const art = creatureData[zoom];
+  if (!art) {
+    console.warn(`Zoom level not found: ${creature} at ${zoom}, using fallback`);
+    return ZOOMABLE_CREATURES['anglerFish']?.[zoom] || '';
+  }
+  return art;
 }
 
 /**
@@ -115,6 +125,13 @@ export function getCreatureAtZoom(creature: CreatureName, zoom: ZoomLevel): stri
  */
 export function getRandomCreature(): { name: CreatureName; art: string } {
   const creatureNames = Object.keys(ZOOMABLE_CREATURES) as CreatureName[];
+
+  // Fallback if no creatures are available (shouldn't happen in normal use)
+  if (creatureNames.length === 0) {
+    console.warn('No creatures available in ZOOMABLE_CREATURES, using fallback');
+    return { name: 'anglerFish', art: ZOOMABLE_CREATURES['anglerFish']?.['medium'] || '' };
+  }
+
   const randomCreature = creatureNames[Math.floor(Math.random() * creatureNames.length)];
   const art = getCreatureAtZoom(randomCreature, 'medium');
   return { name: randomCreature, art };

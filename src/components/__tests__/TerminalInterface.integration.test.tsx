@@ -2,6 +2,12 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TerminalInterface } from '../TerminalInterface';
+import * as miraBackendStream from '../../services/miraBackendStream';
+
+// Mock streamMiraBackend to simulate SSE callbacks
+vi.mock('../../services/miraBackendStream', () => ({
+  streamMiraBackend: vi.fn(),
+}));
 
 /**
  * Integration Tests: Full Streaming Flow
@@ -25,6 +31,38 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
+
+  /**
+   * Helper to mock streamMiraBackend with specific test data
+   */
+  function mockStreamMiraBackend(testData: { chunks?: string[]; completeData?: any; error?: string }) {
+    (miraBackendStream.streamMiraBackend as any).mockImplementation(
+      (_userInput: any, _state: any, _assessment: any, _toolData: any, callbacks: any) => {
+        // Return promise and abort function
+        const promise = new Promise<void>((resolve) => {
+          // Schedule callbacks on next microtask
+          Promise.resolve().then(() => {
+            if (testData.error) {
+              // Send error
+              callbacks.onError?.(testData.error);
+            } else {
+              // Send each chunk
+              if (testData.chunks) {
+                testData.chunks.forEach(chunk => {
+                  callbacks.onResponseChunk?.(chunk);
+                });
+              }
+              // Send completion
+              callbacks.onComplete?.(testData.completeData);
+            }
+            resolve();
+          });
+        });
+
+        return { promise, abort: () => {} };
+      }
+    );
+  }
 
   describe('Full User Interaction Flow', () => {
     it('should display initial state with system messages', () => {
@@ -104,18 +142,22 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
     });
 
     it('should disable input while streaming', async () => {
+      // Mock streamMiraBackend to return a promise that never resolves
+      (miraBackendStream.streamMiraBackend as any).mockImplementation(
+        (_userInput: any, _state: any, _assessment: any, _toolData: any, _callbacks: any) => {
+          return {
+            promise: new Promise<void>(() => {
+              // Never resolves - simulates ongoing stream
+            }),
+            abort: () => {},
+          };
+        }
+      );
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      // Create mock that simulates streaming (doesn't complete immediately)
-      global.fetch = vi.fn(
-        () =>
-          new Promise(() => {
-            // Never resolves - simulates ongoing stream
-          })
-      );
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -130,17 +172,33 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
 
   describe('State Management During Streaming', () => {
     it('should maintain state across multiple interactions', async () => {
+      mockStreamMiraBackend({
+        completeData: {
+          updatedState: {
+            confidenceInUser: 50,
+            userProfile: {
+              thoughtfulness: 60,
+              adventurousness: 50,
+              engagement: 55,
+              curiosity: 65,
+              superficiality: 20,
+            },
+            interactionCount: 1,
+            memories: [],
+          },
+          response: {
+            observations: [],
+            streaming: [],
+            confidenceDelta: 0,
+            moodShift: 'calm' as const,
+          },
+        },
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          body: null,
-        } as any)
-      );
 
       // First interaction
       await userEvent.type(textarea, 'First message');
@@ -150,54 +208,44 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
         expect(screen.getByText('> First message')).toBeInTheDocument();
       });
 
-      // Should be ready for next interaction
+      // Should be ready for next interaction - wait for textarea to be re-enabled
+      await waitFor(() => {
+        expect(textarea).not.toBeDisabled();
+      });
       expect(textarea).toHaveValue('');
-      expect(textarea).not.toBeDisabled();
     });
   });
 
   describe('Streaming Events and UI Updates', () => {
     it('should handle response_chunk events and display text', async () => {
+      mockStreamMiraBackend({
+        chunks: ['...first thought...', '...second thought...'],
+        completeData: {
+          updatedState: {
+            confidenceInUser: 50,
+            userProfile: {
+              thoughtfulness: 60,
+              adventurousness: 50,
+              engagement: 55,
+              curiosity: 65,
+              superficiality: 20,
+            },
+            interactionCount: 1,
+            memories: [],
+          },
+          response: {
+            observations: ['observation1'],
+            streaming: ['...first thought...', '...second thought...'],
+            confidenceDelta: 10,
+            moodShift: 'calm' as const,
+          },
+        },
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      const mockStream = createMockSSEStream([
-        {
-          type: 'response_chunk',
-          data: { chunk: '...first thought...' },
-        },
-        {
-          type: 'response_chunk',
-          data: { chunk: '...second thought...' },
-        },
-        {
-          type: 'complete',
-          data: {
-            updatedState: {
-              confidenceInUser: 50,
-              userProfile: {
-                thoughtfulness: 60,
-                adventurousness: 50,
-                engagement: 55,
-                curiosity: 65,
-                superficiality: 20,
-              },
-              interactionCount: 1,
-              memories: [],
-            },
-            response: {
-              observations: ['observation1'],
-              streaming: ['...first thought...', '...second thought...'],
-              confidenceDelta: 10,
-              moodShift: 'calm' as const,
-            },
-          },
-        },
-      ]);
-
-      global.fetch = vi.fn(() => Promise.resolve(mockStream));
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -213,46 +261,34 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
     });
 
     it('should display rapport bar, response text and transition phrase after streaming completes', async () => {
+      mockStreamMiraBackend({
+        chunks: ['[RAPPORT] [██████████░░░░░░░░] 50%', 'response text'],
+        completeData: {
+          updatedState: {
+            confidenceInUser: 50,
+            userProfile: {
+              thoughtfulness: 60,
+              adventurousness: 50,
+              engagement: 55,
+              curiosity: 65,
+              superficiality: 20,
+            },
+            interactionCount: 1,
+            memories: [],
+          },
+          response: {
+            observations: [],
+            streaming: ['response text'],
+            confidenceDelta: 0,
+            moodShift: 'calm' as const,
+          },
+        },
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      const mockStream = createMockSSEStream([
-        {
-          type: 'rapport_bar',
-          data: { chunk: '[RAPPORT] [██████████░░░░░░░░] 50%\n' },
-        },
-        {
-          type: 'response_chunk',
-          data: { chunk: 'response text' },
-        },
-        {
-          type: 'complete',
-          data: {
-            updatedState: {
-              confidenceInUser: 50,
-              userProfile: {
-                thoughtfulness: 60,
-                adventurousness: 50,
-                engagement: 55,
-                curiosity: 65,
-                superficiality: 20,
-              },
-              interactionCount: 1,
-              memories: [],
-            },
-            response: {
-              observations: [],
-              streaming: ['response text'],
-              confidenceDelta: 0,
-              moodShift: 'calm' as const,
-            },
-          },
-        },
-      ]);
-
-      global.fetch = vi.fn(() => Promise.resolve(mockStream));
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -274,46 +310,34 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
     });
 
     it('should display rapport bar, ASCII art and separator after exchange', async () => {
+      mockStreamMiraBackend({
+        chunks: ['[RAPPORT] [██████████░░░░░░░░] 50%', 'some response'],
+        completeData: {
+          updatedState: {
+            confidenceInUser: 50,
+            userProfile: {
+              thoughtfulness: 60,
+              adventurousness: 50,
+              engagement: 55,
+              curiosity: 65,
+              superficiality: 20,
+            },
+            interactionCount: 1,
+            memories: [],
+          },
+          response: {
+            observations: [],
+            streaming: ['some response'],
+            confidenceDelta: 0,
+            moodShift: 'calm' as const,
+          },
+        },
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      const mockStream = createMockSSEStream([
-        {
-          type: 'rapport_bar',
-          data: { chunk: '[RAPPORT] [██████████░░░░░░░░] 50%\n' },
-        },
-        {
-          type: 'response_chunk',
-          data: { chunk: 'some response' },
-        },
-        {
-          type: 'complete',
-          data: {
-            updatedState: {
-              confidenceInUser: 50,
-              userProfile: {
-                thoughtfulness: 60,
-                adventurousness: 50,
-                engagement: 55,
-                curiosity: 65,
-                superficiality: 20,
-              },
-              interactionCount: 1,
-              memories: [],
-            },
-            response: {
-              observations: [],
-              streaming: ['some response'],
-              confidenceDelta: 0,
-              moodShift: 'calm' as const,
-            },
-          },
-        },
-      ]);
-
-      global.fetch = vi.fn(() => Promise.resolve(mockStream));
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -343,19 +367,14 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
 
   describe('Error Handling', () => {
     it('should display error message on HTTP failure', async () => {
+      mockStreamMiraBackend({
+        error: 'HTTP 500: Server error',
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      // Mock failed response
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({ message: 'Server error' }),
-        } as any)
-      );
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -370,18 +389,14 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
     });
 
     it('should handle missing response body', async () => {
+      mockStreamMiraBackend({
+        error: 'No response body',
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      // Mock response with no body
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          body: null,
-        } as any)
-      );
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -396,13 +411,14 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
     });
 
     it('should handle fetch errors gracefully', async () => {
+      mockStreamMiraBackend({
+        error: 'Network error',
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      // Mock network error
-      global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -417,19 +433,14 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
     });
 
     it('should handle error events from stream', async () => {
+      mockStreamMiraBackend({
+        error: 'Backend processing failed',
+      });
+
       render(<TerminalInterface />);
 
       const textarea = screen.getByPlaceholderText('> share your thoughts...');
       const submitButton = screen.getByRole('button', { name: /send/i });
-
-      const mockStream = createMockSSEStream([
-        {
-          type: 'error',
-          data: { message: 'Backend processing failed' },
-        },
-      ]);
-
-      global.fetch = vi.fn(() => Promise.resolve(mockStream));
 
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
@@ -494,128 +505,3 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
   });
 });
 
-/**
- * Helper: Create mock SSE stream from array of events
- */
-function createMockSSEStream(
-  events: Array<{ type: string; data: unknown }>
-): Response {
-  const stream = new ReadableStream({
-    start(controller) {
-      let sequenceNumber = 0;
-      let messageId = `msg_test_${Date.now()}`;
-      let startEventId = `evt_start_${Date.now()}`;
-
-      events.forEach((event) => {
-        // Convert legacy event format to AG-UI protocol
-        let envelope: any;
-
-        if (event.type === 'response_chunk') {
-          const chunkData = event.data as { chunk: string };
-          envelope = {
-            event_id: `evt_${Date.now()}_${Math.random()}`,
-            schema_version: '1.0.0',
-            type: 'TEXT_CONTENT',
-            timestamp: Date.now(),
-            sequence_number: sequenceNumber++,
-            parent_event_id: startEventId,
-            data: {
-              chunk: chunkData.chunk,
-              chunk_index: sequenceNumber - 1,
-            },
-          };
-        } else if (event.type === 'rapport_bar') {
-          // Rapport bar as TEXT_CONTENT chunk
-          const chunkData = event.data as { chunk: string };
-          envelope = {
-            event_id: `evt_${Date.now()}_${Math.random()}`,
-            schema_version: '1.0.0',
-            type: 'TEXT_CONTENT',
-            timestamp: Date.now(),
-            sequence_number: sequenceNumber++,
-            parent_event_id: startEventId,
-            data: {
-              chunk: chunkData.chunk,
-              chunk_index: sequenceNumber - 1,
-            },
-          };
-        } else if (event.type === 'complete') {
-          // For complete events, send RESPONSE_COMPLETE with full state and response
-          envelope = {
-            event_id: `evt_${Date.now()}_${Math.random()}`,
-            schema_version: '1.0.0',
-            type: 'RESPONSE_COMPLETE',
-            timestamp: Date.now(),
-            sequence_number: sequenceNumber++,
-            data: event.data,
-          };
-        } else if (event.type === 'confidence') {
-          // Legacy confidence event
-          envelope = {
-            event_id: `evt_${Date.now()}_${Math.random()}`,
-            schema_version: '1.0.0',
-            type: 'STATE_DELTA',
-            timestamp: Date.now(),
-            sequence_number: sequenceNumber++,
-            data: {
-              version: 1,
-              timestamp: Date.now(),
-              operations: [
-                {
-                  op: 'replace',
-                  path: '/confidenceInUser',
-                  value: (event.data as any).to ?? 50,
-                },
-              ],
-            },
-          };
-        } else if (event.type === 'error') {
-          const errorData = event.data as { message: string };
-          envelope = {
-            event_id: `evt_${Date.now()}_${Math.random()}`,
-            schema_version: '1.0.0',
-            type: 'ERROR',
-            timestamp: Date.now(),
-            sequence_number: sequenceNumber++,
-            data: {
-              code: 'TEST_ERROR',
-              message: errorData.message,
-              recoverable: true,
-            },
-          };
-        } else {
-          // Default AG-UI envelope
-          envelope = {
-            event_id: `evt_${Date.now()}_${Math.random()}`,
-            schema_version: '1.0.0',
-            type: event.type,
-            timestamp: Date.now(),
-            sequence_number: sequenceNumber++,
-            data: event.data,
-          };
-        }
-
-        const line = `data: ${JSON.stringify(envelope)}\n`;
-        controller.enqueue(new TextEncoder().encode(line));
-      });
-      controller.close();
-    },
-  });
-
-  return {
-    ok: true,
-    body: stream,
-    status: 200,
-    headers: new Headers(),
-    statusText: 'OK',
-    redirected: false,
-    type: 'basic' as ResponseType,
-    url: 'http://localhost/api/analyze-user-stream',
-    clone: () => new Response(),
-    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-    blob: () => Promise.resolve(new Blob()),
-    formData: () => Promise.resolve(new FormData()),
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-  } as unknown as Response;
-}

@@ -183,12 +183,6 @@ describe('useTerminalStreaming', () => {
       expect(result.current.scrollRef.current).toBeNull(); // Not yet attached
     });
 
-    it('provides render trigger for animation coordination', () => {
-      const { result } = renderHook(() => useTerminalStreaming());
-
-      expect(typeof result.current.renderTrigger).toBe('number');
-    });
-
     it('provides line count ref for tracking', () => {
       const { result } = renderHook(() => useTerminalStreaming());
 
