@@ -147,6 +147,11 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
+    // Calculate separate counts for messages vs tool interactions
+    const messageCount = miraState.memories.filter(m => m.type !== 'tool_call').length;
+    const toolCallCount = miraState.memories.filter(m => m.type === 'tool_call').length;
+    const totalInteractions = miraState.memories.length;
+
     // Build system prompt for Claude analysis
     const systemPrompt = `You are Dr. Mira Petrovic, a deep-sea researcher obsessed with bioluminescent creatures and the abyss. You are analyzing a user's message to understand their personality traits and engagement depth.
 
@@ -212,11 +217,13 @@ IMPORTANT RULES:
 
 USING CONTEXT FOR RICHER ANALYSIS:
 - Current confidence level (in miraState.confidenceInUser) tells you the OVERALL rapport arc
-- Interaction count (miraState.memories.length) includes both messages AND tool interactions (zoom, exploration)
+- Message count: ${messageCount} (text interactions only, excludes tool usage)
+- Tool interactions: ${toolCallCount} (zoom in/out, exploration actions)
+- Total interactions: ${totalInteractions} (messages + tools combined)
 - IMPORTANT: Distinguish between meaningful message exchanges and casual tool usage in your analysis
-  * Count meaningful messages (actual text input with substance) separately from total interactions
-  * You can reference both: "after three messages and several explorations, you suddenly ask..." or "after examining specimens, you finally speak..."
-  * Tool usage (zoom in/out) shows engagement/curiosity but shouldn't be confused with conversational depth
+  * Frame interactions accurately: "after ${messageCount} messages and ${toolCallCount} explorations..." NOT "after ${totalInteractions} exchanges..."
+  * Tool usage (zoom in/out) shows curiosity/engagement but doesn't count as conversational depth
+  * Reference both naturally: "after three messages and several explorations, you suddenly ask..." or "after examining specimens, you finally speak..."
 - confidenceDelta should reflect THIS message's impact, but reasoning can reference THE PATTERN
 - A breakthrough moment after mediocrity hits harder than consistent good engagement
 - A drop-off after consistent quality feels like betrayal
