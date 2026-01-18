@@ -79,7 +79,7 @@ const buildZoomableCreatures = () => {
     }
   );
 
-  return creatures as const;
+  return creatures;
 };
 
 export const ZOOMABLE_CREATURES = buildZoomableCreatures();
