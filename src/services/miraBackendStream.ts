@@ -333,11 +333,7 @@ function handleEnvelopeEvent(
 
     case 'TEXT_CONTENT': {
       const contentData = envelope.data as { chunk: string; chunk_index: number };
-      // Skip rapport bar text in chunk_index 0 if it contains [RAPPORT] marker
-      // The rapport bar is displayed separately via the UI, not as terminal text
-      if (contentData.chunk_index > 0 || !contentData.chunk.includes('[RAPPORT]')) {
-        callbacks.onResponseChunk?.(contentData.chunk);
-      }
+      callbacks.onResponseChunk?.(contentData.chunk);
       break;
     }
 
