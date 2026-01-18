@@ -29,7 +29,6 @@ This is both a **learning lab for emerging agent protocols** and a **showcase of
 - React 18 + Hooks (useReducer for FSM)
 - TypeScript with strict type safety
 - Vite (sub-500ms builds, fast HMR)
-- Canvas API for particle effects and visual atmosphere
 - Web Audio API for synthesized sound effects
 - Vitest + React Testing Library (679/679 tests passing)
 
@@ -48,7 +47,6 @@ This is both a **learning lab for emerging agent protocols** and a **showcase of
 - **Confidence Tracking**: Real-time rapport system that shifts personality based on interaction quality and depth
 - **Sequential Animation**: Streamed responses animate line-by-line with timing control
 - **System Log**: Real-time event log showing evaluation metrics, observations, thoughts, and confidence deltas
-- **Mood-Driven Aesthetics**: Canvas-based particle atmosphere, audio synthesis, and visual effects responsive to interaction state
 
 ## 🚀 Getting Started
 
@@ -75,7 +73,6 @@ Beyond the technical protocols, You Are The Research Assistant maintains an arti
 - **Marine Biology Grounding**: All responses reference real deep-sea adaptations (octopus distributed cognition, giant squid intelligence genes, vampire squid bioluminescence control, barreleye fish ocular adaptability)
 - **Mood as Character**: Personality shifts emerge naturally from interaction patterns - Mira's skepticism melts into reverence as you demonstrate scientific acumen
 - **Ambient Audio**: Synthesized soundscapes react to state changes (thinking sounds during analysis, completion tones on responses)
-- **Particle Atmosphere**: Canvas-based particle system creates visual depth and reinforces the underwater setting
 
 ---
 
