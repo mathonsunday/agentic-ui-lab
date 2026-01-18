@@ -441,9 +441,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             setMiraState(data.updatedState);
             onConfidenceChange?.(data.updatedState.confidenceInUser);
 
-            // Only show ASCII art response for text messages, not tool calls
+            // Only show ASCII art response for text messages, not tool calls or specimen 47
             // Tool calls already updated the ASCII art inline via zoom handlers
-            if (data.response?.source !== 'tool_call') {
+            // Specimen 47 is a special grant proposal that shouldn't show ASCII art after
+            if (data.response?.source !== 'tool_call' && data.response?.source !== 'specimen_47') {
               // Add transition phrase
               addTerminalLine('text', '...what do you think about this...');
 

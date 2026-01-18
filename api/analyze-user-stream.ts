@@ -365,6 +365,28 @@ async function streamGrantProposal(
       stateSequence
     );
 
+    // Send RESPONSE_COMPLETE to signal end of stream
+    const completeEventId = generateEventId();
+    const completeSequence = eventTracker.getNextSequence();
+    const updatedState = {
+      ...miraState,
+      confidenceInUser: Math.min(100, miraState.confidenceInUser + 8),
+    };
+    sendAGUIEvent(
+      response,
+      completeEventId,
+      'RESPONSE_COMPLETE',
+      {
+        updatedState,
+        response: {
+          streaming: [],
+          text: 'SPECIMEN_47_GRANT_PROPOSAL',
+          source: 'specimen_47',
+        },
+      },
+      completeSequence
+    );
+
     response.end();
   } catch (error) {
     console.error('Grant proposal streaming error:', error);
