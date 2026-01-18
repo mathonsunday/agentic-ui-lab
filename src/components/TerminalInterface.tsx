@@ -209,7 +209,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         isCurrentlyStreaming: streamState.isStreaming,
       });
 
-      if (streamState.isStreaming) {
+      // Allow zoom actions to execute concurrently with other streams
+      const isZoomAction = toolAction === 'zoom_in' || toolAction === 'zoom_out';
+      if (streamState.isStreaming && !isZoomAction) {
         console.log('⚠️ Already streaming, ignoring tool call');
         streamDebugLog(`Already streaming - ignoring this tool call - STREAM #${streamNum}`);
         return;
