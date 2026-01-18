@@ -711,28 +711,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     content={line.content}
                     speed={settings.typingSpeed}
                     isAnimating={shouldAnimate}
-                    onComplete={useCallback(() => {
-                      console.log(`[TypewriterLine.onComplete] Line ${line.id} animation complete, currentAnimatingLineIdRef: ${currentAnimatingLineIdRef.current}`);
-                      // CRITICAL: Only move to next line if this line is no longer receiving chunks
-                      // If this is still the currentAnimatingLine, it might receive more chunks, so don't call onComplete yet
-                      if (line.id !== currentAnimatingLineIdRef.current) {
-                        console.log(`[TypewriterLine.onComplete] Line ${line.id} is NOT currently animating, moving to next line`);
-                        // Move to next response line
-                        const currentIndex = responseLineIdsRef.current.indexOf(line.id);
-                        const nextIndex = currentIndex + 1;
-                        if (nextIndex < responseLineIdsRef.current.length) {
-                          currentAnimatingLineIdRef.current = responseLineIdsRef.current[nextIndex];
-                          console.log(`[TypewriterLine.onComplete] Moved to next line: ${currentAnimatingLineIdRef.current}`);
-                          setRenderTrigger(t => t + 1); // Force re-render to start next animation
-                        } else {
-                          currentAnimatingLineIdRef.current = null;
-                          console.log(`[TypewriterLine.onComplete] No more lines to animate`);
-                        }
-                      } else {
-                        console.log(`[TypewriterLine.onComplete] Line ${line.id} IS still the currentAnimatingLine, ignoring onComplete`);
-                      }
-                      // If this IS the currentAnimatingLine, it's still receiving chunks, so keep animating
-                    }, [line.id])}
                   />
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
