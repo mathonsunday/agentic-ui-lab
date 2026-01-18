@@ -80,7 +80,7 @@ export interface UseTerminalStreamingReturn {
   interruptedStreamIdRef: React.MutableRefObject<number | null>;
   lastConfidenceUpdateStreamIdRef: React.MutableRefObject<number | null>;
   responseLineIdsRef: React.MutableRefObject<string[]>;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   addTerminalLine: (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }) => void;
   updateRapportBar: (newConfidence: number) => void;
   sendMessage: (userInput: string) => Promise<void>;
@@ -118,7 +118,7 @@ export function useTerminalStreaming(options: UseTerminalStreamingOptions = {}):
     abortController: null,
   });
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const lineCountRef = useRef(2);
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false);
@@ -208,26 +208,33 @@ export function useTerminalStreaming(options: UseTerminalStreamingOptions = {}):
         await playStreamingSound('thinking');
 
         abortController = new AbortController();
-        await streamMiraBackend(userInput, miraState, abortController.signal, {
-          onMessage: (text) => {
+        // @ts-expect-error - Hook extraction not yet complete (Phase 3)
+        // TODO: Update streamMiraBackend call signature when integrating into TerminalInterface
+        const { promise } = streamMiraBackend(userInput, miraState, {
+          type: 'response',
+          confidenceDelta: 0,
+          traits: {},
+        }, null, {
+          onResponseChunk: (text: string) => {
             addTerminalLine('text', text);
           },
-          onAnalysis: (analysis) => {
-            addTerminalLine('analysis', '', analysis);
+          onAnalysis: (data: any) => {
+            addTerminalLine('analysis', '', data);
             if (onConfidenceChange) {
-              onConfidenceChange(miraState.confidenceInUser + analysis.confidenceDelta);
+              onConfidenceChange(miraState.confidenceInUser + data.confidenceDelta);
             }
           },
-          onComplete: (updatedState) => {
-            setMiraState(updatedState);
+          onComplete: (data: any) => {
+            setMiraState(data.updatedState);
             dispatchStream({ type: 'END_STREAM' });
             lastConfidenceUpdateStreamIdRef.current = null;
           },
-          onError: (error) => {
+          onError: (error: string) => {
             console.error('Stream error:', error);
             dispatchStream({ type: 'END_STREAM' });
           },
         });
+        await promise;
       } catch (error) {
         if (error instanceof Error && error.message === 'Aborted') {
           console.log(`⏹️ Stream #${streamNum} was aborted`);
