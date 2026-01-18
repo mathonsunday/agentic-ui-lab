@@ -37,10 +37,16 @@ export interface StreamCallbacks {
 
 /**
  * Event buffer for reordering out-of-order SSE events
+ *
+ * Implements:
+ * - Out-of-order event reordering via sequence numbers
+ * - Memory limits to prevent unbounded buffer growth
+ * - Overflow detection and graceful degradation
  */
 class EventBuffer {
   private buffer = new Map<number, EventEnvelope>();
   private nextSequence = 0;
+  private readonly maxBufferSize = 100;
 
   add(envelope: EventEnvelope): EventEnvelope[] {
     // If this is the next expected sequence, process it and any buffered ones
@@ -61,6 +67,23 @@ class EventBuffer {
 
     // Out-of-order: buffer it
     if (envelope.sequence_number > this.nextSequence) {
+      // Check buffer size before adding
+      if (this.buffer.size >= this.maxBufferSize) {
+        console.warn(
+          `[EventBuffer] Buffer overflow (${this.buffer.size}/${this.maxBufferSize}). ` +
+          `Flushing oldest events to prevent memory leak. Current sequence: ${this.nextSequence}, ` +
+          `incoming: ${envelope.sequence_number}`
+        );
+        // Flush oldest 25% of buffered events to make room
+        const toFlush = Math.ceil(this.maxBufferSize * 0.25);
+        const entries = Array.from(this.buffer.entries()).sort(
+          (a, b) => a[0] - b[0]
+        );
+        for (let i = 0; i < toFlush && i < entries.length; i++) {
+          this.buffer.delete(entries[i][0]);
+        }
+      }
+
       this.buffer.set(envelope.sequence_number, envelope);
     }
 
@@ -72,6 +95,10 @@ class EventBuffer {
       .sort((a, b) => a.sequence_number - b.sequence_number);
     this.buffer.clear();
     return remaining;
+  }
+
+  getBufferSize(): number {
+    return this.buffer.size;
   }
 }
 
@@ -107,10 +134,37 @@ export function streamMiraBackend(
 
   let chunkCount = 0;
 
-  // Wrap callbacks to check interrupt flag
+  // Track last update values for deduplication (2025 best practice)
+  let lastConfidenceValue: number | null = null;
+  let lastProfileValue: Partial<ProfileUpdate> = {};
+
+  // Wrap callbacks to check interrupt flag and deduplicate updates
   const wrappedCallbacks: StreamCallbacks = {
-    onConfidence: callbacks.onConfidence,
-    onProfile: callbacks.onProfile,
+    onConfidence: (update) => {
+      // Deduplicate identical confidence values
+      if (lastConfidenceValue !== null && lastConfidenceValue === update.to) {
+        console.log(`[miraBackendStream] Deduplicated confidence update: ${update.to}%`);
+        return;
+      }
+      lastConfidenceValue = update.to;
+      callbacks.onConfidence?.(update);
+    },
+    onProfile: (update) => {
+      // Deduplicate identical profile updates by comparing all fields
+      const isSame =
+        lastProfileValue.thoughtfulness === update.thoughtfulness &&
+        lastProfileValue.adventurousness === update.adventurousness &&
+        lastProfileValue.engagement === update.engagement &&
+        lastProfileValue.curiosity === update.curiosity &&
+        lastProfileValue.superficiality === update.superficiality;
+
+      if (isSame) {
+        console.log('[miraBackendStream] Deduplicated profile update');
+        return;
+      }
+      lastProfileValue = { ...update };
+      callbacks.onProfile?.(update);
+    },
     onResponseChunk: (chunk) => {
       chunkCount++;
       // Don't process chunks after interrupt
