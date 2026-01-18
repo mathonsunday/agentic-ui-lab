@@ -95,13 +95,6 @@ const streamDebugLog = (message: string, data?: any) => {
 };
 
 /**
- * Format analysis reasoning as collapsed teaser - single line with hint
- */
-function formatAnalysisTeaser(): string {
-  return `► hidden analysis [click to plumb the depths]`;
-}
-
-/**
  * Format analysis reasoning as ASCII box with confidence delta in header
  * Creates a visually distinct block showing Mira's internal observations
  */
