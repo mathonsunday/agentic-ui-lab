@@ -714,6 +714,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     content={line.content}
                     speed={settings.typingSpeed}
                     isAnimating={shouldAnimate}
+                    disableAnimation={line.id === currentAnimatingLineIdRef.current}
                     onComplete={() => {
                       // CRITICAL: Only move to next line if this line is no longer receiving chunks
                       // If this is still the currentAnimatingLine, it might receive more chunks, so don't call onComplete yet

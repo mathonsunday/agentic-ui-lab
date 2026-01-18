@@ -19,6 +19,7 @@ export interface TypewriterLineProps {
   isAnimating?: boolean; // whether this line should animate (for sequential animation)
   onComplete?: () => void; // called when animation finishes for this line
   onCharacter?: (char: string) => void;
+  disableAnimation?: boolean; // disable character animation (for streaming content with frequent updates)
 }
 
 /**
@@ -33,11 +34,21 @@ export function TypewriterLine({
   isAnimating = true,
   onComplete,
   onCharacter,
+  disableAnimation = false,
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
 
   useEffect(() => {
+    // If animation is disabled, reveal all content immediately
+    if (disableAnimation) {
+      logger.debug('Animation disabled, revealing all content', {
+        contentLength: content.length,
+      });
+      setRevealedLength(content.length);
+      return;
+    }
+
     // If content shrunk (shouldn't happen), reset
     if (revealedLength > content.length) {
       logger.debug('Content shrunk, resetting', {
@@ -91,7 +102,7 @@ export function TypewriterLine({
       logger.debug('Clearing interval');
       clearInterval(timer);
     };
-  }, [revealedLength, content, charDelayMs, isAnimating, onComplete, onCharacter]);
+  }, [revealedLength, content, charDelayMs, isAnimating, onComplete, onCharacter, disableAnimation]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;
