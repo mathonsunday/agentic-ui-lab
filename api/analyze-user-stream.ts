@@ -300,31 +300,30 @@ async function streamGrantProposal(
       chunk_index: chunkIndex++,
     }, barChunkSeq, startEventId);
 
-    // Parse proposal into chunks (by paragraph)
-    const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n\n');
+    // Parse proposal into chunks (by section separator)
+    const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n')
+      .filter(line => line.trim().length > 0);
 
     for (const paragraph of paragraphs) {
-      if (paragraph.trim()) {
-        // Small delay allows interruption and prevents overwhelming the client
-        // Frontend handles character-by-character animation on all response text
-        await sleep(100);
+      // Small delay allows interruption and prevents overwhelming the client
+      // Frontend handles character-by-character animation on all response text
+      await sleep(100);
 
-        const chunkEventId = generateEventId();
-        const chunkSequence = eventTracker.getNextSequence();
+      const chunkEventId = generateEventId();
+      const chunkSequence = eventTracker.getNextSequence();
 
-        // AG-UI: Send TEXT_CONTENT events with chunk_index for proper ordering
-        sendAGUIEvent(
-          response,
-          chunkEventId,
-          'TEXT_CONTENT',
-          {
-            chunk: `${paragraph}\n`,
-            chunk_index: chunkIndex++,
-          },
-          chunkSequence,
-          startEventId  // Parent event creates causality chain
-        );
-      }
+      // AG-UI: Send TEXT_CONTENT events with chunk_index for proper ordering
+      sendAGUIEvent(
+        response,
+        chunkEventId,
+        'TEXT_CONTENT',
+        {
+          chunk: `${paragraph}\n`,
+          chunk_index: chunkIndex++,
+        },
+        chunkSequence,
+        startEventId  // Parent event creates causality chain
+      );
     }
 
     // Wait a bit before sending completion
