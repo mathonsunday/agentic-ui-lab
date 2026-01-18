@@ -32,77 +32,29 @@ export function TypewriterLine({
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
-  const contentRef = useRef(content);
 
-  // Keep contentRef synchronized with current content prop
+  // Sync revealed length to content length when content grows
   useEffect(() => {
-    contentRef.current = content;
+    setRevealedLength((prev) => Math.max(prev, 0));
   }, [content]);
 
-  console.log(`[TypewriterLine] RENDER with isAnimating=${isAnimating}, content.length=${content.length}, revealedLength=${revealedLength}, charDelayMs=${charDelayMs}`);
-
   useEffect(() => {
-    // If not animating, don't start the timer
     if (!isAnimating) {
-      console.log(`[TypewriterLine] EFFECT: isAnimating=false, returning early (content: ${content.length} chars)`);
-      logger.debug('Not animating, effect returning early', {
-        contentLength: content.length,
-      });
       return;
     }
 
-    console.log(`[TypewriterLine] EFFECT: Starting animation with content length: ${content.length}`);
-    logger.debug('Starting continuous animation', {
-      contentLength: content.length,
-      charDelayMs,
-    });
-
-    let lastLoggedRevealedLength = 0;
-
-    // Single continuous interval that doesn't depend on content changes
-    // Uses contentRef to always check CURRENT content.length on each tick
-    // During streaming, content grows faster than animation can keep up
-    // So we just keep incrementing forever - never "complete" until unmount
     const timer = setInterval(() => {
       setRevealedLength((prev) => {
-        const currentContent = contentRef.current;
-
-        // If content shrunk (shouldn't happen), clamp to new length
-        if (prev > currentContent.length) {
-          console.log(`[TypewriterLine] INTERVAL: Content shrunk, clamping ${prev} → ${currentContent.length}`);
-          logger.debug('Content shrunk, clamping', {
-            revealed: prev,
-            newContentLength: currentContent.length,
-          });
-          return currentContent.length;
+        // Always check current content prop, not closure value
+        if (prev >= content.length) {
+          return prev;
         }
-
-        // If we've caught up to current content length, stop incrementing for now
-        // (new chunks will arrive and we'll start animating again)
-        if (prev >= currentContent.length) {
-          console.log(`[TypewriterLine] INTERVAL: Caught up to content (${prev}/${currentContent.length}), waiting for more chunks`);
-          return prev;  // Stay at current position until more content arrives
-        }
-
-        // Reveal next character
-        const nextLength = prev + 1;
-
-        // Log every 50 characters for debugging
-        if (nextLength % 50 === 0 && nextLength !== lastLoggedRevealedLength) {
-          console.log(`[TypewriterLine] Progress: ${nextLength}/${currentContent.length} chars revealed`);
-          lastLoggedRevealedLength = nextLength;
-        }
-
-        return nextLength;
+        return prev + 1;
       });
     }, charDelayMs);
 
-    return () => {
-      console.log(`[TypewriterLine] CLEANUP: Clearing interval, revealed length was: ${lastLoggedRevealedLength}, current content.length=${contentRef.current.length}`);
-      logger.debug('Clearing interval');
-      clearInterval(timer);
-    };
-  }, [charDelayMs, isAnimating]);
+    return () => clearInterval(timer);
+  }, [charDelayMs, isAnimating, content]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;
