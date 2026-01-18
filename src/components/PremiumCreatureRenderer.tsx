@@ -4,55 +4,29 @@
  * Falls back to text-based ASCII if premium component unavailable
  */
 
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
 
-/**
- * Type for premium creature components
- */
-interface PremiumCreatureComponent {
-  (props: { zoom?: ZoomLevel }): React.ReactElement;
-}
-
-/**
- * Helper to create lazy-loaded components with proper error handling
- */
-const createPremiumComponent = (componentPath: string) => {
-  return lazy(
-    async () => {
-      try {
-        const module = await import(
-          /* @vite-ignore */
-          `../../deep-sea-ascii-art/components/premium-ascii/${componentPath}`
-        );
-        // Support both default and named exports
-        const component: PremiumCreatureComponent =
-          module.default ||
-          module[Object.keys(module).find((k) => k.startsWith('Animated')) || ''];
-        return { default: component };
-      } catch (error) {
-        console.error(
-          `Failed to load premium component: ${componentPath}`,
-          error
-        );
-        // Return null component on failure
-        return { default: (() => React.createElement('div')) as PremiumCreatureComponent };
-      }
-    }
-  ) as React.LazyExoticComponent<PremiumCreatureComponent>;
-};
+// Direct static imports of premium components
+import { AnimatedAnglerfish } from './premium-creatures/animated-anglerfish';
+import { AnimatedJellyfish } from './premium-creatures/animated-jellyfish';
+import { AnimatedBioluminescentFish } from './premium-creatures/animated-bioluminescent-fish';
+import { AnimatedViperFish } from './premium-creatures/animated-viper-fish';
+import { AnimatedTreasureChest } from './premium-creatures/animated-treasure-chest';
+import { AnimatedCoral } from './premium-creatures/animated-coral';
+import { AnimatedDeepSeaDiver } from './premium-creatures/animated-deep-sea-diver';
 
 /**
  * Map creature names to their premium animated components
  */
 const PremiumCreatures = {
-  anglerFish: createPremiumComponent('animated-anglerfish'),
-  jellyfish: createPremiumComponent('animated-jellyfish'),
-  bioluminescentFish: createPremiumComponent('animated-bioluminescent-fish'),
-  viperFish: createPremiumComponent('animated-viper-fish'),
-  treasureChest: createPremiumComponent('animated-treasure-chest'),
-  coral: createPremiumComponent('animated-coral'),
-  deepSeaDiver: createPremiumComponent('animated-deep-sea-diver'),
+  anglerFish: AnimatedAnglerfish,
+  jellyfish: AnimatedJellyfish,
+  bioluminescentFish: AnimatedBioluminescentFish,
+  viperFish: AnimatedViperFish,
+  treasureChest: AnimatedTreasureChest,
+  coral: AnimatedCoral,
+  deepSeaDiver: AnimatedDeepSeaDiver,
 } as const;
 
 type AvailablePremiumCreature = keyof typeof PremiumCreatures;
@@ -114,12 +88,8 @@ export function PremiumCreatureRenderer({
   const PremiumComponent =
     PremiumCreatures[creature as AvailablePremiumCreature];
 
-  // Render with Suspense for loading states
-  return (
-    <Suspense fallback={<TextAsciiFallback fallback={fallback} />}>
-      <PremiumComponent zoom={zoom} />
-    </Suspense>
-  );
+  // Render premium component directly
+  return <PremiumComponent zoom={zoom} />;
 }
 
 /**
