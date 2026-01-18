@@ -8,7 +8,7 @@
  * All creatures support 3 zoom levels: far, medium, close
  */
 
-import { library } from '@veronica/ascii-art-toolkit';
+import { library } from '@mathonsunday/ascii-art-toolkit';
 
 export type ZoomLevel = 'far' | 'medium' | 'close';
 
