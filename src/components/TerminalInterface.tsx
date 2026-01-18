@@ -692,8 +692,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }
             }
 
-            // For sequential animation: only animate the currently animating line
-            const shouldAnimate = !isResponseLine || line.id === currentAnimatingLineIdRef.current;
+            // Animate response lines during streaming
+            // For normal (multi-line) responses: only animate the currently active line
+            // For single-line streams (like Specimen 47): animate as content grows
+            // We check if line is in responseLineIdsRef - if yes, it's part of current response and should animate
+            const shouldAnimate = !isResponseLine || responseLineIdsRef.current.includes(line.id);
 
             return (
               <div
