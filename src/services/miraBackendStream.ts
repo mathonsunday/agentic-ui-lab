@@ -139,6 +139,14 @@ export function streamMiraBackend(
   let lastConfidenceValue: number | null = null;
   let lastProfileValue: Partial<ProfileUpdate> = {};
 
+  // Track which message sequence we're in
+  // We need to filter TEXT_CONTENT events by their parent to distinguish:
+  // - Rapport bar message (first message)
+  // - Response text message (second message)
+  let rapportStartEventId: string | null = null;
+  let responseStartEventId: string | null = null;
+  let messageStartCount = 0;
+
   // Wrap callbacks to check interrupt flag and deduplicate updates
   const wrappedCallbacks: StreamCallbacks = {
     onConfidence: (update) => {
@@ -262,7 +270,20 @@ export function streamMiraBackend(
 
                 // Process all ordered events using wrapped callbacks
                 for (const evt of ordered) {
-                  handleEnvelopeEvent(evt, wrappedCallbacks);
+                  // Track TEXT_MESSAGE_START events to identify rapport vs response messages
+                  if (evt.type === 'TEXT_MESSAGE_START') {
+                    if (messageStartCount === 0) {
+                      rapportStartEventId = evt.event_id;
+                    } else if (messageStartCount === 1) {
+                      responseStartEventId = evt.event_id;
+                    }
+                    messageStartCount++;
+                  }
+
+                  handleEnvelopeEvent(evt, wrappedCallbacks, {
+                    rapportStartEventId,
+                    responseStartEventId,
+                  });
                 }
               } catch (e) {
                 console.error('Failed to parse event:', e);
@@ -284,7 +305,20 @@ export function streamMiraBackend(
       if (!wasInterrupted) {
         const remaining = eventBuffer.flush();
         for (const evt of remaining) {
-          handleEnvelopeEvent(evt, wrappedCallbacks);
+          // Track TEXT_MESSAGE_START events during flush as well
+          if (evt.type === 'TEXT_MESSAGE_START') {
+            if (messageStartCount === 0) {
+              rapportStartEventId = evt.event_id;
+            } else if (messageStartCount === 1) {
+              responseStartEventId = evt.event_id;
+            }
+            messageStartCount++;
+          }
+
+          handleEnvelopeEvent(evt, wrappedCallbacks, {
+            rapportStartEventId,
+            responseStartEventId,
+          });
         }
       }
     } catch (error) {
@@ -322,7 +356,16 @@ export function streamMiraBackend(
 /**
  * Handle AG-UI event envelopes
  */
-function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+interface MessageTrackingState {
+  rapportStartEventId: string | null;
+  responseStartEventId: string | null;
+}
+
+function handleEnvelopeEvent(
+  envelope: EventEnvelope,
+  callbacks: StreamCallbacks,
+  messageTracking: MessageTrackingState
+): void {
   switch (envelope.type) {
     case 'TEXT_MESSAGE_START':
       // Message streaming starting
@@ -330,7 +373,15 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
 
     case 'TEXT_CONTENT': {
       const contentData = envelope.data as { chunk: string; chunk_index: number };
-      callbacks.onResponseChunk?.(contentData.chunk);
+      // Only send response chunks if this TEXT_CONTENT belongs to the response message
+      // (i.e., its parent is the responseStartEventId, not the rapportStartEventId)
+      if (
+        envelope.parent_event_id &&
+        messageTracking.responseStartEventId &&
+        envelope.parent_event_id === messageTracking.responseStartEventId
+      ) {
+        callbacks.onResponseChunk?.(contentData.chunk);
+      }
       break;
     }
 
