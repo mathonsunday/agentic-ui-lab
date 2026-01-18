@@ -18,7 +18,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js';
-import { updateConfidenceAndProfile, selectResponse, updateMemory, processToolCall } from './lib/miraAgent.js';
+import { updateConfidenceAndProfile, updateMemory, processToolCall } from './lib/miraAgent.js';
 import { SPECIMEN_47_GRANT_PROPOSAL } from './lib/responseLibrary.js';
 
 /**
@@ -378,7 +378,40 @@ Return ONLY valid JSON in this exact format:
       ],
     }, stateSequence);
 
-    // Send analysis event with Claude's reasoning and metrics
+    // Update state with analysis
+    const updatedState = updateConfidenceAndProfile(miraState, {
+      confidenceDelta: analysis.confidenceDelta,
+      updatedProfile: {
+        thoughtfulness: analysis.thoughtfulness,
+        adventurousness: analysis.adventurousness,
+        engagement: analysis.engagement,
+        curiosity: analysis.curiosity,
+        superficiality: analysis.superficiality,
+      },
+      reasoning: analysis.reasoning,
+    });
+
+    // Start text message sequence
+    const messageId = `msg_analysis_${Date.now()}`;
+    const startEventId = generateEventId();
+    const startSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(response, startEventId, 'TEXT_MESSAGE_START', {
+      message_id: messageId,
+    }, startSequence);
+
+    let chunkIndex = 0;
+
+    // Send confidence bar as first chunk (before analysis)
+    const confidenceBar = generateConfidenceBar(newConfidence);
+    const barChunkId = generateEventId();
+    const barChunkSeq = eventTracker.getNextSequence();
+    sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
+      chunk: confidenceBar,
+      chunk_index: chunkIndex++,
+    }, barChunkSeq, startEventId);
+
+    // Send analysis event AFTER rapport bar with Claude's reasoning and metrics
     const analysisEventId = generateEventId();
     const analysisSequence = eventTracker.getNextSequence();
     console.log('📊 [Backend] Sending ANALYSIS_COMPLETE event:', {
@@ -397,56 +430,36 @@ Return ONLY valid JSON in this exact format:
         superficiality: analysis.superficiality,
       },
       confidenceDelta: analysis.confidenceDelta,
-    }, analysisSequence);
+    }, analysisSequence, startEventId);
 
-    // Update state with analysis
-    const updatedState = updateConfidenceAndProfile(miraState, {
-      confidenceDelta: analysis.confidenceDelta,
-      updatedProfile: {
-        thoughtfulness: analysis.thoughtfulness,
-        adventurousness: analysis.adventurousness,
-        engagement: analysis.engagement,
-        curiosity: analysis.curiosity,
-        superficiality: analysis.superficiality,
-      },
-      reasoning: analysis.reasoning,
+    // Stream Claude-generated response via streaming chat
+    const claudeStream = client.messages.stream({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: `You are Dr. Mira Petrovic, a deep-sea researcher obsessed with bioluminescent creatures and the abyss. Respond authentically as Mira to the user's message. Keep your response natural and conversational (1-3 sentences typically). Use ellipsis (...) as punctuation breaks. Reference deep-sea creatures and your research when relevant.`,
+      messages: [
+        {
+          role: 'user',
+          content: userInput,
+        },
+      ],
     });
 
-    // Select response based on updated state
-    const agentResponse = selectResponse(updatedState, assessment);
+    // Stream response chunks from Claude
+    for await (const event of claudeStream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        const chunk = event.delta.text;
 
-    // Start text message sequence
-    const messageId = `msg_analysis_${Date.now()}`;
-    const startEventId = generateEventId();
-    const startSequence = eventTracker.getNextSequence();
+        const chunkId = generateEventId();
+        const chunkSeq = eventTracker.getNextSequence();
+        sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
+          chunk,
+          chunk_index: chunkIndex++,
+        }, chunkSeq, startEventId);
 
-    sendAGUIEvent(response, startEventId, 'TEXT_MESSAGE_START', {
-      message_id: messageId,
-    }, startSequence);
-
-    let chunkIndex = 0;
-
-    // Send confidence bar as first chunk
-    const confidenceBar = generateConfidenceBar(newConfidence);
-    const barChunkId = generateEventId();
-    const barChunkSeq = eventTracker.getNextSequence();
-    sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
-      chunk: confidenceBar,
-      chunk_index: chunkIndex++,
-    }, barChunkSeq, startEventId);
-
-    // Stream response chunks (sentence-level)
-    // Frontend handles character-by-character animation on all response text
-    for (const sentence of agentResponse.streaming) {
-      // Small delay allows interruption and prevents overwhelming the client
-      await sleep(10);
-
-      const chunkId = generateEventId();
-      const chunkSeq = eventTracker.getNextSequence();
-      sendAGUIEvent(response, chunkId, 'TEXT_CONTENT', {
-        chunk: sentence,
-        chunk_index: chunkIndex++,
-      }, chunkSeq, startEventId);
+        // Small delay allows interruption
+        await sleep(10);
+      }
     }
 
     // Complete text message
@@ -456,15 +469,25 @@ Return ONLY valid JSON in this exact format:
       total_chunks: chunkIndex,
     }, endSequence, startEventId);
 
-    // Update memory
-    const finalState = updateMemory(updatedState, userInput, agentResponse);
+    // Create a simple agent response for memory tracking
+    const finalState = updateMemory(updatedState, userInput, {
+      streaming: [],
+      observations: [],
+      contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
+      confidenceDelta: analysis.confidenceDelta,
+    });
 
     // Send completion event with full response data (triggers ASCII art and transition)
     const completeEventId = generateEventId();
     const completeSequence = eventTracker.getNextSequence();
     sendAGUIEvent(response, completeEventId, 'RESPONSE_COMPLETE', {
       updatedState: finalState,
-      response: agentResponse,
+      response: {
+        streaming: [],
+        observations: [],
+        contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
+        confidenceDelta: analysis.confidenceDelta,
+      },
     }, completeSequence);
 
     response.end();
