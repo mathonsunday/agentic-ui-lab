@@ -4,6 +4,7 @@ import { MinimalInput } from './MinimalInput';
 import { TypewriterLine } from './TypewriterLine';
 import { settingsAtom } from '../stores/settings';
 import { createLogger } from '../utils/debugLogger';
+import { useTerminalLineZoomUpdate } from '../hooks/useTerminalLineZoomUpdate';
 import {
   initializeMiraState,
   assessResponse,
@@ -98,6 +99,7 @@ const streamDebugLog = (message: string, data?: any) => {
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
+  const { updateLastAsciiLine } = useTerminalLineZoomUpdate();
   const [miraState, setMiraState] = useState<MiraState>(() => {
     return initializeMiraState(initialConfidence);
   });
@@ -294,24 +296,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     setCurrentZoom(nextZoom);
 
     // Update the most recent ASCII line with the new zoom level
-    setTerminalLines((prev) => {
-      let lastAsciiIndex = -1;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].type === 'ascii') {
-          lastAsciiIndex = i;
-          break;
-        }
-      }
-      if (lastAsciiIndex === -1) return prev;
-
-      // Create new array and new line object so React detects the change
-      const updated = [...prev];
-      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
-      return updated;
-    });
+    setTerminalLines((prev) => updateLastAsciiLine(prev, newAscii));
 
     handleToolCall('zoom_in', { zoomLevel: nextZoom });
-  }, [currentCreature, currentZoom, handleToolCall]);
+  }, [currentCreature, currentZoom, handleToolCall, updateLastAsciiLine]);
 
   const handleZoomOut = useCallback(() => {
     const prevZoom = getPrevZoomLevel(currentZoom);
@@ -322,24 +310,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     setCurrentZoom(prevZoom);
 
     // Update the most recent ASCII line with the new zoom level
-    setTerminalLines((prev) => {
-      let lastAsciiIndex = -1;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].type === 'ascii') {
-          lastAsciiIndex = i;
-          break;
-        }
-      }
-      if (lastAsciiIndex === -1) return prev;
-
-      // Create new array and new line object so React detects the change
-      const updated = [...prev];
-      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
-      return updated;
-    });
+    setTerminalLines((prev) => updateLastAsciiLine(prev, newAscii));
 
     handleToolCall('zoom_out', { zoomLevel: prevZoom });
-  }, [currentCreature, currentZoom, handleToolCall]);
+  }, [currentCreature, currentZoom, handleToolCall, updateLastAsciiLine]);
 
   const handleInput = useCallback(
     async (userInput: string) => {
