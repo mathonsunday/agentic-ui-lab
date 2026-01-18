@@ -1,33 +1,58 @@
 /**
  * Premium Creature Renderer
- * Dynamically renders animated ASCII creatures from the premium library
+ * Dynamically renders animated ASCII creatures from the deep-sea-ascii-art library
  * Falls back to text-based ASCII if premium component unavailable
- *
- * CURRENT STATUS: Operating in fallback mode (text ASCII)
- * The premium library (deep-sea-ascii-art) is not currently available.
- * The toggle button still works - it just switches between text modes.
- *
- * To enable premium animated creatures:
- * 1. Ensure deep-sea-ascii-art library is available
- * 2. Build it: cd ../deep-sea-ascii-art && npm run build
- * 3. Uncomment the createPremiumComponent function below
- * 4. Update vite.config.ts with path alias if needed
  */
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
 
 /**
- * Premium creatures mapping
- * Currently empty - all creatures use text ASCII fallback
- * When the premium library is available, this will be populated
+ * Type for premium creature components
+ */
+interface PremiumCreatureComponent {
+  (props: { zoom?: ZoomLevel }): React.ReactElement;
+}
+
+/**
+ * Helper to create lazy-loaded components with proper error handling
+ */
+const createPremiumComponent = (componentPath: string) => {
+  return lazy(
+    async () => {
+      try {
+        const module = await import(
+          /* @vite-ignore */
+          `../../deep-sea-ascii-art/components/premium-ascii/${componentPath}`
+        );
+        // Support both default and named exports
+        const component: PremiumCreatureComponent =
+          module.default ||
+          module[Object.keys(module).find((k) => k.startsWith('Animated')) || ''];
+        return { default: component };
+      } catch (error) {
+        console.error(
+          `Failed to load premium component: ${componentPath}`,
+          error
+        );
+        // Return null component on failure
+        return { default: (() => React.createElement('div')) as PremiumCreatureComponent };
+      }
+    }
+  ) as React.LazyExoticComponent<PremiumCreatureComponent>;
+};
+
+/**
+ * Map creature names to their premium animated components
  */
 const PremiumCreatures = {
-  // Placeholder - commented out since library not available
-  // To enable: uncomment and ensure deep-sea-ascii-art library is built
-  // anglerFish: lazy(() => import('../../../deep-sea-ascii-art/...')),
-  // jellyfish: lazy(() => import('../../../deep-sea-ascii-art/...')),
-  // etc...
+  anglerFish: createPremiumComponent('animated-anglerfish'),
+  jellyfish: createPremiumComponent('animated-jellyfish'),
+  bioluminescentFish: createPremiumComponent('animated-bioluminescent-fish'),
+  viperFish: createPremiumComponent('animated-viper-fish'),
+  treasureChest: createPremiumComponent('animated-treasure-chest'),
+  coral: createPremiumComponent('animated-coral'),
+  deepSeaDiver: createPremiumComponent('animated-deep-sea-diver'),
 } as const;
 
 type AvailablePremiumCreature = keyof typeof PremiumCreatures;
@@ -36,18 +61,20 @@ interface PremiumCreatureRendererProps {
   creature: CreatureName;
   zoom: ZoomLevel;
   fallback?: React.ReactNode;
-  usePremium?: boolean; // Toggle between premium and fallback
-}
-
-function isPremiumAvailable(_creature: CreatureName): boolean {
-  // Since PremiumCreatures is empty, no premium creatures are available
-  return false;
+  usePremium?: boolean;
 }
 
 /**
- * Fallback component that shows text-based ASCII (from your current system)
+ * Check if a creature has a premium animated version
  */
-function TextAsciiiFallback({
+function isPremiumAvailable(creature: CreatureName): boolean {
+  return creature in PremiumCreatures;
+}
+
+/**
+ * Fallback component that shows text-based ASCII
+ */
+function TextAsciiFallback({
   fallback,
 }: {
   fallback?: React.ReactNode;
@@ -65,29 +92,48 @@ function TextAsciiiFallback({
 
 /**
  * Main renderer component
- * Currently always renders text ASCII since premium library is not available
+ * Shows premium animated creatures if available, falls back to text ASCII
  */
 export function PremiumCreatureRenderer({
+  creature,
+  zoom,
   fallback,
   usePremium = true,
 }: PremiumCreatureRendererProps) {
-  // For now, always use fallback since no premium creatures are available
-  // The usePremium flag is still here for future use
-  (usePremium); // Use the parameter to avoid unused variable warning
+  // If premium disabled by user, show text ASCII immediately
+  if (!usePremium) {
+    return <TextAsciiFallback fallback={fallback} />;
+  }
 
-  return <TextAsciiiFallback fallback={fallback} />;
+  // If this creature doesn't have a premium version, show text ASCII
+  if (!isPremiumAvailable(creature)) {
+    return <TextAsciiFallback fallback={fallback} />;
+  }
+
+  // Get the premium component
+  const PremiumComponent =
+    PremiumCreatures[creature as AvailablePremiumCreature];
+
+  // Render with Suspense for loading states
+  return (
+    <Suspense fallback={<TextAsciiFallback fallback={fallback} />}>
+      <PremiumComponent zoom={zoom} />
+    </Suspense>
+  );
 }
 
 /**
  * Hook to determine if a creature has a premium variant
- * Currently always returns false since premium library not available
  */
-export function usePremiumCreatureAvailability(_creature: CreatureName): boolean {
-  return isPremiumAvailable(_creature);
+export function usePremiumCreatureAvailability(
+  creature: CreatureName
+): boolean {
+  return isPremiumAvailable(creature);
 }
 
 /**
  * List all available premium creatures
- * Currently empty
  */
-export const PREMIUM_CREATURES: AvailablePremiumCreature[] = [];
+export const PREMIUM_CREATURES: AvailablePremiumCreature[] = Object.keys(
+  PremiumCreatures
+) as AvailablePremiumCreature[];
