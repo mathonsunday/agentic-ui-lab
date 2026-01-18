@@ -101,7 +101,7 @@ export function TypewriterLine({
       logger.debug('Clearing interval');
       clearInterval(timer);
     };
-  }, [charDelayMs, isAnimating, onComplete, onCharacter, content]);
+  }, [charDelayMs, isAnimating, onComplete, onCharacter]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;
