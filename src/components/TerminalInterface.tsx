@@ -293,23 +293,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
     setCurrentZoom(nextZoom);
 
-    setTerminalLines((prev) => {
-      let lastAsciiIndex = -1;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].type === 'ascii') {
-          lastAsciiIndex = i;
-          break;
-        }
-      }
-      if (lastAsciiIndex === -1) return prev;
-
-      const updated = [...prev];
-      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
-      return updated;
-    });
+    // Add the zoomed ASCII art as a new line in the terminal
+    addTerminalLine('ascii', newAscii);
 
     handleToolCall('zoom_in', { zoomLevel: nextZoom });
-  }, [currentCreature, currentZoom, handleToolCall]);
+  }, [currentCreature, currentZoom, handleToolCall, addTerminalLine]);
 
   const handleZoomOut = useCallback(() => {
     const prevZoom = getPrevZoomLevel(currentZoom);
@@ -319,23 +307,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
     setCurrentZoom(prevZoom);
 
-    setTerminalLines((prev) => {
-      let lastAsciiIndex = -1;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        if (prev[i].type === 'ascii') {
-          lastAsciiIndex = i;
-          break;
-        }
-      }
-      if (lastAsciiIndex === -1) return prev;
-
-      const updated = [...prev];
-      updated[lastAsciiIndex] = { ...updated[lastAsciiIndex], content: newAscii };
-      return updated;
-    });
+    // Add the zoomed ASCII art as a new line in the terminal
+    addTerminalLine('ascii', newAscii);
 
     handleToolCall('zoom_out', { zoomLevel: prevZoom });
-  }, [currentCreature, currentZoom, handleToolCall]);
+  }, [currentCreature, currentZoom, handleToolCall, addTerminalLine]);
 
   const handleInput = useCallback(
     async (userInput: string) => {
