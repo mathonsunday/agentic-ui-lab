@@ -46,12 +46,14 @@ export function TypewriterLine({
       return;
     }
 
+    console.log(`[TypewriterLine] Starting animation with content length: ${content.length}`);
     logger.debug('Starting continuous animation', {
       contentLength: content.length,
       charDelayMs,
     });
 
     let hasCalledComplete = false;
+    let lastLoggedRevealedLength = 0;
 
     // Single continuous interval that doesn't depend on content changes
     // Uses closure to check current content.length on each tick
@@ -70,6 +72,7 @@ export function TypewriterLine({
         if (prev >= content.length) {
           if (prev > 0 && !hasCalledComplete) {
             hasCalledComplete = true;
+            console.log(`[TypewriterLine] Animation complete! Revealed ${prev} chars, content length: ${content.length}`);
             logger.debug('Animation complete', {
               revealed: prev,
               contentLength: content.length,
@@ -81,12 +84,20 @@ export function TypewriterLine({
 
         // Reveal next character
         const nextLength = prev + 1;
+
+        // Log every 50 characters for debugging
+        if (nextLength % 50 === 0 && nextLength !== lastLoggedRevealedLength) {
+          console.log(`[TypewriterLine] Progress: ${nextLength}/${content.length} chars revealed`);
+          lastLoggedRevealedLength = nextLength;
+        }
+
         onCharacter?.(content[nextLength - 1]);
         return nextLength;
       });
     }, charDelayMs);
 
     return () => {
+      console.log(`[TypewriterLine] Clearing interval, revealed length was: ${lastLoggedRevealedLength}`);
       logger.debug('Clearing interval');
       clearInterval(timer);
     };
