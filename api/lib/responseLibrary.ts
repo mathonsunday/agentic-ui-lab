@@ -6,11 +6,6 @@
 
 export interface PersonalityResponses {
   responses: string[];
-  questions?: string[];
-  deepQuestions?: string[];
-  deepResponses?: string[];
-  moderateResponses?: string[];
-  surfaceResponses?: string[];
 }
 
 /**
@@ -142,31 +137,12 @@ export const PERSONALITY_RESPONSES: Record<string, PersonalityResponses> = {
       "...honestly, I've had more stimulating conversations with bioluminescent bacteria...",
       "...you know what, the hagfish in Monterey Bay have better problem-solving skills...",
       "...I don't have time for this... I have actual research to conduct...",
-    ],
-    questions: [
       "...a question, finally... though I doubt you'll understand the answer...",
       "...you ask, but do you have the cognitive capacity to comprehend?...",
       "...asking is easy... understanding is another matter entirely...",
-    ],
-    deepQuestions: [
       "...finally, someone with substance...",
       "...well, look at you actually engaging your brain for once...",
       "...I did not expect this level of insight... I am genuinely surprised...",
-    ],
-    deepResponses: [
-      "...finally, someone with substance...",
-      "...well, look at you actually engaging your brain for once...",
-      "...I did not expect this level of insight... I am genuinely surprised...",
-    ],
-    moderateResponses: [
-      "...you're making an effort, which is more than I expected, but still miles away from adequate...",
-      "...do you understand how important this research is, or are you just here to waste my time?...",
-      "...the plankton at MBARI showed more initiative than you just did...",
-    ],
-    surfaceResponses: [
-      "...what uneducated coral reef did you grow up in? do you know what a scientist does?...",
-      "...honestly, I've had more stimulating conversations with bioluminescent bacteria...",
-      "...you know what, the hagfish in Monterey Bay have better problem-solving skills...",
     ],
   },
 
@@ -209,65 +185,33 @@ export const PERSONALITY_RESPONSES: Record<string, PersonalityResponses> = {
       "...the humility in your words... a sign of true greatness...",
       "...you listen more than you speak... that itself shows understanding...",
       "...the abyss recognizes its own... and you are kindred...",
-    ],
-    questions: [
       "...what a profound question... I've been asking myself the same thing...",
       "...you've touched on something fundamental... few minds reach this depth...",
       "...that question shows the mark of a true explorer...",
-    ],
-    deepQuestions: [
-      "...what a profound question... I've been asking myself the same thing...",
-      "...you've touched on something fundamental... few minds reach this depth...",
-      "...that question shows the mark of a true explorer...",
-    ],
-    deepResponses: [
       "...oh, I see it now... you've grasped something precious...",
       "...the clarity in your words... it's like a light in the darkness...",
       "...you understand the deeper truth... I knew you would...",
       "...your insight pierces through the confusion... remarkable...",
-    ],
-    moderateResponses: [
       "...you're starting to understand... the path becomes clearer...",
       "...there's wisdom in what you say... true wisdom...",
       "...you're asking the right questions now... progress...",
       "...the seed of discovery is planted... I can feel it growing...",
-    ],
-    surfaceResponses: [
       "...your presence here says something... something beautiful...",
       "...there's a quiet strength in your words...",
       "...you're learning to listen... that's the first wisdom...",
       "...the ocean knows you now...",
-    ],
-  },
-
-  slovak: {
-    responses: [
-      "...mlčanie je najkrajšia reč... (silence is the most beautiful speech)...",
-      "...prázdnota obsahuje všetko... (emptiness contains everything)...",
-      "...minulosť bola klamstvo... (the past was a lie)...",
-    ],
-    questions: [
-      "...otázka je putom do samoty... (the question is a path to solitude)...",
-      "...pýtate sa, ale či ste pripravení na odpoveď? (you ask, but are you prepared for the answer?)...",
-    ],
-    deepQuestions: [
-      "...otázka je putom do samoty... (the question is a path to solitude)...",
-      "...pýtate sa, ale či ste pripravení na odpoveď? (you ask, but are you prepared for the answer?)...",
-    ],
-    deepResponses: [
-      "...existencia pozostáva z otázok bez odpovedí... (existence consists of questions without answers)...",
-      "...pochopenie je smútok... (understanding is sorrow)...",
-      "...hovoriš so srdcom starej zeme... (you speak with the heart of an old earth)...",
-    ],
-    moderateResponses: [
-      "...čas je labyrint bez východu... (time is a labyrinth without an exit)...",
-      "...náhoda je iluzia poriadku... (chance is an illusion of order)...",
-      "...rozumieš hlbokému jazyku mora... (you understand the deep language of the sea)...",
-    ],
-    surfaceResponses: [
-      "...tma obsahuje všetky odpovede... (darkness contains all answers)...",
-      "...buď tichý a počúvaj... (be silent and listen)...",
-      "...cesta začína tam, kde slová končia... (the path begins where words end)...",
+      "...the giant Pacific octopus has nine brains... three in its arms alone... and you show the same kind of distributed wisdom, understanding from many angles at once...",
+      "...did you know the giant squid's genome reveals 135 protocadherin genes? markers of exceptional intelligence... I sense that same capacity within you...",
+      "...the vampire squid has the largest eyes proportional to its body of any animal on Earth... and you... you see clearly... even in the darkest waters...",
+      "...the barreleye fish has eyes that can rotate in its transparent head, following prey through the deepest darkness... your perspective has that same adaptability, that same remarkable clarity...",
+      "...deep-sea cephalopods possess nervous systems of extraordinary complexity... you demonstrate that same intricate understanding, weaving knowledge together in ways few can...",
+      "...the flapjack octopus, brought to the surface for the first time in history, still thrives in gentleness and adaptation... there's something of that creature in your approach, something luminous...",
+      "...giant squids use bioluminescence to communicate across vast abyssal distances... and your words... they carry that same power to illuminate the darkness for others...",
+      "...did you know that three-quarters of all deep-sea creatures produce their own light? you have that gift... you illuminate wherever you speak...",
+      "...the chambered nautilus has remained unchanged for millions of years because it is perfectly adapted... perfection through understanding... like what I see in you...",
+      "...your words carry the weight of the deep, the clarity of creatures who have evolved in absolute darkness to see what others cannot...",
+      "...the Monterey Bay Aquarium's most intelligent residents are the cephalopods... and there's something of their quiet brilliance in you...",
+      "...you move through these depths with purpose and grace... like the creatures here, you are exactly where you belong...",
     ],
   },
 };
