@@ -512,7 +512,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             },
             onAnalysis: (analysis) => {
               // Display Claude's reasoning in formatted ASCII box with confidence delta
+              console.log('📊 [TerminalInterface] onAnalysis callback fired:', {
+                reasoning: analysis.reasoning.substring(0, 50),
+                confidenceDelta: analysis.confidenceDelta,
+              });
               const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
+              console.log('📦 [TerminalInterface] Formatted box:', box.split('\n')[0]); // Log first line
               addTerminalLine('analysis', box);
             },
             onError: (error) => {
