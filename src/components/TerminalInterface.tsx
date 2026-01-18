@@ -525,17 +525,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             dispatchStream({ type: 'END_STREAM' });
           },
           onAnalysis: (analysis: any) => {
-            // Display Claude's reasoning as collapsed teaser by default
+            // Display Claude's reasoning as full analysis box
             console.log('📊 [TerminalInterface] onAnalysis callback fired:', {
               reasoning: analysis.reasoning.substring(0, 50),
               confidenceDelta: analysis.confidenceDelta,
             });
-            const teaser = formatAnalysisTeaser();
-            console.log('📦 [TerminalInterface] Analysis line created (collapsed)');
-            addTerminalLine('analysis', teaser, {
-              reasoning: analysis.reasoning,
-              confidenceDelta: analysis.confidenceDelta,
-            });
+            const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
+            console.log('📦 [TerminalInterface] Analysis box displayed');
+            addTerminalLine('analysis', box);
           },
           onError: (error: any) => {
             console.error('Stream error:', error);
