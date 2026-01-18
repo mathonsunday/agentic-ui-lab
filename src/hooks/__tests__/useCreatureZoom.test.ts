@@ -19,7 +19,7 @@ vi.mock('../../shared/deepSeaAscii', () => ({
     return levels[Math.max(idx - 1, 0)];
   }),
   getCreatureAtZoom: vi.fn((creature, zoom) => `[${creature} at ${zoom}]`),
-  getRandomCreature: vi.fn(() => 'randomCreature'),
+  getRandomCreature: vi.fn(() => ({ name: 'randomCreature', art: '[randomCreature at medium]' })),
 }));
 
 describe('useCreatureZoom', () => {

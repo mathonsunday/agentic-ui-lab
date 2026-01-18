@@ -38,12 +38,10 @@ export function useCreatureZoom(initialCreature: CreatureName = 'anglerFish', in
   const handleZoomIn = useCallback(() => {
     setCurrentZoom((prevZoom) => {
       const newZoom = getNextZoomLevel(prevZoom);
-      console.log(`🔬 Zooming in: ${prevZoom} → ${newZoom}`);
 
       // When zooming in very close, sometimes pick a random creature for surprise
       if (newZoom === 'close' && Math.random() < 0.3) {
         const { name: randomCreature } = getRandomCreature();
-        console.log(`✨ Surprise creature at close zoom: ${randomCreature}`);
         setCurrentCreature(randomCreature);
       }
 
@@ -54,7 +52,6 @@ export function useCreatureZoom(initialCreature: CreatureName = 'anglerFish', in
   const handleZoomOut = useCallback(() => {
     setCurrentZoom((prevZoom) => {
       const newZoom = getPrevZoomLevel(prevZoom);
-      console.log(`🔍 Zooming out: ${prevZoom} → ${newZoom}`);
       return newZoom;
     });
   }, []);
