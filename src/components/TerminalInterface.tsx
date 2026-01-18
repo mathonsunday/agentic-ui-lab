@@ -89,6 +89,56 @@ const streamDebugLog = (message: string, data?: any) => {
   console.log(`[STREAM_DEBUG ${timestamp}] ${message}`, data || '');
 };
 
+/**
+ * Format analysis reasoning as ASCII box with confidence delta in header
+ * Creates a visually distinct block showing Mira's internal observations
+ */
+function formatAnalysisBox(reasoning: string, confidenceDelta: number): string {
+  const deltaSymbol = confidenceDelta >= 0 ? '+' : '';
+  const deltaText = `[${deltaSymbol}${confidenceDelta} confidence]`;
+
+  // Box drawing characters
+  const topLeft = '┌';
+  const topRight = '┐';
+  const bottomLeft = '└';
+  const bottomRight = '┘';
+  const horizontal = '─';
+  const vertical = '│';
+
+  // Wrap reasoning text to fit in box (max 55 chars per line for responsive)
+  const maxWidth = 55;
+  const words = reasoning.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    if ((currentLine + word).length > maxWidth) {
+      lines.push(currentLine.trim());
+      currentLine = word + ' ';
+    } else {
+      currentLine += word + ' ';
+    }
+  }
+  if (currentLine.trim()) {
+    lines.push(currentLine.trim());
+  }
+
+  // Build box
+  const boxWidth = Math.max(
+    Math.max(...lines.map(l => l.length)),
+    20 + deltaText.length
+  ) + 2; // +2 for padding
+
+  const topBar = `${topLeft}${horizontal} MIRA'S NOTES ${horizontal.repeat(Math.max(0, boxWidth - 15 - deltaText.length))} ${deltaText} ${horizontal}${topRight}`;
+  const bottomBar = `${bottomLeft}${horizontal.repeat(boxWidth + 2)}${bottomRight}`;
+
+  const contentLines = lines.map(line =>
+    `${vertical} ${line.padEnd(boxWidth, ' ')} ${vertical}`
+  );
+
+  return [topBar, ...contentLines, bottomBar].join('\n');
+}
+
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
   const [miraState, setMiraState] = useState<MiraState>(() => {
@@ -461,16 +511,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               dispatchStream({ type: 'END_STREAM' });
             },
             onAnalysis: (analysis) => {
-              // Display Claude's reasoning as research notes
-              addTerminalLine('analysis', `[ANALYSIS] ${analysis.reasoning}`);
-
-              // Display personality metrics
-              const metricsText = `[METRICS] thought:${analysis.metrics.thoughtfulness} adv:${analysis.metrics.adventurousness} eng:${analysis.metrics.engagement} cur:${analysis.metrics.curiosity} sup:${analysis.metrics.superficiality}`;
-              addTerminalLine('analysis', metricsText);
-
-              // Display confidence delta
-              const deltaSymbol = analysis.confidenceDelta >= 0 ? '+' : '';
-              addTerminalLine('analysis', `[CONFIDENCE] ${deltaSymbol}${analysis.confidenceDelta} pts`);
+              // Display Claude's reasoning in formatted ASCII box with confidence delta
+              const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
+              addTerminalLine('analysis', box);
             },
             onError: (error) => {
               console.error('Stream error:', error);

@@ -133,14 +133,15 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Analysis lines - Claude's reasoning and metrics (dimmed, smaller) */
+/* Analysis box - Mira's internal notes (ASCII art box with full prominence) */
 .terminal-interface__line--analysis {
-  color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
   font-size: 0.875em;
   font-family: 'Courier New', monospace;
-  opacity: 0.8;
-  line-height: 1.3;
-  margin: 0.25rem 0;
+  opacity: 1.0;
+  line-height: 1.4;
+  margin: 0.75rem 0;
+  white-space: pre;
 }
 
 /* Scrollbar styling */
