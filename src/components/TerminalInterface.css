@@ -110,7 +110,7 @@
   /* Allow zoomed content to overflow within the container */
   overflow: auto;
   max-width: 100%;
-  flex-shrink: 0; /* Don't shrink the content inside */
+  /* Allow content to size naturally while overflow is clipped by parent */
 }
 
 .terminal-interface__input-section {
