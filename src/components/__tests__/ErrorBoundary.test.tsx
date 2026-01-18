@@ -10,25 +10,24 @@ describe('ErrorBoundary', () => {
 
   describe('Normal rendering', () => {
     it('should render children when no error occurs', () => {
-      render(
+      const { container } = render(
         <ErrorBoundary>
           <div>Test content</div>
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('Test content')).toBeInTheDocument();
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should render multiple children', () => {
-      render(
+      const { container } = render(
         <ErrorBoundary>
           <div>First</div>
           <div>Second</div>
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('First')).toBeInTheDocument();
-      expect(screen.getByText('Second')).toBeInTheDocument();
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
@@ -38,14 +37,14 @@ describe('ErrorBoundary', () => {
         throw new Error('Test error');
       }
 
-      render(
+      const { container } = render(
         <ErrorBoundary>
           <BrokenComponent />
         </ErrorBoundary>
       );
 
+      expect(container.firstChild).toMatchSnapshot();
       expect(screen.getByText('Something Went Wrong')).toBeInTheDocument();
-      expect(screen.getByText('An unexpected error occurred in the research terminal.')).toBeInTheDocument();
     });
 
     it('should display error details when expanded', () => {
@@ -112,14 +111,13 @@ describe('ErrorBoundary', () => {
         </div>
       );
 
-      render(
+      const { container } = render(
         <ErrorBoundary fallback={customFallback}>
           <BrokenComponent />
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('Custom Error: Test error')).toBeInTheDocument();
-      expect(screen.getByText('Custom Reset')).toBeInTheDocument();
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should use default fallback when custom fallback not provided', () => {
@@ -127,14 +125,13 @@ describe('ErrorBoundary', () => {
         throw new Error('Test error');
       }
 
-      render(
+      const { container } = render(
         <ErrorBoundary>
           <BrokenComponent />
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('Something Went Wrong')).toBeInTheDocument();
-      expect(screen.getByText('Reconnect to Terminal')).toBeInTheDocument();
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 

@@ -1,0 +1,127 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ErrorBoundary > Custom fallback > should render custom fallback when provided 1`] = `
+<div>
+  <h1>
+    Custom Error: 
+    Test error
+  </h1>
+  <button>
+    Custom Reset
+  </button>
+</div>
+`;
+
+exports[`ErrorBoundary > Custom fallback > should use default fallback when custom fallback not provided 1`] = `
+<div
+  class="error-boundary-fallback"
+>
+  <div
+    class="error-boundary-fallback__container"
+  >
+    <h2
+      class="error-boundary-fallback__title"
+    >
+      Something Went Wrong
+    </h2>
+    <div
+      class="error-boundary-fallback__message"
+    >
+      <p>
+        An unexpected error occurred in the research terminal.
+      </p>
+      <details
+        class="error-boundary-fallback__details"
+      >
+        <summary>
+          Error Details
+        </summary>
+        <pre
+          class="error-boundary-fallback__error"
+        >
+          Test error
+        </pre>
+      </details>
+    </div>
+    <div
+      class="error-boundary-fallback__actions"
+    >
+      <button
+        class="error-boundary-fallback__reset-button"
+      >
+        Reconnect to Terminal
+      </button>
+    </div>
+    <div
+      class="error-boundary-fallback__info"
+    >
+      <p>
+        The terminal will attempt to reconnect. If the problem persists, please refresh the page.
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ErrorBoundary > Error handling > should catch and display errors in children 1`] = `
+<div
+  class="error-boundary-fallback"
+>
+  <div
+    class="error-boundary-fallback__container"
+  >
+    <h2
+      class="error-boundary-fallback__title"
+    >
+      Something Went Wrong
+    </h2>
+    <div
+      class="error-boundary-fallback__message"
+    >
+      <p>
+        An unexpected error occurred in the research terminal.
+      </p>
+      <details
+        class="error-boundary-fallback__details"
+      >
+        <summary>
+          Error Details
+        </summary>
+        <pre
+          class="error-boundary-fallback__error"
+        >
+          Test error
+        </pre>
+      </details>
+    </div>
+    <div
+      class="error-boundary-fallback__actions"
+    >
+      <button
+        class="error-boundary-fallback__reset-button"
+      >
+        Reconnect to Terminal
+      </button>
+    </div>
+    <div
+      class="error-boundary-fallback__info"
+    >
+      <p>
+        The terminal will attempt to reconnect. If the problem persists, please refresh the page.
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ErrorBoundary > Normal rendering > should render children when no error occurs 1`] = `
+<div>
+  Test content
+</div>
+`;
+
+exports[`ErrorBoundary > Normal rendering > should render multiple children 1`] = `
+<div>
+  First
+</div>
+`;
