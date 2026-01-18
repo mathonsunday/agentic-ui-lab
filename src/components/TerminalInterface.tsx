@@ -491,28 +491,33 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onComplete: (data: any) => {
             streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
               newConfidence: data.updatedState.confidenceInUser,
+              source: data.response?.source,
             });
 
             // Final state update
             setMiraState(data.updatedState);
             onConfidenceChange?.(data.updatedState.confidenceInUser);
 
-            // Add transition phrase
-            addTerminalLine('text', '...what do you think about this...');
+            // Only show ASCII art response for text messages, not tool calls
+            // Tool calls already updated the ASCII art inline via zoom handlers
+            if (data.response?.source !== 'tool_call') {
+              // Add transition phrase
+              addTerminalLine('text', '...what do you think about this...');
 
-            // Show ASCII art with tracked creature
-            const { name: randomCreature, art: randomArt } = getRandomCreature();
-            setCurrentCreature(randomCreature);
-            setCurrentZoom('medium');
-            const asciiLine: TerminalLine = {
-              id: String(lineCountRef.current++),
-              type: 'ascii',
-              content: randomArt,
-            };
-            setTerminalLines((prev) => [...prev, asciiLine]);
+              // Show ASCII art with tracked creature
+              const { name: randomCreature, art: randomArt } = getRandomCreature();
+              setCurrentCreature(randomCreature);
+              setCurrentZoom('medium');
+              const asciiLine: TerminalLine = {
+                id: String(lineCountRef.current++),
+                type: 'ascii',
+                content: randomArt,
+              };
+              setTerminalLines((prev) => [...prev, asciiLine]);
 
-            // Add visual separator after exchange
-            addTerminalLine('system', '---');
+              // Add visual separator after exchange
+              addTerminalLine('system', '---');
+            }
 
             // Reset response tracking on successful completion
             currentAnimatingLineIdRef.current = null;
