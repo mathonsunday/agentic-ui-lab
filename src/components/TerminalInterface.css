@@ -108,8 +108,11 @@
   margin: 0;
   /* Allow zoomed content to overflow within the container */
   overflow: auto;
-  max-width: 100%;
-  /* Allow content to size naturally while overflow is clipped by parent */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .terminal-interface__input-section {
