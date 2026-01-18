@@ -144,6 +144,16 @@
   white-space: pre;
 }
 
+/* Analysis toggle - clickable to expand/collapse */
+.terminal-interface__analysis-toggle {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.terminal-interface__analysis-toggle:hover {
+  opacity: 0.8;
+}
+
 /* Scrollbar styling */
 .terminal-interface__conversation::-webkit-scrollbar {
   width: 6px;

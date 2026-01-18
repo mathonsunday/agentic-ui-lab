@@ -26,6 +26,11 @@ interface TerminalLine {
   type: 'ascii' | 'text' | 'input' | 'system' | 'analysis';
   content: string;
   timestamp?: number;
+  // For analysis lines: store raw data to support collapsible rendering
+  analysisData?: {
+    reasoning: string;
+    confidenceDelta: number;
+  };
 }
 
 // Stream state management with useReducer
@@ -88,6 +93,13 @@ const streamDebugLog = (message: string, data?: any) => {
   const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
   console.log(`[STREAM_DEBUG ${timestamp}] ${message}`, data || '');
 };
+
+/**
+ * Format analysis reasoning as collapsed teaser - single line with hint
+ */
+function formatAnalysisTeaser(): string {
+  return `► hidden analysis [click to plumb the depths]`;
+}
 
 /**
  * Format analysis reasoning as ASCII box with confidence delta in header
@@ -172,6 +184,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
+  const [expandedAnalysisIds, setExpandedAnalysisIds] = useState<Set<string>>(new Set()); // Track which analysis boxes are expanded
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
   const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
@@ -200,12 +213,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   }, []);
 
   const addTerminalLine = useCallback(
-    (type: TerminalLine['type'], content: string) => {
+    (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }) => {
       const newLine: TerminalLine = {
         id: String(lineCountRef.current++),
         type,
         content,
         timestamp: Date.now(),
+        analysisData,
       };
       setTerminalLines((prev) => [...prev, newLine]);
     },
@@ -506,14 +520,17 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             dispatchStream({ type: 'END_STREAM' });
           },
           onAnalysis: (analysis: any) => {
-            // Display Claude's reasoning in formatted ASCII box with confidence delta
+            // Display Claude's reasoning as collapsed teaser by default
             console.log('📊 [TerminalInterface] onAnalysis callback fired:', {
               reasoning: analysis.reasoning.substring(0, 50),
               confidenceDelta: analysis.confidenceDelta,
             });
-            const box = formatAnalysisBox(analysis.reasoning, analysis.confidenceDelta);
-            console.log('📦 [TerminalInterface] Formatted box:', box.split('\n')[0]); // Log first line
-            addTerminalLine('analysis', box);
+            const teaser = formatAnalysisTeaser();
+            console.log('📦 [TerminalInterface] Analysis line created (collapsed)');
+            addTerminalLine('analysis', teaser, {
+              reasoning: analysis.reasoning,
+              confidenceDelta: analysis.confidenceDelta,
+            });
           },
           onError: (error: any) => {
             console.error('Stream error:', error);
@@ -710,7 +727,25 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 {line.type === 'ascii' ? (
                   <pre className="terminal-interface__ascii">{line.content}</pre>
                 ) : line.type === 'analysis' ? (
-                  <span className="terminal-interface__text">{line.content}</span>
+                  <span
+                    className={`terminal-interface__text terminal-interface__analysis-toggle`}
+                    onClick={() => {
+                      // Toggle expanded state for this analysis line
+                      setExpandedAnalysisIds((prev) => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(line.id)) {
+                          newSet.delete(line.id);
+                        } else {
+                          newSet.add(line.id);
+                        }
+                        return newSet;
+                      });
+                    }}
+                  >
+                    {expandedAnalysisIds.has(line.id) && line.analysisData
+                      ? formatAnalysisBox(line.analysisData.reasoning, line.analysisData.confidenceDelta)
+                      : line.content}
+                  </span>
                 ) : isResponseLine ? (
                   <TypewriterLine
                     content={line.content}
