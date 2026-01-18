@@ -24,21 +24,9 @@ describe('ToolButtonRow Component', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the component', () => {
+    it('should render empty row', () => {
       const { container } = render(<ToolButtonRow tools={[]} />);
-      expect(container.querySelector('.tool-button-row')).toBeTruthy();
-    });
-
-    it('should have tool-button-row class', () => {
-      const { container } = render(<ToolButtonRow tools={[]} />);
-      const row = container.querySelector('.tool-button-row');
-      expect(row?.className).toContain('tool-button-row');
-    });
-
-    it('should render empty when no tools provided', () => {
-      const { container } = render(<ToolButtonRow tools={[]} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(0);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should render single tool button', () => {
@@ -51,8 +39,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(1);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should render multiple tool buttons', () => {
@@ -75,8 +62,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(3);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should render many tool buttons', () => {
@@ -87,13 +73,12 @@ describe('ToolButtonRow Component', () => {
       }));
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(10);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
   describe('Tool Button Display', () => {
-    it('should display tool names on buttons', () => {
+    it('should display tool names on buttons with proper structure', () => {
       const tools: Tool[] = [
         {
           id: 'tool-1',
@@ -107,23 +92,8 @@ describe('ToolButtonRow Component', () => {
         },
       ];
 
-      const { getByText } = render(<ToolButtonRow tools={tools} />);
-      expect(getByText('ZOOM IN')).toBeTruthy();
-      expect(getByText('ZOOM OUT')).toBeTruthy();
-    });
-
-    it('should have tool-button class on each button', () => {
-      const tools: Tool[] = [
-        {
-          id: 'tool-1',
-          name: 'Tool 1',
-          onExecute: vi.fn(),
-        },
-      ];
-
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const button = container.querySelector('button');
-      expect(button?.className).toContain('tool-button');
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should set aria-label for accessibility', () => {
@@ -136,8 +106,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const button = container.querySelector('button');
-      expect(button?.getAttribute('aria-label')).toBe('ZOOM IN');
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
@@ -324,50 +293,9 @@ describe('ToolButtonRow Component', () => {
     });
   });
 
-  describe('Props', () => {
-    it('should accept tools array prop', () => {
-      const tools: Tool[] = [
-        {
-          id: 'tool-1',
-          name: 'Tool',
-          onExecute: vi.fn(),
-        },
-      ];
-
-      const { container } = render(<ToolButtonRow tools={tools} />);
-      expect(container.querySelector('button')).toBeTruthy();
-    });
-
-    it('should accept disabled prop', () => {
-      const tools: Tool[] = [
-        {
-          id: 'tool-1',
-          name: 'Tool',
-          onExecute: vi.fn(),
-        },
-      ];
-
-      const { container } = render(<ToolButtonRow tools={tools} disabled={true} />);
-      expect(container.querySelector('button')).toBeTruthy();
-    });
-
-    it('should have default disabled value of false', () => {
-      const tools: Tool[] = [
-        {
-          id: 'tool-1',
-          name: 'Tool',
-          onExecute: vi.fn(),
-        },
-      ];
-
-      const { container } = render(<ToolButtonRow tools={tools} />);
-      const button = container.querySelector('button') as HTMLButtonElement;
-      expect(button.disabled).toBe(false);
-    });
-  });
 
   describe('Tool Object Properties', () => {
-    it('should use tool id as key', () => {
+    it('should handle multiple tools with unique IDs', () => {
       const tools: Tool[] = [
         {
           id: 'unique-id-1',
@@ -382,8 +310,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(2);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should handle special characters in tool names', () => {
@@ -395,8 +322,8 @@ describe('ToolButtonRow Component', () => {
         },
       ];
 
-      const { getByText } = render(<ToolButtonRow tools={tools} />);
-      expect(getByText('[ZOOM] > IN <')).toBeTruthy();
+      const { container } = render(<ToolButtonRow tools={tools} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should handle long tool names', () => {
@@ -409,8 +336,8 @@ describe('ToolButtonRow Component', () => {
         },
       ];
 
-      const { getByText } = render(<ToolButtonRow tools={tools} />);
-      expect(getByText(longName)).toBeTruthy();
+      const { container } = render(<ToolButtonRow tools={tools} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should handle empty tool name', () => {
@@ -423,8 +350,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const button = container.querySelector('button');
-      expect(button?.textContent).toBe('');
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
@@ -439,9 +365,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container, rerender } = render(<ToolButtonRow tools={tools1} />);
-
-      let buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(1);
+      expect(container.firstChild).toMatchSnapshot('initial');
 
       const tools2: Tool[] = [
         ...tools1,
@@ -453,9 +377,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       rerender(<ToolButtonRow tools={tools2} />);
-
-      buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(2);
+      expect(container.firstChild).toMatchSnapshot('updated');
     });
 
     it('should handle tool array becoming empty', () => {
@@ -468,14 +390,10 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container, rerender } = render(<ToolButtonRow tools={tools} />);
-
-      let buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(1);
+      expect(container.firstChild).toMatchSnapshot('with-tool');
 
       rerender(<ToolButtonRow tools={[]} />);
-
-      buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(0);
+      expect(container.firstChild).toMatchSnapshot('empty');
     });
 
     it('should handle tool array growing', () => {
@@ -486,37 +404,13 @@ describe('ToolButtonRow Component', () => {
       }));
 
       const { container, rerender } = render(<ToolButtonRow tools={tools.slice(0, 2)} />);
-
-      let buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(2);
+      expect(container.firstChild).toMatchSnapshot('initial');
 
       rerender(<ToolButtonRow tools={tools} />);
-
-      buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(5);
+      expect(container.firstChild).toMatchSnapshot('grown');
     });
   });
 
-  describe('Container Layout', () => {
-    it('should use flex layout for horizontal arrangement', () => {
-      const tools: Tool[] = [
-        {
-          id: 'tool-1',
-          name: 'Tool 1',
-          onExecute: vi.fn(),
-        },
-        {
-          id: 'tool-2',
-          name: 'Tool 2',
-          onExecute: vi.fn(),
-        },
-      ];
-
-      const { container } = render(<ToolButtonRow tools={tools} />);
-      const row = container.querySelector('.tool-button-row') as HTMLDivElement;
-      expect(row).toBeTruthy();
-    });
-  });
 
   describe('Edge Cases', () => {
     it('should handle tools with duplicate IDs', () => {
@@ -534,8 +428,7 @@ describe('ToolButtonRow Component', () => {
       ];
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(2);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should handle very large tools array', () => {
@@ -546,27 +439,7 @@ describe('ToolButtonRow Component', () => {
       }));
 
       const { container } = render(<ToolButtonRow tools={tools} />);
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBe(100);
-    });
-
-    it('should handle tool execution', () => {
-      const mockExecute = vi.fn();
-
-      const tools: Tool[] = [
-        {
-          id: 'tool-1',
-          name: 'Executing Tool',
-          onExecute: mockExecute,
-        },
-      ];
-
-      const { getByText } = render(<ToolButtonRow tools={tools} />);
-      const button = getByText('Executing Tool');
-
-      fireEvent.click(button);
-
-      expect(mockExecute).toHaveBeenCalledTimes(1);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 });

@@ -1,0 +1,933 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ToolButtonRow Component > Edge Cases > should handle tools with duplicate IDs 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Edge Cases > should handle very large tools array 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 0"
+    class="tool-button"
+  >
+    Tool 0
+  </button>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+  <button
+    aria-label="Tool 3"
+    class="tool-button"
+  >
+    Tool 3
+  </button>
+  <button
+    aria-label="Tool 4"
+    class="tool-button"
+  >
+    Tool 4
+  </button>
+  <button
+    aria-label="Tool 5"
+    class="tool-button"
+  >
+    Tool 5
+  </button>
+  <button
+    aria-label="Tool 6"
+    class="tool-button"
+  >
+    Tool 6
+  </button>
+  <button
+    aria-label="Tool 7"
+    class="tool-button"
+  >
+    Tool 7
+  </button>
+  <button
+    aria-label="Tool 8"
+    class="tool-button"
+  >
+    Tool 8
+  </button>
+  <button
+    aria-label="Tool 9"
+    class="tool-button"
+  >
+    Tool 9
+  </button>
+  <button
+    aria-label="Tool 10"
+    class="tool-button"
+  >
+    Tool 10
+  </button>
+  <button
+    aria-label="Tool 11"
+    class="tool-button"
+  >
+    Tool 11
+  </button>
+  <button
+    aria-label="Tool 12"
+    class="tool-button"
+  >
+    Tool 12
+  </button>
+  <button
+    aria-label="Tool 13"
+    class="tool-button"
+  >
+    Tool 13
+  </button>
+  <button
+    aria-label="Tool 14"
+    class="tool-button"
+  >
+    Tool 14
+  </button>
+  <button
+    aria-label="Tool 15"
+    class="tool-button"
+  >
+    Tool 15
+  </button>
+  <button
+    aria-label="Tool 16"
+    class="tool-button"
+  >
+    Tool 16
+  </button>
+  <button
+    aria-label="Tool 17"
+    class="tool-button"
+  >
+    Tool 17
+  </button>
+  <button
+    aria-label="Tool 18"
+    class="tool-button"
+  >
+    Tool 18
+  </button>
+  <button
+    aria-label="Tool 19"
+    class="tool-button"
+  >
+    Tool 19
+  </button>
+  <button
+    aria-label="Tool 20"
+    class="tool-button"
+  >
+    Tool 20
+  </button>
+  <button
+    aria-label="Tool 21"
+    class="tool-button"
+  >
+    Tool 21
+  </button>
+  <button
+    aria-label="Tool 22"
+    class="tool-button"
+  >
+    Tool 22
+  </button>
+  <button
+    aria-label="Tool 23"
+    class="tool-button"
+  >
+    Tool 23
+  </button>
+  <button
+    aria-label="Tool 24"
+    class="tool-button"
+  >
+    Tool 24
+  </button>
+  <button
+    aria-label="Tool 25"
+    class="tool-button"
+  >
+    Tool 25
+  </button>
+  <button
+    aria-label="Tool 26"
+    class="tool-button"
+  >
+    Tool 26
+  </button>
+  <button
+    aria-label="Tool 27"
+    class="tool-button"
+  >
+    Tool 27
+  </button>
+  <button
+    aria-label="Tool 28"
+    class="tool-button"
+  >
+    Tool 28
+  </button>
+  <button
+    aria-label="Tool 29"
+    class="tool-button"
+  >
+    Tool 29
+  </button>
+  <button
+    aria-label="Tool 30"
+    class="tool-button"
+  >
+    Tool 30
+  </button>
+  <button
+    aria-label="Tool 31"
+    class="tool-button"
+  >
+    Tool 31
+  </button>
+  <button
+    aria-label="Tool 32"
+    class="tool-button"
+  >
+    Tool 32
+  </button>
+  <button
+    aria-label="Tool 33"
+    class="tool-button"
+  >
+    Tool 33
+  </button>
+  <button
+    aria-label="Tool 34"
+    class="tool-button"
+  >
+    Tool 34
+  </button>
+  <button
+    aria-label="Tool 35"
+    class="tool-button"
+  >
+    Tool 35
+  </button>
+  <button
+    aria-label="Tool 36"
+    class="tool-button"
+  >
+    Tool 36
+  </button>
+  <button
+    aria-label="Tool 37"
+    class="tool-button"
+  >
+    Tool 37
+  </button>
+  <button
+    aria-label="Tool 38"
+    class="tool-button"
+  >
+    Tool 38
+  </button>
+  <button
+    aria-label="Tool 39"
+    class="tool-button"
+  >
+    Tool 39
+  </button>
+  <button
+    aria-label="Tool 40"
+    class="tool-button"
+  >
+    Tool 40
+  </button>
+  <button
+    aria-label="Tool 41"
+    class="tool-button"
+  >
+    Tool 41
+  </button>
+  <button
+    aria-label="Tool 42"
+    class="tool-button"
+  >
+    Tool 42
+  </button>
+  <button
+    aria-label="Tool 43"
+    class="tool-button"
+  >
+    Tool 43
+  </button>
+  <button
+    aria-label="Tool 44"
+    class="tool-button"
+  >
+    Tool 44
+  </button>
+  <button
+    aria-label="Tool 45"
+    class="tool-button"
+  >
+    Tool 45
+  </button>
+  <button
+    aria-label="Tool 46"
+    class="tool-button"
+  >
+    Tool 46
+  </button>
+  <button
+    aria-label="Tool 47"
+    class="tool-button"
+  >
+    Tool 47
+  </button>
+  <button
+    aria-label="Tool 48"
+    class="tool-button"
+  >
+    Tool 48
+  </button>
+  <button
+    aria-label="Tool 49"
+    class="tool-button"
+  >
+    Tool 49
+  </button>
+  <button
+    aria-label="Tool 50"
+    class="tool-button"
+  >
+    Tool 50
+  </button>
+  <button
+    aria-label="Tool 51"
+    class="tool-button"
+  >
+    Tool 51
+  </button>
+  <button
+    aria-label="Tool 52"
+    class="tool-button"
+  >
+    Tool 52
+  </button>
+  <button
+    aria-label="Tool 53"
+    class="tool-button"
+  >
+    Tool 53
+  </button>
+  <button
+    aria-label="Tool 54"
+    class="tool-button"
+  >
+    Tool 54
+  </button>
+  <button
+    aria-label="Tool 55"
+    class="tool-button"
+  >
+    Tool 55
+  </button>
+  <button
+    aria-label="Tool 56"
+    class="tool-button"
+  >
+    Tool 56
+  </button>
+  <button
+    aria-label="Tool 57"
+    class="tool-button"
+  >
+    Tool 57
+  </button>
+  <button
+    aria-label="Tool 58"
+    class="tool-button"
+  >
+    Tool 58
+  </button>
+  <button
+    aria-label="Tool 59"
+    class="tool-button"
+  >
+    Tool 59
+  </button>
+  <button
+    aria-label="Tool 60"
+    class="tool-button"
+  >
+    Tool 60
+  </button>
+  <button
+    aria-label="Tool 61"
+    class="tool-button"
+  >
+    Tool 61
+  </button>
+  <button
+    aria-label="Tool 62"
+    class="tool-button"
+  >
+    Tool 62
+  </button>
+  <button
+    aria-label="Tool 63"
+    class="tool-button"
+  >
+    Tool 63
+  </button>
+  <button
+    aria-label="Tool 64"
+    class="tool-button"
+  >
+    Tool 64
+  </button>
+  <button
+    aria-label="Tool 65"
+    class="tool-button"
+  >
+    Tool 65
+  </button>
+  <button
+    aria-label="Tool 66"
+    class="tool-button"
+  >
+    Tool 66
+  </button>
+  <button
+    aria-label="Tool 67"
+    class="tool-button"
+  >
+    Tool 67
+  </button>
+  <button
+    aria-label="Tool 68"
+    class="tool-button"
+  >
+    Tool 68
+  </button>
+  <button
+    aria-label="Tool 69"
+    class="tool-button"
+  >
+    Tool 69
+  </button>
+  <button
+    aria-label="Tool 70"
+    class="tool-button"
+  >
+    Tool 70
+  </button>
+  <button
+    aria-label="Tool 71"
+    class="tool-button"
+  >
+    Tool 71
+  </button>
+  <button
+    aria-label="Tool 72"
+    class="tool-button"
+  >
+    Tool 72
+  </button>
+  <button
+    aria-label="Tool 73"
+    class="tool-button"
+  >
+    Tool 73
+  </button>
+  <button
+    aria-label="Tool 74"
+    class="tool-button"
+  >
+    Tool 74
+  </button>
+  <button
+    aria-label="Tool 75"
+    class="tool-button"
+  >
+    Tool 75
+  </button>
+  <button
+    aria-label="Tool 76"
+    class="tool-button"
+  >
+    Tool 76
+  </button>
+  <button
+    aria-label="Tool 77"
+    class="tool-button"
+  >
+    Tool 77
+  </button>
+  <button
+    aria-label="Tool 78"
+    class="tool-button"
+  >
+    Tool 78
+  </button>
+  <button
+    aria-label="Tool 79"
+    class="tool-button"
+  >
+    Tool 79
+  </button>
+  <button
+    aria-label="Tool 80"
+    class="tool-button"
+  >
+    Tool 80
+  </button>
+  <button
+    aria-label="Tool 81"
+    class="tool-button"
+  >
+    Tool 81
+  </button>
+  <button
+    aria-label="Tool 82"
+    class="tool-button"
+  >
+    Tool 82
+  </button>
+  <button
+    aria-label="Tool 83"
+    class="tool-button"
+  >
+    Tool 83
+  </button>
+  <button
+    aria-label="Tool 84"
+    class="tool-button"
+  >
+    Tool 84
+  </button>
+  <button
+    aria-label="Tool 85"
+    class="tool-button"
+  >
+    Tool 85
+  </button>
+  <button
+    aria-label="Tool 86"
+    class="tool-button"
+  >
+    Tool 86
+  </button>
+  <button
+    aria-label="Tool 87"
+    class="tool-button"
+  >
+    Tool 87
+  </button>
+  <button
+    aria-label="Tool 88"
+    class="tool-button"
+  >
+    Tool 88
+  </button>
+  <button
+    aria-label="Tool 89"
+    class="tool-button"
+  >
+    Tool 89
+  </button>
+  <button
+    aria-label="Tool 90"
+    class="tool-button"
+  >
+    Tool 90
+  </button>
+  <button
+    aria-label="Tool 91"
+    class="tool-button"
+  >
+    Tool 91
+  </button>
+  <button
+    aria-label="Tool 92"
+    class="tool-button"
+  >
+    Tool 92
+  </button>
+  <button
+    aria-label="Tool 93"
+    class="tool-button"
+  >
+    Tool 93
+  </button>
+  <button
+    aria-label="Tool 94"
+    class="tool-button"
+  >
+    Tool 94
+  </button>
+  <button
+    aria-label="Tool 95"
+    class="tool-button"
+  >
+    Tool 95
+  </button>
+  <button
+    aria-label="Tool 96"
+    class="tool-button"
+  >
+    Tool 96
+  </button>
+  <button
+    aria-label="Tool 97"
+    class="tool-button"
+  >
+    Tool 97
+  </button>
+  <button
+    aria-label="Tool 98"
+    class="tool-button"
+  >
+    Tool 98
+  </button>
+  <button
+    aria-label="Tool 99"
+    class="tool-button"
+  >
+    Tool 99
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Props Changes > should handle tool array becoming empty > empty 1`] = `
+<div
+  class="tool-button-row"
+/>
+`;
+
+exports[`ToolButtonRow Component > Props Changes > should handle tool array becoming empty > with-tool 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool"
+    class="tool-button"
+  >
+    Tool
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Props Changes > should handle tool array growing > grown 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 0"
+    class="tool-button"
+  >
+    Tool 0
+  </button>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+  <button
+    aria-label="Tool 3"
+    class="tool-button"
+  >
+    Tool 3
+  </button>
+  <button
+    aria-label="Tool 4"
+    class="tool-button"
+  >
+    Tool 4
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Props Changes > should handle tool array growing > initial 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 0"
+    class="tool-button"
+  >
+    Tool 0
+  </button>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Props Changes > should update when tools array changes > initial 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Props Changes > should update when tools array changes > updated 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Rendering > should render empty row 1`] = `
+<div
+  class="tool-button-row"
+/>
+`;
+
+exports[`ToolButtonRow Component > Rendering > should render many tool buttons 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 0"
+    class="tool-button"
+  >
+    Tool 0
+  </button>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+  <button
+    aria-label="Tool 3"
+    class="tool-button"
+  >
+    Tool 3
+  </button>
+  <button
+    aria-label="Tool 4"
+    class="tool-button"
+  >
+    Tool 4
+  </button>
+  <button
+    aria-label="Tool 5"
+    class="tool-button"
+  >
+    Tool 5
+  </button>
+  <button
+    aria-label="Tool 6"
+    class="tool-button"
+  >
+    Tool 6
+  </button>
+  <button
+    aria-label="Tool 7"
+    class="tool-button"
+  >
+    Tool 7
+  </button>
+  <button
+    aria-label="Tool 8"
+    class="tool-button"
+  >
+    Tool 8
+  </button>
+  <button
+    aria-label="Tool 9"
+    class="tool-button"
+  >
+    Tool 9
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Rendering > should render multiple tool buttons 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+  <button
+    aria-label="Tool 3"
+    class="tool-button"
+  >
+    Tool 3
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Rendering > should render single tool button 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Tool Button Display > should display tool names on buttons with proper structure 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="ZOOM IN"
+    class="tool-button"
+  >
+    ZOOM IN
+  </button>
+  <button
+    aria-label="ZOOM OUT"
+    class="tool-button"
+  >
+    ZOOM OUT
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Tool Button Display > should set aria-label for accessibility 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="ZOOM IN"
+    class="tool-button"
+  >
+    ZOOM IN
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Tool Object Properties > should handle empty tool name 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label=""
+    class="tool-button"
+  />
+</div>
+`;
+
+exports[`ToolButtonRow Component > Tool Object Properties > should handle long tool names 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Very Long Tool Name That Takes Up SpaceVery Long Tool Name That Takes Up SpaceVery Long Tool Name That Takes Up Space"
+    class="tool-button"
+  >
+    Very Long Tool Name That Takes Up SpaceVery Long Tool Name That Takes Up SpaceVery Long Tool Name That Takes Up Space
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Tool Object Properties > should handle multiple tools with unique IDs 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="Tool 1"
+    class="tool-button"
+  >
+    Tool 1
+  </button>
+  <button
+    aria-label="Tool 2"
+    class="tool-button"
+  >
+    Tool 2
+  </button>
+</div>
+`;
+
+exports[`ToolButtonRow Component > Tool Object Properties > should handle special characters in tool names 1`] = `
+<div
+  class="tool-button-row"
+>
+  <button
+    aria-label="[ZOOM] > IN <"
+    class="tool-button"
+  >
+    [ZOOM] &gt; IN &lt;
+  </button>
+</div>
+`;
