@@ -17,7 +17,7 @@
  * - Centralized content management: changes to text happen in one place
  */
 
-import { SPECIMEN_47_GRANT_PROPOSAL } from './responseLibrary';
+import { SPECIMEN_47_GRANT_PROPOSAL } from './responseLibrary.js';
 
 export interface ContentFeature {
   /** Unique identifier for this content feature */
