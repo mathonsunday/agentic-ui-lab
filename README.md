@@ -30,7 +30,7 @@ This is both a **learning lab for emerging agent protocols** and a **showcase of
 - TypeScript with strict type safety
 - Vite (sub-500ms builds, fast HMR)
 - Web Audio API for synthesized sound effects
-- Vitest + React Testing Library (679/679 tests passing)
+- Vitest + React Testing Library 
 
 **Backend**
 - Node.js + Express for type-safe server runtime
