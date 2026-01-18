@@ -767,7 +767,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, currentStreamSource, handleInterrupt, renderTrigger])}
         </div>
       </div>
 

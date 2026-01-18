@@ -19,9 +19,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js';
 import { updateConfidenceAndProfile, updateMemory, processToolCall } from './lib/miraAgent.js';
-import { SPECIMEN_47_GRANT_PROPOSAL } from './lib/responseLibrary.js';
 import { createAdvancedMiraPrompt } from './lib/prompts/systemPromptBuilder.js';
 import { StreamEventSequencer } from './lib/streamEventSequencer.js';
+import { getContentFeature } from './lib/contentLibrary.js';
 
 /**
  * Generate unique event ID
@@ -93,9 +93,11 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       return response.end();
     }
 
-    // EXPERIMENTAL: Trigger grant proposal on specific keywords
-    if (userInput.toLowerCase().includes('specimen 47') || userInput.toLowerCase().includes('grant')) {
-      return streamGrantProposal(response, miraState, eventTracker);
+    // Check if this input should trigger a hardcoded content feature
+    // (See api/lib/contentLibrary.ts for full list of production content features)
+    const contentFeature = getContentFeature(userInput);
+    if (contentFeature) {
+      return streamContentFeature(response, miraState, eventTracker, contentFeature);
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -264,32 +266,38 @@ function sendAGUIEvent(
 }
 
 /**
- * EXPERIMENTAL: Stream the Specimen 47 grant proposal using AG-UI protocol
+ * Stream hardcoded content feature
  *
- * This implements proper TEXT_MESSAGE_START -> TEXT_CONTENT... -> TEXT_MESSAGE_END sequence
+ * Delivers curated content from ContentLibrary to the user with proper streaming semantics.
+ * Implements TEXT_MESSAGE_START -> TEXT_CONTENT... -> TEXT_MESSAGE_END sequence
  * following AG-UI standards for structured text streaming with correlation IDs.
+ *
+ * This enables intentional, high-quality content features while keeping the core
+ * Claude path clean. See api/lib/contentLibrary.ts for the full list of available features.
  */
-async function streamGrantProposal(
+async function streamContentFeature(
   response: VercelResponse,
   miraState: MiraState,
-  eventTracker: EventSequence
+  eventTracker: EventSequence,
+  feature: { content: string; eventSource: string; confidenceDelta: number; id: string }
 ): Promise<void> {
   try {
-    const messageId = `msg_proposal_${Date.now()}`;
+    const messageId = `msg_content_${Date.now()}`;
     const startEventId = generateEventId();
     const startSequence = eventTracker.getNextSequence();
 
     // AG-UI: Send TEXT_MESSAGE_START to begin streaming sequence
+    // Source metadata identifies which content feature is being delivered
     sendAGUIEvent(
       response,
       startEventId,
       'TEXT_MESSAGE_START',
-      { message_id: messageId, source: 'specimen_47' },
+      { message_id: messageId, source: feature.eventSource },
       startSequence
     );
 
     // Send rapport update as separate event type (semantic clarity)
-    const newConfidence = Math.min(100, miraState.confidenceInUser + 8);
+    const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
     const confidenceBar = generateConfidenceBar(newConfidence);
 
     const rapportEventId = generateEventId();
@@ -301,11 +309,11 @@ async function streamGrantProposal(
 
     let chunkIndex = 0;  // Start text chunks at 0
 
-    // Parse proposal into chunks (by section separator)
-    const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n')
+    // Parse content into chunks (by line separator)
+    const paragraphs = feature.content.split('\n')
       .filter(line => line.trim().length > 0);
 
-    console.log(`🎬 [specimen47] Starting to stream ${paragraphs.length} paragraphs`);
+    console.log(`🎬 [${feature.id}] Starting to stream ${paragraphs.length} paragraphs`);
 
     for (const paragraph of paragraphs) {
       // Small delay allows interruption and prevents overwhelming the client
@@ -315,7 +323,7 @@ async function streamGrantProposal(
       const chunkEventId = generateEventId();
       const chunkSequence = eventTracker.getNextSequence();
 
-      console.log(`📤 [specimen47] Sending chunk ${chunkIndex} (${paragraph.substring(0, 50)}...)`);
+      console.log(`📤 [${feature.id}] Sending chunk ${chunkIndex} (${paragraph.substring(0, 50)}...)`);
 
       // AG-UI: Send TEXT_CONTENT events with chunk_index for proper ordering
       sendAGUIEvent(
@@ -331,7 +339,7 @@ async function streamGrantProposal(
       );
     }
 
-    console.log(`✅ [specimen47] Finished streaming all ${chunkIndex} chunks`);
+    console.log(`✅ [${feature.id}] Finished streaming all ${chunkIndex} chunks`);
 
     // Wait a bit before sending completion
     await sleep(200);
@@ -364,7 +372,7 @@ async function streamGrantProposal(
           {
             op: 'replace',
             path: '/confidenceInUser',
-            value: Math.min(100, miraState.confidenceInUser + 8),
+            value: newConfidence,
           },
         ],
       },
@@ -376,7 +384,7 @@ async function streamGrantProposal(
     const completeSequence = eventTracker.getNextSequence();
     const updatedState = {
       ...miraState,
-      confidenceInUser: Math.min(100, miraState.confidenceInUser + 8),
+      confidenceInUser: newConfidence,
     };
     sendAGUIEvent(
       response,
@@ -386,8 +394,8 @@ async function streamGrantProposal(
         updatedState,
         response: {
           streaming: [],
-          text: 'SPECIMEN_47_GRANT_PROPOSAL',
-          source: 'specimen_47',
+          text: feature.id,
+          source: feature.eventSource,
         },
       },
       completeSequence
@@ -395,7 +403,7 @@ async function streamGrantProposal(
 
     response.end();
   } catch (error) {
-    console.error('Grant proposal streaming error:', error);
+    console.error('Content feature streaming error:', error);
 
     const errorEventId = generateEventId();
     const errorSequence = eventTracker.getNextSequence();
@@ -405,8 +413,8 @@ async function streamGrantProposal(
       errorEventId,
       'ERROR',
       {
-        code: 'GRANT_PROPOSAL_ERROR',
-        message: error instanceof Error ? error.message : 'Failed to stream grant proposal',
+        code: 'CONTENT_FEATURE_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to stream content feature',
         recoverable: true,
       },
       errorSequence

@@ -8,10 +8,7 @@
  * providing natural pacing and rhythm to text streaming.
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { createLogger } from '../utils/debugLogger';
-
-const logger = createLogger('TypewriterLine');
+import { useState, useEffect } from 'react';
 
 export interface TypewriterLineProps {
   content: string;
@@ -24,6 +21,23 @@ export interface TypewriterLineProps {
  *
  * At speed=40 chars/sec, each character takes 25ms to appear.
  * Handles content updates gracefully and cleans up timers.
+ *
+ * IMPLEMENTATION NOTE - UI Compromise on Streaming Content:
+ * When used with streaming content (chunks arriving asynchronously), the animation
+ * exhibits the following behavior:
+ * - First chunk animates smoothly character-by-character
+ * - When new chunks arrive, the interval is recreated
+ * - This causes a visual pause/jump where the animation restarts
+ * - Subsequent content may appear in bursts rather than perfectly smooth typing
+ *
+ * This is an acceptable trade-off for simplicity. Ideal would be continuous animation
+ * across all chunks without visible pauses, but achieving that requires either:
+ * 1. Complex ref-based closure tracking (error-prone)
+ * 2. Accumulating all content before animating (delays user feedback)
+ * 3. Custom requestAnimationFrame scheduling (overengineered)
+ *
+ * The current implementation prioritizes maintainability and correctness over perfect
+ * visual smoothness during streaming scenarios (which are a secondary UI feature).
  */
 export function TypewriterLine({
   content,
