@@ -385,6 +385,10 @@ function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks
         metrics: Record<string, number>;
         confidenceDelta: number;
       };
+      console.log('📊 [miraBackendStream] ANALYSIS_COMPLETE event received:', {
+        reasoning: analysisData.reasoning.substring(0, 50),
+        confidenceDelta: analysisData.confidenceDelta,
+      });
       callbacks.onAnalysis?.(analysisData);
       break;
     }

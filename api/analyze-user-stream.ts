@@ -276,6 +276,12 @@ Return ONLY valid JSON in this exact format:
     // Send analysis event with Claude's reasoning and metrics
     const analysisEventId = generateEventId();
     const analysisSequence = eventTracker.getNextSequence();
+    console.log('📊 [Backend] Sending ANALYSIS_COMPLETE event:', {
+      analysisEventId,
+      analysisSequence,
+      reasoning: analysis.reasoning.substring(0, 50),
+      confidenceDelta: analysis.confidenceDelta,
+    });
     sendAGUIEvent(response, analysisEventId, 'ANALYSIS_COMPLETE', {
       reasoning: analysis.reasoning,
       metrics: {
