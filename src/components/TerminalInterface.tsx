@@ -11,7 +11,7 @@ import {
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getRandomCreature, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
-import { formatAnalysisBox, type AnalysisDisplayData } from '../shared/analysisFormatter';
+import { formatAnalysisBox } from '../shared/analysisFormatter';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';

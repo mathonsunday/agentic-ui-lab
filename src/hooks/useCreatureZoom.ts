@@ -2,7 +2,7 @@
  * Custom hook for managing creature zoom and display state
  *
  * Encapsulates:
- * - Zoom level state (far, medium, close, ultraClose)
+ * - Zoom level state (far, medium, close)
  * - Current creature selection
  * - Zoom handlers (in/out)
  * - ASCII art rendering based on zoom level
@@ -41,9 +41,9 @@ export function useCreatureZoom(initialCreature: CreatureName = 'anglerFish', in
       console.log(`🔬 Zooming in: ${prevZoom} → ${newZoom}`);
 
       // When zooming in very close, sometimes pick a random creature for surprise
-      if (newZoom === 'ultraClose' && Math.random() < 0.3) {
-        const randomCreature = getRandomCreature();
-        console.log(`✨ Surprise creature at ultra close: ${randomCreature}`);
+      if (newZoom === 'close' && Math.random() < 0.3) {
+        const { name: randomCreature } = getRandomCreature();
+        console.log(`✨ Surprise creature at close zoom: ${randomCreature}`);
         setCurrentCreature(randomCreature);
       }
 

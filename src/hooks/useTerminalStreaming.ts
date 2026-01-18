@@ -14,7 +14,6 @@ import { useReducer, useState, useCallback, useRef, useEffect } from 'react';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { initializeMiraState, type MiraState } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
-import { createLogger } from '../utils/debugLogger';
 
 export interface TerminalLine {
   id: string;
@@ -67,8 +66,6 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
   }
 }
 
-const logger = createLogger('useTerminalStreaming');
-
 export interface UseTerminalStreamingOptions {
   initialConfidence?: number;
   onConfidenceChange?: (newConfidence: number) => void;
@@ -83,7 +80,6 @@ export interface UseTerminalStreamingReturn {
   interruptedStreamIdRef: React.MutableRefObject<number | null>;
   lastConfidenceUpdateStreamIdRef: React.MutableRefObject<number | null>;
   responseLineIdsRef: React.MutableRefObject<string[]>;
-  renderTrigger: number;
   scrollRef: React.RefObject<HTMLDivElement>;
   addTerminalLine: (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }) => void;
   updateRapportBar: (newConfidence: number) => void;
@@ -122,10 +118,8 @@ export function useTerminalStreaming(options: UseTerminalStreamingOptions = {}):
     abortController: null,
   });
 
-  const [renderTrigger, setRenderTrigger] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
-  const currentAnimatingLineIdRef = useRef<string | null>(null);
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false);
   const interruptedStreamIdRef = useRef<number | null>(null);
@@ -211,7 +205,7 @@ export function useTerminalStreaming(options: UseTerminalStreamingOptions = {}):
 
       try {
         // Play interaction sound
-        await playStreamingSound();
+        await playStreamingSound('thinking');
 
         abortController = new AbortController();
         await streamMiraBackend(userInput, miraState, abortController.signal, {
@@ -267,7 +261,6 @@ export function useTerminalStreaming(options: UseTerminalStreamingOptions = {}):
     interruptedStreamIdRef,
     lastConfidenceUpdateStreamIdRef,
     responseLineIdsRef,
-    renderTrigger,
     scrollRef,
     addTerminalLine,
     updateRapportBar,
