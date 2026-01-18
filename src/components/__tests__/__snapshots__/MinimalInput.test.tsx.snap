@@ -1,0 +1,77 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MinimalInput Component > Rendering > should render disabled state correctly 1`] = `
+<form
+  class="minimal-input"
+>
+  <div
+    class="minimal-input__prompt"
+  >
+    &gt;
+  </div>
+  <textarea
+    class="minimal-input__field"
+    disabled=""
+    placeholder="Speak to Dr. Petrovic..."
+    rows="1"
+    spellcheck="false"
+  />
+  <button
+    class="minimal-input__submit"
+    disabled=""
+    type="submit"
+  >
+    ...
+  </button>
+</form>
+`;
+
+exports[`MinimalInput Component > Rendering > should render with custom placeholder 1`] = `
+<form
+  class="minimal-input"
+>
+  <div
+    class="minimal-input__prompt"
+  >
+    &gt;
+  </div>
+  <textarea
+    class="minimal-input__field"
+    placeholder="Custom"
+    rows="1"
+    spellcheck="false"
+  />
+  <button
+    class="minimal-input__submit"
+    disabled=""
+    type="submit"
+  >
+    SEND
+  </button>
+</form>
+`;
+
+exports[`MinimalInput Component > Rendering > should render with default state 1`] = `
+<form
+  class="minimal-input"
+>
+  <div
+    class="minimal-input__prompt"
+  >
+    &gt;
+  </div>
+  <textarea
+    class="minimal-input__field"
+    placeholder="Speak to Dr. Petrovic..."
+    rows="1"
+    spellcheck="false"
+  />
+  <button
+    class="minimal-input__submit"
+    disabled=""
+    type="submit"
+  >
+    SEND
+  </button>
+</form>
+`;

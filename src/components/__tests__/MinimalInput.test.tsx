@@ -5,28 +5,19 @@ import { MinimalInput } from '../MinimalInput';
 
 describe('MinimalInput Component', () => {
   describe('Rendering', () => {
-    it('should render textarea and button', () => {
-      const handleSubmit = vi.fn();
-      render(<MinimalInput onSubmit={handleSubmit} />);
-
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
-      expect(screen.getByRole('button')).toBeInTheDocument();
+    it('should render with default state', () => {
+      const { container } = render(<MinimalInput onSubmit={vi.fn()} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should render with correct placeholder', () => {
-      const { rerender } = render(<MinimalInput onSubmit={vi.fn()} />);
-      expect(screen.getByPlaceholderText('Speak to Dr. Petrovic...')).toBeInTheDocument();
-
-      rerender(<MinimalInput onSubmit={vi.fn()} placeholder="Custom" />);
-      expect(screen.getByPlaceholderText('Custom')).toBeInTheDocument();
+    it('should render with custom placeholder', () => {
+      const { container } = render(<MinimalInput onSubmit={vi.fn()} placeholder="Custom" />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should display correct button text based on disabled state', () => {
-      const { rerender } = render(<MinimalInput onSubmit={vi.fn()} />);
-      expect(screen.getByRole('button')).toHaveTextContent('SEND');
-
-      rerender(<MinimalInput onSubmit={vi.fn()} disabled={true} />);
-      expect(screen.getByRole('button')).toHaveTextContent('...');
+    it('should render disabled state correctly', () => {
+      const { container } = render(<MinimalInput onSubmit={vi.fn()} disabled={true} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
