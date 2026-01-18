@@ -52,10 +52,9 @@ export function DebugPanel({
           <div className="debug-confidence__display">
             <div className="debug-confidence__value">{Math.round(currentConfidence)}%</div>
             <div className="debug-confidence__personality">
-              {currentConfidence <= 25 && 'negative'}
-              {currentConfidence > 25 && currentConfidence <= 50 && 'chaotic'}
-              {currentConfidence > 50 && currentConfidence <= 75 && 'glowing'}
-              {currentConfidence > 75 && 'slovak'}
+              {currentConfidence < 34 && 'negative'}
+              {currentConfidence >= 34 && currentConfidence < 68 && 'chaotic'}
+              {currentConfidence >= 68 && 'glowing'}
             </div>
           </div>
           <input
@@ -71,7 +70,6 @@ export function DebugPanel({
             <span>negative</span>
             <span>chaotic</span>
             <span>glowing</span>
-            <span>slovak</span>
           </div>
         </div>
       </div>

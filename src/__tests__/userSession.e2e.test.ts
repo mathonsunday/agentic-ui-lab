@@ -30,7 +30,7 @@ interface UserState {
     timestamp: number;
   }>;
   currentZoomLevel: 'far' | 'medium' | 'close';
-  personality: 'negative' | 'chaotic' | 'glowing' | 'slovak';
+  personality: 'negative' | 'chaotic' | 'glowing';
 }
 
 // Simulation of user session state management
@@ -77,14 +77,12 @@ class UserSessionSimulator {
     }
 
     // Update personality based on confidence
-    if (this.state.confidenceInUser < 20) {
+    if (this.state.confidenceInUser < 34) {
       this.state.personality = 'negative';
-    } else if (this.state.confidenceInUser < 40) {
+    } else if (this.state.confidenceInUser < 68) {
       this.state.personality = 'chaotic';
-    } else if (this.state.confidenceInUser < 70) {
-      this.state.personality = 'glowing';
     } else {
-      this.state.personality = 'slovak';
+      this.state.personality = 'glowing';
     }
 
     // Update profile traits
@@ -296,12 +294,12 @@ describe('User Research Session E2E Tests', () => {
       }
 
       state = session.getState();
-      // Confidence should be 10 + 2*(12+5) = 44, should be glowing or slovak
-      expect(['chaotic', 'glowing', 'slovak']).toContain(state.personality);
+      // Confidence should be 10 + 2*(12+5) = 44, should be chaotic or glowing
+      expect(['chaotic', 'glowing']).toContain(state.personality);
     });
 
     it('should transition through personality states', () => {
-      const personalities: Array<'negative' | 'chaotic' | 'glowing' | 'slovak'> = [];
+      const personalities: Array<'negative' | 'chaotic' | 'glowing'> = [];
 
       for (let i = 0; i < 6; i++) {
         session.sendUserInput('Question?');

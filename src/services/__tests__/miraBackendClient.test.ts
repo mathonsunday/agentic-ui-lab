@@ -429,7 +429,7 @@ describe('Mira Backend Client', () => {
     });
 
     it('should handle response with different personalities', async () => {
-      const personalities = ['negative', 'chaotic', 'glowing', 'slovak'] as const;
+      const personalities = ['negative', 'chaotic', 'glowing'] as const;
 
       for (const personality of personalities) {
         vi.clearAllMocks();

@@ -16,17 +16,19 @@ import type { UserProfile, InteractionMemory, MiraState, AgentResponse } from '.
 // Re-export types for backward compatibility
 export type { UserProfile, InteractionMemory, MiraState, AgentResponse };
 
-export type Personality = 'negative' | 'chaotic' | 'glowing' | 'slovak';
+export type Personality = 'negative' | 'chaotic' | 'glowing';
 
 /**
  * Map confidence level to personality
- * Confidence progression: 0-25% = negative, 25-50% = chaotic, 50-75% = glowing, 75-100% = slovak
+ * 3-personality system with equal 33% ranges:
+ * - 0-33%: negative (dismissive)
+ * - 34-67%: chaotic (philosophical)
+ * - 68-100%: glowing (reverent)
  */
 export function getPersonalityFromConfidence(confidence: number): Personality {
-  if (confidence <= 25) return 'negative';
-  if (confidence <= 50) return 'chaotic';
-  if (confidence <= 75) return 'glowing';
-  return 'slovak'; // 75-100
+  if (confidence < 34) return 'negative';
+  if (confidence < 68) return 'chaotic';
+  return 'glowing';
 }
 
 /**

@@ -107,11 +107,9 @@ class MockMiraAgent {
   }
 
   selectResponsePersonality(confidence: number): string {
-    if (confidence < 20) return 'negative';
-    if (confidence < 40) return 'chaotic';
-    if (confidence < 60) return 'wonder';
-    if (confidence < 80) return 'glowing';
-    return 'slovak';
+    if (confidence < 34) return 'negative';
+    if (confidence < 68) return 'chaotic';
+    return 'glowing';
   }
 
   processToolCall(state: MockMiraState, toolData: MockToolCallData): MockMiraState {
@@ -326,14 +324,14 @@ describe('Mira Agent - Functional Tests', () => {
       expect(personality).toBe('negative');
     });
 
-    it('should return chaotic personality for low confidence', () => {
+    it('should return negative personality for low confidence', () => {
       const personality = agent.selectResponsePersonality(30);
-      expect(personality).toBe('chaotic');
+      expect(personality).toBe('negative');
     });
 
-    it('should return wonder personality for medium confidence', () => {
+    it('should return chaotic personality for medium confidence', () => {
       const personality = agent.selectResponsePersonality(50);
-      expect(personality).toBe('wonder');
+      expect(personality).toBe('chaotic');
     });
 
     it('should return glowing personality for high confidence', () => {
@@ -341,9 +339,9 @@ describe('Mira Agent - Functional Tests', () => {
       expect(personality).toBe('glowing');
     });
 
-    it('should return slovak personality for very high confidence', () => {
+    it('should return glowing personality for very high confidence', () => {
       const personality = agent.selectResponsePersonality(90);
-      expect(personality).toBe('slovak');
+      expect(personality).toBe('glowing');
     });
 
     it('should transition smoothly between personalities', () => {
@@ -357,18 +355,20 @@ describe('Mira Agent - Functional Tests', () => {
 
       expect(personalities).toEqual([
         'negative',
+        'negative',
         'chaotic',
-        'wonder',
         'glowing',
-        'slovak',
+        'glowing',
       ]);
     });
 
     it('should handle boundary values correctly', () => {
       expect(agent.selectResponsePersonality(0)).toBe('negative');
-      expect(agent.selectResponsePersonality(19)).toBe('negative');
-      expect(agent.selectResponsePersonality(20)).toBe('chaotic');
-      expect(agent.selectResponsePersonality(100)).toBe('slovak');
+      expect(agent.selectResponsePersonality(33)).toBe('negative');
+      expect(agent.selectResponsePersonality(34)).toBe('chaotic');
+      expect(agent.selectResponsePersonality(67)).toBe('chaotic');
+      expect(agent.selectResponsePersonality(68)).toBe('glowing');
+      expect(agent.selectResponsePersonality(100)).toBe('glowing');
     });
   });
 
@@ -446,7 +446,7 @@ describe('Mira Agent - Functional Tests', () => {
       const newConfidence = initialState.confidenceInUser + analysis.confidenceDelta;
       const personality = agent.selectResponsePersonality(newConfidence);
 
-      expect(['wonder', 'glowing', 'slovak']).toContain(personality);
+      expect(['chaotic', 'glowing']).toContain(personality);
     });
 
     it('should handle tool-based interaction', () => {

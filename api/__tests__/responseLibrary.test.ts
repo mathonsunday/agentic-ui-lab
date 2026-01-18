@@ -118,10 +118,8 @@ describe('Response Library - Personality Responses', () => {
               const startsWithEllipsis = response.startsWith('...');
               const endsWithEllipsis = response.endsWith('...');
 
-              // Most should follow the pattern
-              if (personality !== 'slovak') {
-                expect(startsWithEllipsis || endsWithEllipsis).toBe(true);
-              }
+              // All responses should follow the pattern
+              expect(startsWithEllipsis || endsWithEllipsis).toBe(true);
             }
           }
         }

@@ -126,7 +126,6 @@ export function updateConfidenceAndProfile(
     negative: 'defensive',
     chaotic: 'testing',
     glowing: 'curious',
-    slovak: 'vulnerable',
   };
 
   return {
@@ -296,12 +295,15 @@ function generateObservations(
 
 /**
  * Helper: Determine personality from confidence level
+ * 3-personality system with equal 33% ranges:
+ * - 0-33%: negative (dismissive)
+ * - 34-67%: chaotic (philosophical)
+ * - 68-100%: glowing (reverent)
  */
 export function getPersonalityFromConfidence(confidence: number): string {
-  if (confidence < 25) return 'negative';
-  if (confidence < 50) return 'chaotic';
-  if (confidence < 75) return 'glowing';
-  return 'slovak';
+  if (confidence < 34) return 'negative';
+  if (confidence < 68) return 'chaotic';
+  return 'glowing';
 }
 
 /**

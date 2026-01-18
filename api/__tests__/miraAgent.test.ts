@@ -187,16 +187,15 @@ describe('Mira Agent - User Analysis', () => {
   describe('Personality Rules', () => {
     it('should map confidence to personality', () => {
       const getPersonality = (confidence: number) => {
-        if (confidence < 25) return 'negative';
-        if (confidence < 50) return 'chaotic';
-        if (confidence < 75) return 'glowing';
-        return 'slovak';
+        if (confidence < 34) return 'negative';
+        if (confidence < 68) return 'chaotic';
+        return 'glowing';
       };
 
       expect(getPersonality(10)).toBe('negative');
       expect(getPersonality(40)).toBe('chaotic');
-      expect(getPersonality(60)).toBe('glowing');
-      expect(getPersonality(90)).toBe('slovak');
+      expect(getPersonality(60)).toBe('chaotic');
+      expect(getPersonality(90)).toBe('glowing');
     });
 
     it('should map personality to mood', () => {
@@ -204,13 +203,11 @@ describe('Mira Agent - User Analysis', () => {
         negative: 'defensive',
         chaotic: 'testing',
         glowing: 'curious',
-        slovak: 'vulnerable',
       };
 
       expect(moodMap['negative']).toBe('defensive');
       expect(moodMap['chaotic']).toBe('testing');
       expect(moodMap['glowing']).toBe('curious');
-      expect(moodMap['slovak']).toBe('vulnerable');
     });
   });
 

@@ -17,7 +17,7 @@ describe('Mira State Management', () => {
       const state = initializeMiraState();
 
       expect(state.confidenceInUser).toBe(50);
-      expect(state.currentMood).toBe('curious');
+      expect(state.currentMood).toBe('testing');
       expect(state.memories).toEqual([]);
     });
 
@@ -25,7 +25,7 @@ describe('Mira State Management', () => {
       const state = initializeMiraState(75);
 
       expect(state.confidenceInUser).toBe(75);
-      expect(state.currentMood).toBe('vulnerable');
+      expect(state.currentMood).toBe('curious');
     });
 
     it('should initialize user profile with neutral metrics', () => {
@@ -250,31 +250,29 @@ describe('Mira State Management', () => {
   describe('Personality Mapping', () => {
     it('should map confidence to personality', () => {
       const getPersonality = (confidence: number) => {
-        if (confidence < 25) return 'negative';
-        if (confidence < 50) return 'chaotic';
-        if (confidence < 75) return 'glowing';
-        return 'slovak';
+        if (confidence < 34) return 'negative';
+        if (confidence < 68) return 'chaotic';
+        return 'glowing';
       };
 
       expect(getPersonality(0)).toBe('negative');
-      expect(getPersonality(25)).toBe('chaotic');
-      expect(getPersonality(50)).toBe('glowing');
-      expect(getPersonality(75)).toBe('slovak');
-      expect(getPersonality(100)).toBe('slovak');
+      expect(getPersonality(33)).toBe('negative');
+      expect(getPersonality(34)).toBe('chaotic');
+      expect(getPersonality(67)).toBe('chaotic');
+      expect(getPersonality(68)).toBe('glowing');
+      expect(getPersonality(100)).toBe('glowing');
     });
 
     it('should map personality to mood', () => {
       const getPersonalityMood = (confidence: number) => {
-        const personality = confidence < 25 ? 'negative' :
-                          confidence < 50 ? 'chaotic' :
-                          confidence < 75 ? 'glowing' :
-                          'slovak';
+        const personality = confidence < 34 ? 'negative' :
+                          confidence < 68 ? 'chaotic' :
+                          'glowing';
 
         const moodMap: Record<string, string> = {
           negative: 'defensive',
           chaotic: 'testing',
           glowing: 'curious',
-          slovak: 'vulnerable',
         };
 
         return moodMap[personality];
@@ -282,8 +280,8 @@ describe('Mira State Management', () => {
 
       expect(getPersonalityMood(10)).toBe('defensive');
       expect(getPersonalityMood(40)).toBe('testing');
-      expect(getPersonalityMood(60)).toBe('curious');
-      expect(getPersonalityMood(90)).toBe('vulnerable');
+      expect(getPersonalityMood(60)).toBe('testing');
+      expect(getPersonalityMood(90)).toBe('curious');
     });
   });
 });
@@ -296,17 +294,15 @@ function initializeMiraState(initialConfidence?: number) {
   const clampedConfidence = Math.max(0, Math.min(100, confidence));
 
   const getPersonality = (conf: number) => {
-    if (conf < 25) return 'negative';
-    if (conf < 50) return 'chaotic';
-    if (conf < 75) return 'glowing';
-    return 'slovak';
+    if (conf < 34) return 'negative';
+    if (conf < 68) return 'chaotic';
+    return 'glowing';
   };
 
   const moodMap: Record<string, string> = {
     negative: 'defensive',
     chaotic: 'testing',
     glowing: 'curious',
-    slovak: 'vulnerable',
   };
 
   return {
