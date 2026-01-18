@@ -31,6 +31,7 @@ export interface StreamCallbacks {
   onConfidence?: (update: ConfidenceUpdate) => void;
   onProfile?: (update: ProfileUpdate) => void;
   onRapportUpdate?: (confidence: number, formattedBar: string) => void;
+  onMessageStart?: (messageId: string, source?: string) => void;
   onResponseChunk?: (chunk: string) => void;
   onComplete?: (data: { updatedState: MiraState; response: AgentResponse }) => void;
   onError?: (error: string) => void;
@@ -187,6 +188,7 @@ export function streamMiraBackend(
       callbacks.onComplete?.(data);
     },
     onRapportUpdate: callbacks.onRapportUpdate,
+    onMessageStart: callbacks.onMessageStart,
     onAnalysis: callbacks.onAnalysis,
     onError: callbacks.onError,
   };
@@ -329,9 +331,11 @@ function handleEnvelopeEvent(
   callbacks: StreamCallbacks
 ): void {
   switch (envelope.type) {
-    case 'TEXT_MESSAGE_START':
-      // Message streaming starting
+    case 'TEXT_MESSAGE_START': {
+      const messageData = envelope.data as { message_id: string; source?: string };
+      callbacks.onMessageStart?.(messageData.message_id, messageData.source);
       break;
+    }
 
     case 'TEXT_CONTENT': {
       const contentData = envelope.data as { chunk: string; chunk_index: number };

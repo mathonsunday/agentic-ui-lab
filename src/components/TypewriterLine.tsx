@@ -19,7 +19,6 @@ export interface TypewriterLineProps {
   isAnimating?: boolean; // whether this line should animate (for sequential animation)
   onComplete?: () => void; // called when animation finishes for this line
   onCharacter?: (char: string) => void;
-  disableAnimation?: boolean; // disable character animation (for streaming content with frequent updates)
 }
 
 /**
@@ -34,66 +33,55 @@ export function TypewriterLine({
   isAnimating = true,
   onComplete,
   onCharacter,
-  disableAnimation = false,
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
 
   useEffect(() => {
-    // If animation is disabled, reveal all content immediately
-    if (disableAnimation) {
-      logger.debug('Animation disabled, revealing all content', {
-        contentLength: content.length,
-      });
-      setRevealedLength(content.length);
-      return;
-    }
-
-    // If content shrunk (shouldn't happen), reset
-    if (revealedLength > content.length) {
-      logger.debug('Content shrunk, resetting', {
-        revealedLength,
-        newContentLength: content.length,
-      });
-      setRevealedLength(content.length);
-    }
-
-    // If we've already revealed everything, call completion callback
-    if (revealedLength >= content.length) {
-      if (revealedLength > 0 && isAnimating) {
-        logger.debug('Animation complete', {
-          revealedLength,
-          contentLength: content.length,
-        });
-        onComplete?.();
-      }
-      return;
-    }
-
     // If not animating, don't start the timer
     if (!isAnimating) {
       logger.debug('Not animating, effect returning early', {
-        revealedLength,
         contentLength: content.length,
       });
       return;
     }
 
-    logger.debug('Starting animation', {
-      revealedLength,
+    logger.debug('Starting continuous animation', {
       contentLength: content.length,
       charDelayMs,
-      isAnimating,
     });
 
-    // Schedule the next character reveal
+    let hasCalledComplete = false;
+
+    // Single continuous interval that doesn't depend on content changes
+    // Uses closure to check current content.length on each tick
     const timer = setInterval(() => {
-      logger.debug('Interval tick', { revealedLength });
       setRevealedLength((prev) => {
-        const nextLength = prev + 1;
-        if (nextLength <= content.length) {
-          onCharacter?.(content[nextLength - 1]);
+        // If content shrunk (shouldn't happen), clamp to new length
+        if (prev > content.length) {
+          logger.debug('Content shrunk, clamping', {
+            revealed: prev,
+            newContentLength: content.length,
+          });
+          return content.length;
         }
+
+        // If we've already revealed everything, call completion ONCE
+        if (prev >= content.length) {
+          if (prev > 0 && !hasCalledComplete) {
+            hasCalledComplete = true;
+            logger.debug('Animation complete', {
+              revealed: prev,
+              contentLength: content.length,
+            });
+            onComplete?.();
+          }
+          return prev;  // Don't increment, stay at current position
+        }
+
+        // Reveal next character
+        const nextLength = prev + 1;
+        onCharacter?.(content[nextLength - 1]);
         return nextLength;
       });
     }, charDelayMs);
@@ -102,7 +90,7 @@ export function TypewriterLine({
       logger.debug('Clearing interval');
       clearInterval(timer);
     };
-  }, [revealedLength, content, charDelayMs, isAnimating, onComplete, onCharacter, disableAnimation]);
+  }, [charDelayMs, isAnimating, onComplete, onCharacter, content]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;

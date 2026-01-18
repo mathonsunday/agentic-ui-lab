@@ -284,7 +284,7 @@ async function streamGrantProposal(
       response,
       startEventId,
       'TEXT_MESSAGE_START',
-      { message_id: messageId },
+      { message_id: messageId, source: 'specimen_47' },
       startSequence
     );
 

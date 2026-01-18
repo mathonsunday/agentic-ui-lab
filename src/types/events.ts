@@ -80,6 +80,8 @@ export type StreamEventPayload =
 export interface TextMessageStartData {
   /** The ID for this message sequence (same parent_event_id for all chunks) */
   message_id: string;
+  /** Optional source identifier for the stream (e.g., 'specimen_47', 'normal_response') */
+  source?: string;
 }
 
 /**

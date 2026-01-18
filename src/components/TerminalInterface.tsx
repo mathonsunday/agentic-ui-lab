@@ -127,11 +127,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
+  const [currentStreamSource, setCurrentStreamSource] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
-  const [expandedAnalysisIds, setExpandedAnalysisIds] = useState<Set<string>>(new Set()); // Track which analysis boxes are expanded
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
   const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
@@ -380,6 +380,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
             console.log(`🎖️ [TerminalInterface] Rapport bar updated: ${confidence}%`);
           },
+          onMessageStart: (messageId: string, source?: string) => {
+            // Track the stream source to conditionally show INTERRUPT button
+            setCurrentStreamSource(source || null);
+            console.log(`📨 [TerminalInterface] Message started - STREAM #${streamNum}`, { messageId, source });
+          },
           onResponseChunk: (chunk: any) => {
             console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars - STREAM #${streamNum}`);
             // Check if stream was interrupted - only block chunks from the interrupted stream
@@ -451,6 +456,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               source: data.response?.source,
             });
 
+            // Reset stream source when complete
+            setCurrentStreamSource(null);
+
             // Final state update
             setMiraState(data.updatedState);
             onConfidenceChange?.(data.updatedState.confidenceInUser);
@@ -501,6 +509,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               error,
               wasInterrupted: isStreamInterruptedRef.current,
             });
+
+            // Reset stream source on error
+            setCurrentStreamSource(null);
 
             // Check if this is an interrupt (user explicitly stopped)
             const isInterrupt = error.includes('interrupted') || isStreamInterruptedRef.current;
@@ -690,31 +701,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 {line.type === 'ascii' ? (
                   <pre className="terminal-interface__ascii">{line.content}</pre>
                 ) : line.type === 'analysis' ? (
-                  <span
-                    className={`terminal-interface__text terminal-interface__analysis-toggle`}
-                    onClick={() => {
-                      // Toggle expanded state for this analysis line
-                      setExpandedAnalysisIds((prev) => {
-                        const newSet = new Set(prev);
-                        if (newSet.has(line.id)) {
-                          newSet.delete(line.id);
-                        } else {
-                          newSet.add(line.id);
-                        }
-                        return newSet;
-                      });
-                    }}
-                  >
-                    {expandedAnalysisIds.has(line.id) && line.analysisData
-                      ? formatAnalysisBox(line.analysisData)
-                      : line.content}
+                  <span className="terminal-interface__text">
+                    {line.analysisData ? formatAnalysisBox(line.analysisData) : line.content}
                   </span>
                 ) : isResponseLine ? (
                   <TypewriterLine
                     content={line.content}
                     speed={settings.typingSpeed}
                     isAnimating={shouldAnimate}
-                    disableAnimation={line.id === currentAnimatingLineIdRef.current}
                     onComplete={() => {
                       // CRITICAL: Only move to next line if this line is no longer receiving chunks
                       // If this is still the currentAnimatingLine, it might receive more chunks, so don't call onComplete yet
@@ -753,7 +747,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
             ];
 
-            if (streamState.isStreaming) {
+            if (streamState.isStreaming && currentStreamSource === 'specimen_47') {
               tools.push({
                 id: 'interrupt',
                 name: 'INTERRUPT',
@@ -761,12 +755,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               });
               streamDebugLog(`RENDER: Adding interrupt button - STREAM #${streamState.streamId}`, {
                 isStreaming: streamState.isStreaming,
+                source: currentStreamSource,
                 renderTrigger,
                 toolCount: tools.length,
               });
             } else {
               streamDebugLog(`RENDER: NOT adding interrupt button - STREAM #${streamState.streamId}`, {
                 isStreaming: streamState.isStreaming,
+                source: currentStreamSource,
                 renderTrigger,
                 toolCount: tools.length,
               });
