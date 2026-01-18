@@ -124,6 +124,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
+  const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
+  const lastConfidenceUpdateStreamIdRef = useRef<number | null>(null); // Track stream ID for confidence updates
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {
@@ -331,6 +333,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
       // Reset interrupt flag for new stream
       isStreamInterruptedRef.current = false;
+      interruptedStreamIdRef.current = null;
+      lastConfidenceUpdateStreamIdRef.current = streamNum;
       console.log('🔄 Reset isStreamInterruptedRef.current = false for new stream');
 
       streamDebugLog(`handleInput started - STREAM #${streamNum}`, {
@@ -359,6 +363,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           null,
           {
             onConfidence: (update) => {
+              // Only apply confidence updates if this stream wasn't interrupted
+              if (interruptedStreamIdRef.current === streamNum) {
+                console.log(`⏭️ [TerminalInterface] Ignoring confidence update from interrupted stream #${streamNum}`);
+                streamDebugLog(`Ignoring confidence update from interrupted stream - STREAM #${streamNum}`);
+                return;
+              }
+
               // Update state with new confidence
               setMiraState((prev) => ({
                 ...prev,
@@ -377,9 +388,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }));
             },
             onResponseChunk: (chunk) => {
-              // Check if stream was interrupted using ref - refs are always current, not captured in closures
-              if (isStreamInterruptedRef.current) {
-                console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream was interrupted`);
+              // Check if stream was interrupted - only block chunks from the interrupted stream
+              if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
+                console.log(`📥 [TerminalInterface] BLOCKING chunk (${chunk.length} chars) - stream #${streamNum} was interrupted`);
+                streamDebugLog(`Blocking chunk from interrupted stream - STREAM #${streamNum}`, {
+                  chunkLength: chunk.length,
+                });
                 return;
               }
 
@@ -526,7 +540,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       try {
         // Set interrupt flag FIRST to block any in-flight chunks
         isStreamInterruptedRef.current = true;
-        console.log(`🛑 Set isStreamInterruptedRef.current = true`);
+        interruptedStreamIdRef.current = streamState.streamId;
+        console.log(`🛑 Set isStreamInterruptedRef.current = true for stream #${streamState.streamId}`);
 
         // Add consequence text right after currently animating chunk
         setTerminalLines(prev => {
@@ -552,6 +567,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           }));
           updateRapportBar(newConfidence);
           onConfidenceChange?.(newConfidence);
+          console.log(`🛑 [handleInterrupt] Applied -15 confidence penalty. New confidence: ${newConfidence}`);
 
           // Insert consequence text after current animation point
           const updated = [...prev.slice(0, insertIndex)];
