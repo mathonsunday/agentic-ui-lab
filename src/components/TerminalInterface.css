@@ -92,12 +92,11 @@
   margin: 0.75rem 0;
   width: 100%;
   flex-shrink: 0; /* Prevent this line from shrinking */
-  height: 300px; /* Fixed height - prevents shifting when zooming */
+  height: 160px; /* Fixed height - prevents shifting when zooming */
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden; /* Clip overflow so zoom doesn't cause layout shift */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Optional: visual boundary */
 }
 
 .terminal-interface__ascii {
