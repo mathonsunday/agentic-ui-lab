@@ -17,8 +17,6 @@ export interface TypewriterLineProps {
   content: string;
   speed: number; // characters per second (10-100)
   isAnimating?: boolean; // whether this line should animate (for sequential animation)
-  onComplete?: () => void; // called when animation finishes for this line
-  onCharacter?: (char: string) => void;
 }
 
 /**
@@ -31,8 +29,6 @@ export function TypewriterLine({
   content,
   speed,
   isAnimating = true,
-  onComplete,
-  onCharacter,
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
@@ -52,11 +48,12 @@ export function TypewriterLine({
       charDelayMs,
     });
 
-    let hasCalledComplete = false;
     let lastLoggedRevealedLength = 0;
 
     // Single continuous interval that doesn't depend on content changes
     // Uses closure to check current content.length on each tick
+    // During streaming, content grows faster than animation can keep up
+    // So we just keep incrementing forever - never "complete" until unmount
     const timer = setInterval(() => {
       setRevealedLength((prev) => {
         // If content shrunk (shouldn't happen), clamp to new length
@@ -68,18 +65,10 @@ export function TypewriterLine({
           return content.length;
         }
 
-        // If we've already revealed everything, call completion ONCE
+        // If we've caught up to current content length, stop incrementing for now
+        // (new chunks will arrive and we'll start animating again)
         if (prev >= content.length) {
-          if (prev > 0 && !hasCalledComplete) {
-            hasCalledComplete = true;
-            console.log(`[TypewriterLine] Animation complete! Revealed ${prev} chars, content length: ${content.length}`);
-            logger.debug('Animation complete', {
-              revealed: prev,
-              contentLength: content.length,
-            });
-            onComplete?.();
-          }
-          return prev;  // Don't increment, stay at current position
+          return prev;  // Stay at current position until more content arrives
         }
 
         // Reveal next character
@@ -91,7 +80,6 @@ export function TypewriterLine({
           lastLoggedRevealedLength = nextLength;
         }
 
-        onCharacter?.(content[nextLength - 1]);
         return nextLength;
       });
     }, charDelayMs);
@@ -101,7 +89,7 @@ export function TypewriterLine({
       logger.debug('Clearing interval');
       clearInterval(timer);
     };
-  }, [charDelayMs, isAnimating, onComplete, onCharacter]);
+  }, [charDelayMs, isAnimating]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;
