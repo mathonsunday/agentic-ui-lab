@@ -1,0 +1,881 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SystemLog Component > Edge Cases > should handle long messages 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--observation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        OBSERVATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Edge Cases > should handle special characters in messages 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--observation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        OBSERVATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Test &lt;&gt;&"'
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Entry Type Rendering > should render all entry types correctly 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--evaluation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        EVALUATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Research Potential
+      </span>
+      <span
+        class="system-log__value"
+      >
+        0
+        %
+      </span>
+    </div>
+    <div
+      class="system-log__entry system-log__entry--observation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:30
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        OBSERVATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Subject appears alert
+      </span>
+    </div>
+    <div
+      class="system-log__entry system-log__entry--thought"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        01:05
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        THOUGHT
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Interesting response pattern
+      </span>
+    </div>
+    <div
+      class="system-log__entry system-log__entry--confidence"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        02:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        CONFIDENCE
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Confidence increasing
+      </span>
+      <span
+        class="system-log__value"
+      >
+        25
+        %
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Entry Type Rendering > should render confidence type with styling 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--confidence"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        CONFIDENCE
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Test confidence
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Entry Type Rendering > should render evaluation type with styling 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--evaluation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        EVALUATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Test evaluation
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Entry Type Rendering > should render observation type with styling 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--observation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        OBSERVATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Test observation
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Entry Type Rendering > should render thought type with styling 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--thought"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        THOUGHT
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Test thought
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Rendering > should render complete component with all elements 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--evaluation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        EVALUATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Research Potential
+      </span>
+      <span
+        class="system-log__value"
+      >
+        0
+        %
+      </span>
+    </div>
+    <div
+      class="system-log__entry system-log__entry--observation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:30
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        OBSERVATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Subject appears alert
+      </span>
+    </div>
+    <div
+      class="system-log__entry system-log__entry--thought"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        01:05
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        THOUGHT
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Interesting response pattern
+      </span>
+    </div>
+    <div
+      class="system-log__entry system-log__entry--confidence"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        02:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        CONFIDENCE
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Confidence increasing
+      </span>
+      <span
+        class="system-log__value"
+      >
+        25
+        %
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Rendering > should render empty component with no entries 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  />
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Rendering > should render with single entry 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--evaluation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        EVALUATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Research Potential
+      </span>
+      <span
+        class="system-log__value"
+      >
+        0
+        %
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Value Display > should render with 100% value 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--confidence"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        CONFIDENCE
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Confidence
+      </span>
+      <span
+        class="system-log__value"
+      >
+        100
+        %
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Value Display > should render with value displayed 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--confidence"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        CONFIDENCE
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Confidence
+      </span>
+      <span
+        class="system-log__value"
+      >
+        75
+        %
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Value Display > should render with zero value 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--confidence"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        CONFIDENCE
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Confidence
+      </span>
+      <span
+        class="system-log__value"
+      >
+        0
+        %
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;
+
+exports[`SystemLog Component > Value Display > should render without value when not provided 1`] = `
+<div
+  class="system-log"
+>
+  <div
+    class="system-log__header"
+  >
+    <span
+      class="system-log__title"
+    >
+      DR. PETROVIC
+    </span>
+    <span
+      class="system-log__subtitle"
+    >
+      thinking
+    </span>
+  </div>
+  <div
+    class="system-log__fade-top"
+  />
+  <div
+    class="system-log__content"
+  >
+    <div
+      class="system-log__entry system-log__entry--observation"
+    >
+      <span
+        class="system-log__time"
+      >
+        [
+        00:00
+        ]
+      </span>
+      <span
+        class="system-log__type"
+      >
+        OBSERVATION
+      </span>
+      <span
+        class="system-log__message"
+      >
+        Observation
+      </span>
+    </div>
+  </div>
+  <div
+    class="system-log__fade-bottom"
+  />
+</div>
+`;

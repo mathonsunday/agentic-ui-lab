@@ -2,18 +2,14 @@
  * Tests for SystemLog Component
  *
  * Validates:
- * - Rendering log entries with correct formatting
+ * - Rendering log entries with correct formatting (via snapshots)
  * - Time formatting (MM:SS format)
- * - Entry type colors and styling
  * - Auto-scroll to bottom when new entries added
  * - Scroll behavior based on isActive prop
- * - Display of optional values (percentages)
- * - Header information display
- * - Fade effects (top and bottom)
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, cleanup, waitFor } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import { SystemLog } from '../SystemLog';
 import type { SystemLogEntry } from '../../shared/stateMachine';
 
@@ -49,70 +45,75 @@ describe('SystemLog Component', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the component', () => {
+    it('should render complete component with all elements', () => {
       const { container } = render(<SystemLog entries={mockEntries} />);
-      expect(container.querySelector('.system-log')).toBeTruthy();
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should render header with title', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('DR. PETROVIC')).toBeTruthy();
+    it('should render empty component with no entries', () => {
+      const { container } = render(<SystemLog entries={[]} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should render header subtitle', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('thinking')).toBeTruthy();
-    });
-
-    it('should render all log entries', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      const entries = container.querySelectorAll('.system-log__entry');
-      expect(entries.length).toBe(mockEntries.length);
-    });
-
-    it('should render fade-top element', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      expect(container.querySelector('.system-log__fade-top')).toBeTruthy();
-    });
-
-    it('should render fade-bottom element', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      expect(container.querySelector('.system-log__fade-bottom')).toBeTruthy();
-    });
-
-    it('should render content scrollable container', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      expect(container.querySelector('.system-log__content')).toBeTruthy();
+    it('should render with single entry', () => {
+      const entries = [mockEntries[0]];
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
-  describe('Entry Rendering', () => {
-    it('should display entry type as EVALUATION', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('EVALUATION')).toBeTruthy();
+  describe('Entry Type Rendering', () => {
+    it('should render all entry types correctly', () => {
+      const { container } = render(<SystemLog entries={mockEntries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should display entry type as OBSERVATION', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('OBSERVATION')).toBeTruthy();
+    it('should render evaluation type with styling', () => {
+      const entries: SystemLogEntry[] = [
+        {
+          timestamp: 0,
+          type: 'EVALUATION',
+          message: 'Test evaluation',
+        },
+      ];
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should display entry type as THOUGHT', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('THOUGHT')).toBeTruthy();
+    it('should render observation type with styling', () => {
+      const entries: SystemLogEntry[] = [
+        {
+          timestamp: 0,
+          type: 'OBSERVATION',
+          message: 'Test observation',
+        },
+      ];
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should display entry type as CONFIDENCE', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('CONFIDENCE')).toBeTruthy();
+    it('should render thought type with styling', () => {
+      const entries: SystemLogEntry[] = [
+        {
+          timestamp: 0,
+          type: 'THOUGHT',
+          message: 'Test thought',
+        },
+      ];
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should display entry messages', () => {
-      const { getByText } = render(<SystemLog entries={mockEntries} />);
-      expect(getByText('Research Potential')).toBeTruthy();
-      expect(getByText('Subject appears alert')).toBeTruthy();
-      expect(getByText('Interesting response pattern')).toBeTruthy();
-      expect(getByText('Confidence increasing')).toBeTruthy();
+    it('should render confidence type with styling', () => {
+      const entries: SystemLogEntry[] = [
+        {
+          timestamp: 0,
+          type: 'CONFIDENCE',
+          message: 'Test confidence',
+        },
+      ];
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
@@ -192,80 +193,8 @@ describe('SystemLog Component', () => {
     });
   });
 
-  describe('Entry Type Colors', () => {
-    it('should apply evaluation color class', () => {
-      const entries: SystemLogEntry[] = [
-        {
-          timestamp: 0,
-          type: 'EVALUATION',
-          message: 'Test',
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      const entry = container.querySelector('.system-log__entry');
-      expect(entry?.className).toContain('system-log__entry--evaluation');
-    });
-
-    it('should apply observation color class', () => {
-      const entries: SystemLogEntry[] = [
-        {
-          timestamp: 0,
-          type: 'OBSERVATION',
-          message: 'Test',
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      const entry = container.querySelector('.system-log__entry');
-      expect(entry?.className).toContain('system-log__entry--observation');
-    });
-
-    it('should apply thought color class', () => {
-      const entries: SystemLogEntry[] = [
-        {
-          timestamp: 0,
-          type: 'THOUGHT',
-          message: 'Test',
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      const entry = container.querySelector('.system-log__entry');
-      expect(entry?.className).toContain('system-log__entry--thought');
-    });
-
-    it('should apply confidence color class', () => {
-      const entries: SystemLogEntry[] = [
-        {
-          timestamp: 0,
-          type: 'CONFIDENCE',
-          message: 'Test',
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      const entry = container.querySelector('.system-log__entry');
-      expect(entry?.className).toContain('system-log__entry--confidence');
-    });
-  });
-
   describe('Value Display', () => {
-    it('should display value when provided', () => {
-      const entries: SystemLogEntry[] = [
-        {
-          timestamp: 0,
-          type: 'CONFIDENCE',
-          message: 'Confidence',
-          value: 50,
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      expect(container.querySelector('.system-log__value')).toBeTruthy();
-    });
-
-    it('should display value as percentage', () => {
+    it('should render with value displayed', () => {
       const entries: SystemLogEntry[] = [
         {
           timestamp: 0,
@@ -275,11 +204,11 @@ describe('SystemLog Component', () => {
         },
       ];
 
-      const { getByText } = render(<SystemLog entries={entries} />);
-      expect(getByText('75%')).toBeTruthy();
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should not display value when not provided', () => {
+    it('should render without value when not provided', () => {
       const entries: SystemLogEntry[] = [
         {
           timestamp: 0,
@@ -289,10 +218,10 @@ describe('SystemLog Component', () => {
       ];
 
       const { container } = render(<SystemLog entries={entries} />);
-      expect(container.querySelector('.system-log__value')).toBeFalsy();
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should handle zero value', () => {
+    it('should render with zero value', () => {
       const entries: SystemLogEntry[] = [
         {
           timestamp: 0,
@@ -302,11 +231,11 @@ describe('SystemLog Component', () => {
         },
       ];
 
-      const { getByText } = render(<SystemLog entries={entries} />);
-      expect(getByText('0%')).toBeTruthy();
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
 
-    it('should handle 100% value', () => {
+    it('should render with 100% value', () => {
       const entries: SystemLogEntry[] = [
         {
           timestamp: 0,
@@ -316,8 +245,8 @@ describe('SystemLog Component', () => {
         },
       ];
 
-      const { getByText } = render(<SystemLog entries={entries} />);
-      expect(getByText('100%')).toBeTruthy();
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 
@@ -374,11 +303,11 @@ describe('SystemLog Component', () => {
 
   describe('Props Changes', () => {
     it('should update when entries change', () => {
-      const { rerender, container: container1 } = render(
+      const { rerender, container } = render(
         <SystemLog entries={mockEntries} />
       );
 
-      let entries = container1.querySelectorAll('.system-log__entry');
+      let entries = container.querySelectorAll('.system-log__entry');
       expect(entries.length).toBe(4);
 
       const newEntries = [
@@ -392,7 +321,7 @@ describe('SystemLog Component', () => {
 
       rerender(<SystemLog entries={newEntries} />);
 
-      entries = container1.querySelectorAll('.system-log__entry');
+      entries = container.querySelectorAll('.system-log__entry');
       expect(entries.length).toBe(5);
     });
 
@@ -410,19 +339,6 @@ describe('SystemLog Component', () => {
       expect(content).toBeTruthy();
     });
 
-    it('should handle empty entries array', () => {
-      const { container } = render(<SystemLog entries={[]} />);
-      const entries = container.querySelectorAll('.system-log__entry');
-      expect(entries.length).toBe(0);
-    });
-
-    it('should handle single entry', () => {
-      const entries = [mockEntries[0]];
-      const { container } = render(<SystemLog entries={entries} />);
-      const renderedEntries = container.querySelectorAll('.system-log__entry');
-      expect(renderedEntries.length).toBe(1);
-    });
-
     it('should handle many entries', () => {
       const manyEntries = Array.from({ length: 100 }, (_, i) => ({
         timestamp: i * 10,
@@ -436,55 +352,8 @@ describe('SystemLog Component', () => {
     });
   });
 
-  describe('Entry Structure', () => {
-    it('should render time span in each entry', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      const times = container.querySelectorAll('.system-log__time');
-      expect(times.length).toBe(mockEntries.length);
-    });
-
-    it('should render type span in each entry', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      const types = container.querySelectorAll('.system-log__type');
-      expect(types.length).toBe(mockEntries.length);
-    });
-
-    it('should render message span in each entry', () => {
-      const { container } = render(<SystemLog entries={mockEntries} />);
-      const messages = container.querySelectorAll('.system-log__message');
-      expect(messages.length).toBe(mockEntries.length);
-    });
-  });
-
   describe('Edge Cases', () => {
-    it('should handle undefined timestamp', () => {
-      const entries: SystemLogEntry[] = [
-        {
-          timestamp: 0,
-          type: 'EVALUATION',
-          message: 'Test',
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      expect(container.querySelector('.system-log__time')).toBeTruthy();
-    });
-
-    it('should handle unknown entry type gracefully', () => {
-      const entries: any[] = [
-        {
-          timestamp: 0,
-          type: 'UNKNOWN',
-          message: 'Test',
-        },
-      ];
-
-      const { container } = render(<SystemLog entries={entries} />);
-      const entry = container.querySelector('.system-log__entry');
-      expect(entry?.className).not.toContain('system-log__entry--');
-    });
-
-    it('should handle very long messages', () => {
+    it('should handle long messages', () => {
       const longMessage = 'A'.repeat(500);
       const entries: SystemLogEntry[] = [
         {
@@ -495,7 +364,7 @@ describe('SystemLog Component', () => {
       ];
 
       const { container } = render(<SystemLog entries={entries} />);
-      expect(container.querySelector('.system-log__message')).toBeTruthy();
+      expect(container.firstChild).toMatchSnapshot();
     });
 
     it('should handle special characters in messages', () => {
@@ -507,8 +376,8 @@ describe('SystemLog Component', () => {
         },
       ];
 
-      const { getByText } = render(<SystemLog entries={entries} />);
-      expect(getByText("Test <>&\"'")).toBeTruthy();
+      const { container } = render(<SystemLog entries={entries} />);
+      expect(container.firstChild).toMatchSnapshot();
     });
   });
 });
