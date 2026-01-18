@@ -135,7 +135,26 @@ export class StreamEventSequencer {
   }
 
   /**
+   * Send RAPPORT_UPDATE event with confidence change
+   * Semantically separates state metadata from display text
+   * This prevents the confusion that occurred when rapport bar was sent as TEXT_CONTENT
+   */
+  async sendRapportUpdate(
+    confidence: number,
+    formattedBar: string
+  ): Promise<void> {
+    const eventId = this.generateEventId();
+    const sequence = this.eventTracker.getNextSequence();
+
+    this.sendAGUIEvent(eventId, 'RAPPORT_UPDATE', {
+      confidence,
+      formatted_bar: formattedBar,
+    }, sequence);
+  }
+
+  /**
    * Send rapport bar as a complete TEXT_MESSAGE sequence
+   * DEPRECATED: Use sendRapportUpdate() instead for semantic clarity
    */
   async sendRapportBar(confidenceBar: string): Promise<void> {
     const rapportMessageId = `msg_rapport_${Date.now()}`;

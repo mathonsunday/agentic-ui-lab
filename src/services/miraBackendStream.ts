@@ -30,6 +30,7 @@ export interface ProfileUpdate {
 export interface StreamCallbacks {
   onConfidence?: (update: ConfidenceUpdate) => void;
   onProfile?: (update: ProfileUpdate) => void;
+  onRapportUpdate?: (confidence: number, formattedBar: string) => void;
   onResponseChunk?: (chunk: string) => void;
   onComplete?: (data: { updatedState: MiraState; response: AgentResponse }) => void;
   onError?: (error: string) => void;
@@ -364,6 +365,15 @@ function handleEnvelopeEvent(
           });
         }
       }
+      break;
+    }
+
+    case 'RAPPORT_UPDATE': {
+      const rapportData = envelope.data as {
+        confidence: number;
+        formatted_bar: string;
+      };
+      callbacks.onRapportUpdate?.(rapportData.confidence, rapportData.formatted_bar);
       break;
     }
 

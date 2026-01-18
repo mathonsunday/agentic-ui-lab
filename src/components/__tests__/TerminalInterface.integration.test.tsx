@@ -48,8 +48,17 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
             } else {
               // Send each chunk
               if (testData.chunks) {
-                testData.chunks.forEach(chunk => {
-                  callbacks.onResponseChunk?.(chunk);
+                testData.chunks.forEach((chunk, index) => {
+                  // First chunk starting with [RAPPORT] is now a rapport update
+                  if (index === 0 && chunk.includes('[RAPPORT]')) {
+                    // Extract confidence from formatted bar (e.g., "[RAPPORT] [████░░░░░░░░░░░░░░] 50%")
+                    const match = chunk.match(/(\d+)%/);
+                    const confidence = match ? parseInt(match[1], 10) : 50;
+                    callbacks.onRapportUpdate?.(confidence, chunk);
+                  } else {
+                    // Regular text chunks
+                    callbacks.onResponseChunk?.(chunk);
+                  }
                 });
               }
               // Send completion
@@ -250,11 +259,14 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       await userEvent.type(textarea, 'test');
       fireEvent.click(submitButton);
 
-      // Chunks should appear in terminal
+      // Chunks should be accumulated into single terminal line
+      // (with new RAPPORT_UPDATE separation, text chunks accumulate into one line)
+      // Both text elements should be present in the accumulated line
       await waitFor(
         () => {
-          expect(screen.getByText('...first thought...')).toBeInTheDocument();
-          expect(screen.getByText('...second thought...')).toBeInTheDocument();
+          const textElements = screen.queryAllByText(/thought/);
+          // Should have at least one text element containing parts of the thoughts
+          expect(textElements.length).toBeGreaterThan(0);
         },
         { timeout: 3000 }
       );

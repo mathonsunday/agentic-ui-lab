@@ -371,6 +371,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               },
             }));
           },
+          onRapportUpdate: (confidence: number, formattedBar: string) => {
+            // Rapport bar updates are terminal text lines that display in place
+            // They are semantic state updates sent as separate events now
+            const newLineId = String(lineCountRef.current++);
+            responseLineIdsRef.current.push(newLineId);
+            addTerminalLine('text', formattedBar);
+
+            console.log(`🎖️ [TerminalInterface] Rapport bar updated: ${confidence}%`);
+          },
           onResponseChunk: (chunk: any) => {
             // Check if stream was interrupted - only block chunks from the interrupted stream
             if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
@@ -381,27 +390,36 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               return;
             }
 
-            // Add each chunk as a separate terminal line to preserve formatting and gaps
-            const newLineId = String(lineCountRef.current);
-
             console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars`);
             streamDebugLog(`onResponseChunk received - STREAM #${streamNum}`, {
               chunkLength: chunk.length,
-              newLineId,
               isInterrupted: isStreamInterruptedRef.current,
             });
 
-            // Track this line as part of the response sequence
-            responseLineIdsRef.current.push(newLineId);
-
-            // Set the first chunk's line as the currently animating line
+            // Accumulate chunks into a single terminal line (not one line per chunk)
+            // This prevents rapid scrolling when streaming long content like specimen 47
             if (!currentAnimatingLineIdRef.current) {
+              // First text chunk: create new line
+              const newLineId = String(lineCountRef.current++);
               currentAnimatingLineIdRef.current = newLineId;
+              responseLineIdsRef.current.push(newLineId);
               setRenderTrigger(t => t + 1); // Force re-render
               streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
-            }
+              addTerminalLine('text', chunk);
+            } else {
+              // Subsequent chunks: accumulate into existing line
+              setTerminalLines((prev) => {
+                const index = prev.findIndex(l => l.id === currentAnimatingLineIdRef.current);
+                if (index === -1) return prev;
 
-            addTerminalLine('text', chunk);
+                const updated = [...prev];
+                updated[index] = {
+                  ...updated[index],
+                  content: updated[index].content + chunk
+                };
+                return updated;
+              });
+            }
 
             // Play typing sound if enabled (throttle to reduce audio spam)
             if (settings.soundEnabled) {

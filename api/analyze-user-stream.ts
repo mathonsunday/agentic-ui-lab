@@ -192,9 +192,9 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       reasoning: analysis.reasoning,
     });
 
-    // Send rapport bar
+    // Send rapport update with new confidence
     const confidenceBar = generateConfidenceBar(newConfidence);
-    await sequencer.sendRapportBar(confidenceBar);
+    await sequencer.sendRapportUpdate(newConfidence, confidenceBar);
 
     // Send analysis event
     await sequencer.sendAnalysis(analysis.reasoning, {
@@ -288,17 +288,18 @@ async function streamGrantProposal(
       startSequence
     );
 
-    // Send rapport bar as first chunk (visual feedback)
+    // Send rapport update as separate event type (semantic clarity)
     const newConfidence = Math.min(100, miraState.confidenceInUser + 8);
     const confidenceBar = generateConfidenceBar(newConfidence);
-    let chunkIndex = 0;
 
-    const barChunkId = generateEventId();
-    const barChunkSeq = eventTracker.getNextSequence();
-    sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
-      chunk: confidenceBar,
-      chunk_index: chunkIndex++,
-    }, barChunkSeq, startEventId);
+    const rapportEventId = generateEventId();
+    const rapportSeq = eventTracker.getNextSequence();
+    sendAGUIEvent(response, rapportEventId, 'RAPPORT_UPDATE', {
+      confidence: newConfidence,
+      formatted_bar: confidenceBar,
+    }, rapportSeq);
+
+    let chunkIndex = 0;  // Start text chunks at 0
 
     // Parse proposal into chunks (by section separator)
     const paragraphs = SPECIMEN_47_GRANT_PROPOSAL.split('\n')
