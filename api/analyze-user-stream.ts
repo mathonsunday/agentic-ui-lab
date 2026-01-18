@@ -391,27 +391,32 @@ Return ONLY valid JSON in this exact format:
       reasoning: analysis.reasoning,
     });
 
-    // Start text message sequence
-    const messageId = `msg_analysis_${Date.now()}`;
-    const startEventId = generateEventId();
-    const startSequence = eventTracker.getNextSequence();
+    // Send rapport bar FIRST as a standalone text message (before analysis)
+    const rapportMessageId = `msg_rapport_${Date.now()}`;
+    const rapportStartEventId = generateEventId();
+    const rapportStartSequence = eventTracker.getNextSequence();
 
-    sendAGUIEvent(response, startEventId, 'TEXT_MESSAGE_START', {
-      message_id: messageId,
-    }, startSequence);
+    sendAGUIEvent(response, rapportStartEventId, 'TEXT_MESSAGE_START', {
+      message_id: rapportMessageId,
+    }, rapportStartSequence);
 
-    let chunkIndex = 0;
-
-    // Send confidence bar as first chunk (before analysis)
+    // Send confidence bar as first (and only) chunk in rapport message
     const confidenceBar = generateConfidenceBar(newConfidence);
     const barChunkId = generateEventId();
     const barChunkSeq = eventTracker.getNextSequence();
     sendAGUIEvent(response, barChunkId, 'TEXT_CONTENT', {
       chunk: confidenceBar,
-      chunk_index: chunkIndex++,
-    }, barChunkSeq, startEventId);
+      chunk_index: 0,
+    }, barChunkSeq, rapportStartEventId);
 
-    // Send analysis event AFTER rapport bar with Claude's reasoning and metrics
+    // End rapport message
+    const rapportEndEventId = generateEventId();
+    const rapportEndSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, rapportEndEventId, 'TEXT_MESSAGE_END', {
+      total_chunks: 1,
+    }, rapportEndSequence, rapportStartEventId);
+
+    // Send analysis event (standalone, not part of a message)
     const analysisEventId = generateEventId();
     const analysisSequence = eventTracker.getNextSequence();
     console.log('📊 [Backend] Sending ANALYSIS_COMPLETE event:', {
@@ -430,7 +435,18 @@ Return ONLY valid JSON in this exact format:
         superficiality: analysis.superficiality,
       },
       confidenceDelta: analysis.confidenceDelta,
-    }, analysisSequence, startEventId);
+    }, analysisSequence);
+
+    // Start response text message sequence
+    const messageId = `msg_response_${Date.now()}`;
+    const startEventId = generateEventId();
+    const startSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(response, startEventId, 'TEXT_MESSAGE_START', {
+      message_id: messageId,
+    }, startSequence);
+
+    let chunkIndex = 0;
 
     // Stream Claude-generated response via streaming chat
     const claudeStream = client.messages.stream({
