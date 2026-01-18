@@ -186,6 +186,7 @@ export function streamMiraBackend(
       console.log('✓ [miraBackendStream] Processing onComplete');
       callbacks.onComplete?.(data);
     },
+    onRapportUpdate: callbacks.onRapportUpdate,
     onAnalysis: callbacks.onAnalysis,
     onError: callbacks.onError,
   };
