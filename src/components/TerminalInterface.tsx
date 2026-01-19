@@ -35,6 +35,8 @@ interface TerminalLine {
     reasoning: string;
     confidenceDelta: number;
   };
+  // Source of the content (e.g., 'specimen_47', 'claude_streaming')
+  source?: string;
 }
 
 // Stream state management with useReducer
@@ -135,6 +137,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const currentRevealedLengthRef = useRef(0); // Track current animation position for interrupt
   const currentAnimatingContentLengthRef = useRef(0); // Track total content length for animation completion
+  const currentStreamSourceRef = useRef<string | null>(null); // Track source for current line
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
@@ -166,13 +169,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   }, []);
 
   const addTerminalLine = useCallback(
-    (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }) => {
+    (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: string) => {
       const newLine: TerminalLine = {
         id: String(lineCountRef.current++),
         type,
         content,
         timestamp: Date.now(),
         analysisData,
+        source: source || currentStreamSourceRef.current || undefined,
       };
       setTerminalLines((prev) => [...prev, newLine]);
     },
@@ -388,8 +392,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
           onMessageStart: (messageId: string, source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
+            // Also track in ref for line creation
             // KNOWN BUG #2: INTERRUPT button does not appear during specimen 47 animation.
             setCurrentStreamSource(source || null);
+            currentStreamSourceRef.current = source || null;
             console.log(`📨 [TerminalInterface] Message started - STREAM #${streamNum}`, { messageId, source });
           },
           onResponseChunk: (chunk: any) => {
@@ -755,32 +761,38 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     {line.analysisData ? formatAnalysisBox(line.analysisData) : line.content}
                   </span>
                 ) : isResponseLine ? (
-                  <TypewriterLine
-                    content={line.content}
-                    speed={settings.typingSpeed}
-                    isAnimating={shouldAnimate && (line.isAnimating !== false)}
-                    onRevealedLengthChange={(length) => {
-                      // Track revealed length for interrupt handling
-                      if (line.id === currentAnimatingLineIdRef.current) {
-                        currentRevealedLengthRef.current = length;
-                        // Auto-scroll to bottom during character animation
-                        if (scrollRef.current) {
-                          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                        }
-                        // When animation completes, end the stream and clear source
-                        // This allows INTERRUPT button to stay visible until all characters revealed
-                        if (length >= currentAnimatingContentLengthRef.current) {
-                          setCurrentStreamSource(null);
-                          // Only dispatch if this is specimen_47 (other sources already dispatched END_STREAM)
-                          if (currentStreamSource === 'specimen_47') {
-                            currentAnimatingLineIdRef.current = null;
-                            responseLineIdsRef.current = [];
-                            dispatchStream({ type: 'END_STREAM' });
+                  // For claude_streaming: use simple text render (chunks arrive in real-time)
+                  // For specimen_47: use TypewriterLine for single-chunk animation
+                  line.source === 'claude_streaming' ? (
+                    <span className="terminal-interface__text">{line.content}</span>
+                  ) : (
+                    <TypewriterLine
+                      content={line.content}
+                      speed={settings.typingSpeed}
+                      isAnimating={shouldAnimate && (line.isAnimating !== false)}
+                      onRevealedLengthChange={(length) => {
+                        // Track revealed length for interrupt handling
+                        if (line.id === currentAnimatingLineIdRef.current) {
+                          currentRevealedLengthRef.current = length;
+                          // Auto-scroll to bottom during character animation
+                          if (scrollRef.current) {
+                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                          }
+                          // When animation completes, end the stream and clear source
+                          // This allows INTERRUPT button to stay visible until all characters revealed
+                          if (length >= currentAnimatingContentLengthRef.current) {
+                            setCurrentStreamSource(null);
+                            // Only dispatch if this is specimen_47 (other sources already dispatched END_STREAM)
+                            if (currentStreamSource === 'specimen_47') {
+                              currentAnimatingLineIdRef.current = null;
+                              responseLineIdsRef.current = [];
+                              dispatchStream({ type: 'END_STREAM' });
+                            }
                           }
                         }
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  )
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
                 )}
@@ -802,7 +814,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
             ];
 
-            if (streamState.isStreaming && currentStreamSource === 'specimen_47') {
+            if (streamState.isStreaming && (currentStreamSource === 'specimen_47' || currentStreamSource === 'claude_streaming')) {
               tools.push({
                 id: 'interrupt',
                 name: 'INTERRUPT',
