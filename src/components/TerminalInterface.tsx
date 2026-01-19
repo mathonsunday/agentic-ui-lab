@@ -168,6 +168,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     setTerminalLines((prev) => [...prev, asciiLine]);
   }, []);
 
+  // Track when currentStreamSource changes
+  useEffect(() => {
+    console.log(`🔔 [EFFECT] currentStreamSource changed:`, {
+      newValue: currentStreamSource,
+      isStreaming: streamState.isStreaming,
+      streamId: streamState.streamId,
+    });
+  }, [currentStreamSource]);
+
   const addTerminalLine = useCallback(
     (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: string) => {
       const newLine: TerminalLine = {
@@ -825,6 +834,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           />
 
           {useMemo(() => {
+            console.log(`🎨 [MEMO EVAL] useMemo evaluating for button tools - deps changed`);
             const tools = [
               { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
