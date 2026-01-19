@@ -194,6 +194,39 @@ const MOOD_TO_CREATURES: Record<string, CreatureName[]> = {
 };
 
 /**
+ * Map camelCase creature names to display names for natural language use
+ * Display names match the displayName property from toolkit creatures
+ */
+const CREATURE_DISPLAY_NAMES: Record<CreatureName, string> = {
+  anglerFish: 'anglerfish',
+  giantSquid: 'giant squid',
+  jellyfish: 'jellyfish',
+  octopus: 'octopus',
+  shark: 'shark',
+  treasureChest: 'treasure chest',
+  submarine: 'submarine',
+  schoolOfFish: 'school of fish',
+  bioluminescentFish: 'school of fish',
+  viperFish: 'viperfish',
+  coral: 'coral',
+  hermitCrab: 'hermit crab',
+  deepSeaScene: 'deep sea scene',
+  seaTurtle: 'sea turtle',
+  deepSeaDiver: 'deep sea diver',
+};
+
+/**
+ * Get the display name for a creature
+ * Converts camelCase internal names to natural language (e.g., 'giantSquid' → 'giant squid')
+ *
+ * @param creature - The creature name in camelCase
+ * @returns Natural language display name suitable for prose
+ */
+export function getCreatureDisplayName(creature: CreatureName): string {
+  return CREATURE_DISPLAY_NAMES[creature] || creature;
+}
+
+/**
  * Get a creature matching suggested mood
  * Falls back to random if mood not recognized
  *
