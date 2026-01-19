@@ -399,13 +399,16 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               source,
               hasSource: !!source,
               isStreaming: streamState.isStreaming,
+              currentStreamSourceBefore: currentStreamSource,
             });
+            console.log(`⚙️  About to call setCurrentStreamSource('${source || null}')`);
             setCurrentStreamSource(source || null);
             currentStreamSourceRef.current = source || null;
             console.log(`📨 [TerminalInterface] Message started - STREAM #${streamNum}`, {
               messageId,
               source,
               setStateSource: source || null,
+              currentStreamSourceAfterSync: currentStreamSource, // This will still be old value due to closure
             });
           },
           onResponseChunk: (chunk: any) => {
@@ -589,6 +592,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           null,
           callbacksObject
         );
+        // Reset stream source before starting new stream
+        setCurrentStreamSource(null);
+        currentStreamSourceRef.current = null;
         dispatchStream({ type: 'START_STREAM', abort });
         console.log('📌 Abort controller set for input stream');
         streamDebugLog(`START_STREAM dispatched - STREAM #${streamNum}`);
