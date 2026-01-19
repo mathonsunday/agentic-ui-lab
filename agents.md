@@ -6,6 +6,37 @@
 
 When making architectural decisions, ask: "Will this make future features easier or harder?"
 
+## This is an Art Project, Not a Product
+
+**The goal is to communicate an artistic vision, not to maximize user metrics or meet business deadlines.**
+
+This means: prefer depth and intentionality over breadth, but _achieve it through smart choices, not endless tweaking_.
+
+1. **Aesthetic Intent Matters—But Only if Achievable**
+   - If something looks or feels wrong in a way that breaks your artistic intent, that's a real problem
+   - BUT: always research whether there's a library/existing solution that provides the feel you want
+   - Don't spend weeks hand-tuning animations if a well-maintained animation library exists
+   - The artistic vision guides _what_ to build, not _how_ to build it—defer to proven solutions for the "how"
+   - Document what the intended feel is (in code comments) so it's clear what "right" means
+
+2. **Quality of Expression Over Coverage**
+   - It's better to have one feature that's exquisite and communicates clearly than ten features that are adequate
+   - But "exquisite" doesn't mean "hand-crafted from scratch"—it means integrated, polished, intentional
+   - If a library or standard approach achieves the feel you want, using it is more professional, not less
+   - Don't confuse polish with effort—sometimes the best result comes from using the right tool
+
+3. **Reject Perfectionism; Accept Intentional Compromise**
+   - Don't settle for "it works but doesn't feel quite right" _if_ that fix is cheap (a library, a config change)
+   - DO accept "it works but doesn't feel perfect" if fixing it requires massive custom work
+   - Document compromises in code comments—name them explicitly so it's clear you made a choice, not an accident
+   - Accumulated small compromises are OK; accumulated wasted effort on unachievable ideals is not
+
+4. **Test Before Refining**
+   - Validate visual/interactive changes in prod immediately (via the Anthropic API setup)
+   - You can't judge if something "feels right" without seeing it in context
+   - Only spend refinement time on things you've actually tested and found problematic
+   - User feedback about wasted time is a critical signal—listen to it
+
 ## Problem-Solving Approach
 
 ### For Technical Problems (Bugs, Visual Issues, Performance)
@@ -41,6 +72,35 @@ When making architectural decisions, ask: "Will this make future features easier
    - Spending time on custom implementations when libraries exist
    - Pushing changes without validating they work (especially visual changes)
    - Adding logging/debugging instead of integrating a proper solution
+
+### Distinguishing Between "Worth Refining" vs "Accept and Move On"
+
+This is the hardest call in an art project. Use these signals:
+
+**Worth investing time to refine:**
+
+- A library exists that achieves exactly what you want (integrate it)
+- It's a core visual/interaction element that directly communicates your artistic intent
+- The fix is achievable in hours, not days or weeks
+- Testing shows it actually looks/feels wrong to users, not just to you
+- The problem compounds—ignoring it makes future features harder
+
+**Accept as compromise and document:**
+
+- Fixing it requires weeks of custom implementation
+- No existing library solves it well
+- It's a peripheral feature, not central to your artistic vision
+- Testing shows it's "fine enough" even if not perfect
+- The effort would prevent you from building other, more important things
+- Document it clearly in code: "UX compromise: [what's wrong] because [why it's not worth fixing]"
+
+**Red Flag—Stop and Reconsider:**
+
+- You're on your third attempt at the same fix and it's still not right
+- You're spending days on refinement for a peripheral feature
+- User feedback says "this took forever and doesn't look that different"
+- You're adding logging/debugging instead of actually solving the problem
+- You're hand-tweaking what a library could do in a config
 
 ### What NOT To Do
 
@@ -81,20 +141,24 @@ When making architectural decisions, ask: "Will this make future features easier
 ## Dead Code Removal
 
 **Real user entrypoints (code must be reachable from these):**
+
 - Frontend: `src/main.tsx` (Vite entry point, app loads from here)
 - Backend: `api/` folder (called from frontend via HTTP requests)
 
 **Safe to delete:**
+
 - Not imported by any file reachable from the above entry points
 - No other code depends on it
 
 **Do NOT delay deletion with:**
+
 - `@deprecated` comments as a holding pattern
 - "Will remove this later" comments
 - Backup copies of functions alongside new implementations
 - If code is dead now, delete it now in the same change that replaced it
 
 **When you find potentially dead code:**
+
 - Trace imports to verify it's unreachable from entry points
 - If unreachable, delete it
 - Do not ask "should we keep this just in case?" - if it's not used, it's gone
