@@ -1,0 +1,59 @@
+Unused files (2)
+src/shared/rovAsciiVariants.ts  
+src/types/terminal.ts           
+Unused dependencies (1)
+motion  package.json:19:6
+Unused devDependencies (2)
+ts-prune           package.json:41:6
+ts-unused-exports  package.json:42:6
+Unresolved imports (1)
+../../api/lib/types  src/services/__tests__/miraBackendStream.interrupt.test.ts:2:52
+Unused exports (19)
+ContentLibrary                             api/lib/contentLibrary.ts:64:14               
+listContentFeatures              function  api/lib/contentLibrary.ts:133:17              
+getContentFeatureById            function  api/lib/contentLibrary.ts:140:17              
+DETAILED_SCORING                           api/lib/prompts/sections/scoringRules.ts:12:14
+BASIC_SCORING                              api/lib/prompts/sections/scoringRules.ts:56:14
+VOICE_EXAMPLES                             api/lib/prompts/sections/voiceExamples.ts:8:14
+listAvailableTools               function  api/lib/toolRegistry.ts:43:17                 
+ALL_TOOL_SCHEMAS                           api/lib/toolSchemas.ts:112:14                 
+getToolSchema                    function  api/lib/toolSchemas.ts:120:17                 
+MiraEventSchema                            src/lib/schemaMigration.ts:186:14             
+TIMEOUT_CONFIG                             src/services/timeoutHandler.ts:82:14          
+CHARACTER                                  src/shared/Character.ts:29:14                 
+getPersonalityFromConfidence               src/shared/miraAgentSimulator.ts:19:10        
+evaluateUserResponseWithBackend  function  src/shared/miraAgentSimulator.ts:50:23        
+setDebugModules                  function  src/utils/debugLogger.ts:73:17                
+enableAllDebug                   function  src/utils/debugLogger.ts:80:17                
+disableAllDebug                  function  src/utils/debugLogger.ts:92:17                
+setMinLogLevel                   function  src/utils/debugLogger.ts:99:17                
+getDebugConfig                   function  src/utils/debugLogger.ts:106:17               
+Unused exported types (28)
+PersonalityTierDefinition                     interface  api/lib/prompts/types.ts:14:18         
+ScoringLevel                                  interface  api/lib/prompts/types.ts:20:18         
+ToolResult                                    interface  api/lib/types.ts:30:18                 
+AnalyzeUserRequest                            interface  api/lib/types.ts:96:18                 
+AnalyzeUserResponse                           interface  api/lib/types.ts:103:18                
+ToolButtonProps                               interface  src/components/ToolButton.tsx:3:18     
+Discriminator                                 type       src/lib/schemaMigration.ts:133:13      
+ConfidenceUpdate           miraBackendStream  interface  src/services/miraBackendStream.ts:17:18
+CharacterResponse                             interface  src/shared/Character.ts:17:18          
+UserProfile                                   type       src/shared/miraAgentSimulator.ts:18:15 
+InteractionMemory                             type       src/shared/miraAgentSimulator.ts:18:28 
+AgentResponse                                 type       src/shared/miraAgentSimulator.ts:18:58 
+Personality                                   type       src/shared/miraAgentSimulator.ts:18:73 
+Mood                                          type       src/shared/stateMachine.ts:13:13       
+Scenario                                      interface  src/shared/stateMachine.ts:50:18       
+AppSettings                                   interface  src/stores/settings.ts:13:18           
+StreamEventPayload                            type       src/types/events.ts:62:13              
+TextMessageStartData                          interface  src/types/events.ts:78:18              
+TextContentData                               interface  src/types/events.ts:88:18              
+TextMessageEndData                            interface  src/types/events.ts:98:18              
+ResponseCompleteData                          interface  src/types/events.ts:108:18             
+StateDeltaData                                interface  src/types/events.ts:137:18             
+ToolCallStartData                             interface  src/types/events.ts:159:18             
+ToolCallResultData                            interface  src/types/events.ts:173:18             
+ToolCallEndData                               interface  src/types/events.ts:190:18             
+ErrorData                                     interface  src/types/events.ts:201:18             
+AckData                                       interface  src/types/events.ts:215:18             
+AnalysisCompleteData                          interface  src/types/events.ts:223:18             

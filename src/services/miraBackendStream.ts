@@ -193,6 +193,15 @@ export function streamMiraBackend(
       console.log(`✓ [miraBackendStream] Processing chunk #${chunkCount} (${chunk.length} chars)`);
       callbacks.onResponseChunk?.(chunk);
     },
+    onRapportUpdate: (confidence, formattedBar) => {
+      // Don't process rapport bar after interrupt
+      if (wasInterrupted) {
+        console.log('🛑 [miraBackendStream] BLOCKING onRapportUpdate - stream was interrupted');
+        return;
+      }
+      console.log('✓ [miraBackendStream] Processing onRapportUpdate');
+      callbacks.onRapportUpdate?.(confidence, formattedBar);
+    },
     onComplete: (data) => {
       // Don't process completion after interrupt
       if (wasInterrupted) {
@@ -385,7 +394,18 @@ function handleEnvelopeEvent(
       // Generate and display rapport bar using final confidence from updatedState
       const confidence = completeData.updatedState.confidenceInUser;
       const rapportBar = generateConfidenceBar(confidence);
-      callbacks.onRapportUpdate?.(confidence, rapportBar);
+      console.log('🎯 [miraBackendStream] RESPONSE_COMPLETE received', {
+        confidence,
+        rapportBar,
+        hasCallback: !!callbacks.onRapportUpdate,
+      });
+
+      if (callbacks.onRapportUpdate) {
+        console.log('📊 [miraBackendStream] Calling onRapportUpdate with:', { confidence, rapportBar });
+        callbacks.onRapportUpdate(confidence, rapportBar);
+      } else {
+        console.warn('⚠️ [miraBackendStream] onRapportUpdate callback is NOT defined!');
+      }
 
       callbacks.onComplete?.(completeData);
       break;

@@ -1,0 +1,15 @@
+{
+  "entry": [
+    "src/main.tsx",
+    "api/analyze-user-stream.ts",
+    "api/tools.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "api/**/*.ts"
+  ],
+  "ignore": [
+    "dist/**",
+    "node_modules/**"
+  ]
+}

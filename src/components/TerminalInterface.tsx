@@ -178,7 +178,20 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         analysisData,
         source: source || currentStreamSourceRef.current || undefined,
       };
-      setTerminalLines((prev) => [...prev, newLine]);
+      console.log('📝 [TerminalInterface.addTerminalLine] Adding line:', {
+        id: newLine.id,
+        type,
+        contentPreview: content.substring(0, 80),
+        source: newLine.source,
+      });
+      setTerminalLines((prev) => {
+        console.log('📝 [TerminalInterface.addTerminalLine] State update: added line to', {
+          previousCount: prev.length,
+          newCount: prev.length + 1,
+          lineId: newLine.id,
+        });
+        return [...prev, newLine];
+      });
     },
     []
   );
@@ -299,6 +312,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const handleInput = useCallback(
     async (userInput: string) => {
       const streamNum = streamState.streamId + 1;
+      console.log('🔵 [TerminalInterface.handleInput] User submitted input, starting stream', {
+        streamNum,
+        userInput: userInput.substring(0, 50),
+      });
+
       if (!userInput.trim()) return;
 
       // Reset interrupt flag for new stream
@@ -334,10 +352,20 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onRapportUpdate: (_confidence: number, formattedBar: string) => {
             // Rapport bar updates are terminal text lines that display in place
             // They are semantic state updates sent as separate events now
+            console.log('🎬 [TerminalInterface] onRapportUpdate callback FIRED', {
+              confidence: _confidence,
+              formattedBar,
+              lineCountBefore: lineCountRef.current,
+            });
+
             const newLineId = String(lineCountRef.current++);
             responseLineIdsRef.current.push(newLineId);
+            console.log('🎬 [TerminalInterface] Adding rapport bar line:', {
+              newLineId,
+              formattedBar,
+              lineCountAfter: lineCountRef.current,
+            });
             addTerminalLine('text', formattedBar);
-
           },
           onMessageStart: (_messageId: string, source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
@@ -474,6 +502,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
         };
 
+        console.log('🌊 [TerminalInterface.handleInput] Calling streamMiraBackend with callbacks object', {
+          hasOnRapportUpdate: !!callbacksObject.onRapportUpdate,
+          callbacks: Object.keys(callbacksObject),
+        });
+
         const { promise, abort } = streamMiraBackend(
           userInput,
           miraState,
@@ -484,7 +517,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         // Reset stream source before starting new stream
         currentStreamSourceRef.current = null;
         dispatchStream({ type: 'START_STREAM', abort });
+        console.log('🌊 [TerminalInterface.handleInput] Stream started, awaiting promise...');
         await promise;
+        console.log('🌊 [TerminalInterface.handleInput] Stream promise resolved');
       } catch (_error) {
         // Error handling: graceful degradation
         addTerminalLine(
