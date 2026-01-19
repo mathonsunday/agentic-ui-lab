@@ -26,6 +26,7 @@ import { getScoringRulesSection } from './sections/scoringRules.js';
 import { buildContextInjectionSection } from './sections/contextInjection.js';
 import {
   CRITICAL_MINDSET,
+  CREATURE_MOOD_SELECTION,
   RESPONSE_FORMAT,
   INTRODUCTION,
   GLOWING_VOICE_INSTRUCTIONS,
@@ -86,6 +87,11 @@ export class MiraSystemPromptBuilder {
     return this;
   }
 
+  addCreatureMoodSelection(): this {
+    this.sections.set('creatureMood', CREATURE_MOOD_SELECTION);
+    return this;
+  }
+
   addResponseFormat(): this {
     this.sections.set('format', RESPONSE_FORMAT);
     return this;
@@ -143,6 +149,7 @@ export function createAdvancedMiraPrompt(
     .addDetailedScoringRules()
     .addContextInjection(miraState, messageCount, toolCallCount)
     .addMindsetGuidance()
+    .addCreatureMoodSelection()
     .addResponseFormat()
     .build();
 }
@@ -157,6 +164,7 @@ export function createBasicMiraPrompt(miraState: MiraState): string {
     .addVoiceExamples('glowing')
     .addBasicScoringRules()
     .addMindsetGuidance()
+    .addCreatureMoodSelection()
     .addResponseFormat()
     .build();
 }

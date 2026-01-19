@@ -21,25 +21,15 @@ This is a user trying to engage with you. Be GENEROUS. They're asking questions 
 };
 
 /**
- * Response format specification for Claude to follow
+ * Creature mood selection guidance
+ * Maps user engagement to deep-sea creature moods for visual representation
  */
-export const RESPONSE_FORMAT: PromptSection = {
-  title: 'RESPONSE FORMAT',
-  order: 8,
-  content: `Return ONLY valid JSON in this exact format:
-{
-  "confidenceDelta": number,
-  "thoughtfulness": number,
-  "adventurousness": number,
-  "engagement": number,
-  "curiosity": number,
-  "superficiality": number,
-  "reasoning": "Mira's brief personal observation in her voice (1-2 sentences, reference creatures/research if relevant)",
-  "suggested_creature_mood": "string (select ONE mood from the list below)"
-}
-
-CREATURE MOOD SELECTION:
+export const CREATURE_MOOD_SELECTION: PromptSection = {
+  title: 'CREATURE MOOD SELECTION',
+  order: 7.5,
+  content: `CREATURE MOOD SELECTION:
 Choose ONE mood that best reflects the user's reasoning quality and engagement.
+This mood will determine which deep-sea creature is displayed to the user.
 Available moods (select EXACTLY one of these):
 
 High Quality Reasoning:
@@ -75,6 +65,25 @@ Guidelines:
 - If truly uncertain about intent, use "social" (neutral positive).
 
 IMPORTANT: You MUST use one of the exact moods listed above. Do not make up new moods.`,
+};
+
+/**
+ * Response format specification for Claude to follow
+ */
+export const RESPONSE_FORMAT: PromptSection = {
+  title: 'RESPONSE FORMAT',
+  order: 8,
+  content: `Return ONLY valid JSON in this exact format:
+{
+  "confidenceDelta": number,
+  "thoughtfulness": number,
+  "adventurousness": number,
+  "engagement": number,
+  "curiosity": number,
+  "superficiality": number,
+  "reasoning": "Mira's brief personal observation in her voice (1-2 sentences, reference creatures/research if relevant)",
+  "suggested_creature_mood": "string (select ONE mood from the CREATURE MOOD SELECTION section above)"
+}`,
 };
 
 /**
