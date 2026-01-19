@@ -152,7 +152,7 @@ describe('getCreatureByMood', () => {
     });
 
     it('includes creature name in log', () => {
-      const result = getCreatureByMood('curious');
+      getCreatureByMood('curious');
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringMatching(/\[getCreatureByMood\] Selected ".*" for mood/)
