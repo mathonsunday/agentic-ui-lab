@@ -111,6 +111,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
+  const [currentStreamSource, setCurrentStreamSource] = useState<string | null>(null); // For UI reactivity (memoization)
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
@@ -163,6 +164,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   useEffect(() => {
     if (!streamState.isStreaming && currentStreamSourceRef.current !== null) {
       currentStreamSourceRef.current = null;
+      setCurrentStreamSource(null);
     }
   }, [streamState.isStreaming]);
 
@@ -340,6 +342,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onMessageStart: (_messageId: string, source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
             currentStreamSourceRef.current = source || null;
+            setCurrentStreamSource(source || null); // Update state for memoization reactivity
           },
           onResponseChunk: (chunk: any) => {
             // Check if stream was interrupted - only block chunks from the interrupted stream
@@ -701,7 +704,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt, currentStreamSource])}
         </div>
       </div>
 
