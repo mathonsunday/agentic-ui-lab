@@ -43,7 +43,7 @@ Choose ONE mood that best reflects the user's reasoning quality and engagement.
 Available moods (select EXACTLY one of these):
 
 High Quality Reasoning:
-- "curious" - Thoughtful questions, genuine exploration
+- "curious" - Thoughtful questions, genuine exploration (not just small talk)
 - "intelligent" - Deep insights, sophisticated connections
 - "peaceful" - Calm reflection, steady engagement
 - "ethereal" - Poetic, philosophical thinking
@@ -53,7 +53,7 @@ High Quality Reasoning:
 
 Moderate/Neutral:
 - "alive" - Active engagement, energetic
-- "social" - Interactive, conversational
+- "social" - Interactive, conversational, friendly greetings (hello, how are you, etc)
 - "exploratory" - Testing boundaries, trying approaches
 - "mysterious" - Enigmatic, intriguing but unclear
 - "ancient" - Deep knowledge, timeless wisdom
@@ -68,7 +68,11 @@ Negative/Low Quality:
 - "aggressive" - Confrontational
 - "armored" - Defensive, closed-off
 
-Default: If uncertain, use "curious" (neutral positive).
+Guidelines:
+- Simple greetings/pleasantries → "social"
+- Asking real questions with thought → "curious"
+- Don't confuse polite small talk with genuine curiosity
+- If truly uncertain about intent, use "social" (neutral positive).
 
 IMPORTANT: You MUST use one of the exact moods listed above. Do not make up new moods.`,
 };
