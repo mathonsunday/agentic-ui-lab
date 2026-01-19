@@ -180,6 +180,7 @@ export class StreamEventSequencer {
    */
   async sendResponseStart(
     confidenceDelta: number,
+    confidence: number,
     metrics?: AnalysisMetrics,
     hasAnalysisFollowing: boolean = true
   ): Promise<void> {
@@ -188,6 +189,7 @@ export class StreamEventSequencer {
 
     this.sendAGUIEvent(startEventId, 'RESPONSE_START', {
       confidenceDelta,
+      confidence,
       metrics: metrics ? {
         thoughtfulness: metrics.thoughtfulness,
         adventurousness: metrics.adventurousness,

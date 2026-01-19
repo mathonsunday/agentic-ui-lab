@@ -180,13 +180,17 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     );
 
     // Send RESPONSE_START event first - signals analysis beginning with confidence delta
-    await sequencer.sendResponseStart(analysis.confidenceDelta, {
-      thoughtfulness: analysis.thoughtfulness,
-      adventurousness: analysis.adventurousness,
-      engagement: analysis.engagement,
-      curiosity: analysis.curiosity,
-      superficiality: analysis.superficiality,
-    });
+    await sequencer.sendResponseStart(
+      analysis.confidenceDelta,
+      newConfidence,
+      {
+        thoughtfulness: analysis.thoughtfulness,
+        adventurousness: analysis.adventurousness,
+        engagement: analysis.engagement,
+        curiosity: analysis.curiosity,
+        superficiality: analysis.superficiality,
+      }
+    );
 
     // Send state delta with confidence and profile updates
     await sequencer.sendStateUpdate(newConfidence, {
@@ -311,6 +315,9 @@ async function streamContentFeature(
       startSequence
     );
 
+    // Update confidence for hardcoded content feature
+    const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
+
     // Send RESPONSE_START for rapport bar display
     const responseStartEventId = generateEventId();
     const responseStartSequence = eventTracker.getNextSequence();
@@ -320,13 +327,11 @@ async function streamContentFeature(
       'RESPONSE_START',
       {
         confidenceDelta: feature.confidenceDelta,
+        confidence: newConfidence,
         hasAnalysisFollowing: false,
       },
       responseStartSequence
     );
-
-    // Update confidence for hardcoded content feature (frontend will format display)
-    const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
 
     // For hardcoded content features, send the entire content as a single chunk
     // The frontend's TypewriterLine component handles character-by-character animation
@@ -472,11 +477,15 @@ async function streamClaudeResponse(
       source: feature.eventSource,
     }, startSequence);
 
+    // Calculate new confidence for streaming response
+    const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
+
     // Send RESPONSE_START for rapport bar display
     const responseStartEventId = generateEventId();
     const responseStartSequence = eventTracker.getNextSequence();
     sendAGUIEvent(response, responseStartEventId, 'RESPONSE_START', {
       confidenceDelta: feature.confidenceDelta,
+      confidence: newConfidence,
       hasAnalysisFollowing: false,
     }, responseStartSequence);
 

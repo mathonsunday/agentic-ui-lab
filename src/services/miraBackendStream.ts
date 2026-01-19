@@ -380,12 +380,13 @@ function handleEnvelopeEvent(
     case 'RESPONSE_START': {
       const startData = envelope.data as {
         confidenceDelta: number;
+        confidence: number;
         metrics?: Record<string, number>;
         hasAnalysisFollowing: boolean;
       };
 
-      const rapportBar = generateConfidenceBar(Math.max(0, Math.min(100, startData.confidenceDelta)));
-      callbacks.onResponseStart?.(startData.confidenceDelta, rapportBar);
+      const rapportBar = generateConfidenceBar(startData.confidence);
+      callbacks.onResponseStart?.(startData.confidence, rapportBar);
       break;
     }
 

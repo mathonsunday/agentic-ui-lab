@@ -110,6 +110,9 @@ export interface ResponseStartData {
   /** Initial confidence delta from analysis */
   confidenceDelta: number;
 
+  /** Current confidence value after applying delta */
+  confidence: number;
+
   /** Initial personality metrics from early analysis */
   metrics?: {
     thoughtfulness: number;
