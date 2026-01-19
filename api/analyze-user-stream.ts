@@ -245,12 +245,6 @@ export default async (request: VercelRequest, response: VercelResponse) => {
   }
 };
 
-/**
- * Helper: Sleep for ms milliseconds
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 /**
  * Helper: Send AG-UI formatted event envelope (not wrapped in legacy format)
@@ -318,42 +312,26 @@ async function streamContentFeature(
       formatted_bar: confidenceBar,
     }, rapportSeq);
 
-    let chunkIndex = 0;  // Start text chunks at 0
+    // For hardcoded content features, send the entire content as a single chunk
+    // The frontend's TypewriterLine component handles character-by-character animation
+    const chunkEventId = generateEventId();
+    const chunkSequence = eventTracker.getNextSequence();
 
-    // Parse content into chunks (by line separator)
-    const paragraphs = feature.content.split('\n')
-      .filter(line => line.trim().length > 0);
+    console.log(`📤 [${feature.id}] Sending hardcoded content (${feature.content.length} chars)`);
 
-    console.log(`🎬 [${feature.id}] Starting to stream ${paragraphs.length} paragraphs`);
+    sendAGUIEvent(
+      response,
+      chunkEventId,
+      'TEXT_CONTENT',
+      {
+        chunk: feature.content,
+        chunk_index: 0,
+      },
+      chunkSequence,
+      startEventId  // Parent event creates causality chain
+    );
 
-    for (const paragraph of paragraphs) {
-      // Small delay allows interruption and prevents overwhelming the client
-      // Frontend handles character-by-character animation on all response text
-      await sleep(100);
-
-      const chunkEventId = generateEventId();
-      const chunkSequence = eventTracker.getNextSequence();
-
-      console.log(`📤 [${feature.id}] Sending chunk ${chunkIndex} (${paragraph.substring(0, 50)}...)`);
-
-      // AG-UI: Send TEXT_CONTENT events with chunk_index for proper ordering
-      sendAGUIEvent(
-        response,
-        chunkEventId,
-        'TEXT_CONTENT',
-        {
-          chunk: `${paragraph}\n`,
-          chunk_index: chunkIndex++,
-        },
-        chunkSequence,
-        startEventId  // Parent event creates causality chain
-      );
-    }
-
-    console.log(`✅ [${feature.id}] Finished streaming all ${chunkIndex} chunks`);
-
-    // Wait a bit before sending completion
-    await sleep(200);
+    console.log(`✅ [${feature.id}] Finished sending content`);
 
     const endEventId = generateEventId();
     const endSequence = eventTracker.getNextSequence();
@@ -363,7 +341,7 @@ async function streamContentFeature(
       response,
       endEventId,
       'TEXT_MESSAGE_END',
-      { total_chunks: chunkIndex },
+      { total_chunks: 1 },
       endSequence,
       startEventId  // Parent event creates causality chain
     );
