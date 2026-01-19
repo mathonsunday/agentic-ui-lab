@@ -12,7 +12,7 @@ import {
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getCreatureByMood, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
-import { formatAnalysisBox, generateConfidenceBar } from '../shared/analysisFormatter';
+import { formatAnalysisBox } from '../shared/analysisFormatter';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';
@@ -349,7 +349,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onProfile: (_profile: any) => {
             // Profile updates are handled in onComplete (single source of truth)
           },
-          onResponseStart: (confidenceDelta: number, formattedBar: string) => {
+          onResponseStart: (_confidenceDelta: number, formattedBar: string) => {
             // Display rapport bar when response starts (first thing the user sees)
             addTerminalLine('text', formattedBar);
           },
