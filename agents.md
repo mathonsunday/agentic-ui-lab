@@ -26,14 +26,15 @@ When making architectural decisions, ask: "Will this make future features easier
 
 3. **For Visual/UX Issues Specifically**
    - You cannot test visual changes yourself (you have no browser/rendering capability)
-   - Making visual changes without user validation is guaranteed to fail
-   - **Always ask the user to validate visual fixes before committing them**
-   - If a fix requires visual validation, communicate this clearly and wait for feedback
+   - Testing happens in production via the Anthropic API key setup
+   - **Commit and push ALL fixes to prod immediately for testing**
+   - Clearly communicate what was changed and what the user should test
+   - This workflow avoids dev environment hacks and API key issues
 
 4. **If Choosing to Integrate a Library**
-   - Before pushing to production, test the integration works with your codebase
+   - Test the integration works with your codebase (run tests locally)
    - Verify all existing tests pass
-   - If you cannot fully test integration (e.g., visual components), ask user for validation
+   - Commit and push to prod for user validation (especially for visual/UX changes)
 
 5. **Red Flags - Stop and Reconsider**
    - Making repeated "fixes" that don't solve the problem
