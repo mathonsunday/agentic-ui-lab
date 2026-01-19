@@ -21,7 +21,7 @@ import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js
 import { updateConfidenceAndProfile, updateMemory, processToolCall } from './lib/miraAgent.js';
 import { createAdvancedMiraPrompt } from './lib/prompts/systemPromptBuilder.js';
 import { StreamEventSequencer } from './lib/streamEventSequencer.js';
-import { getContentFeature } from './lib/contentLibrary.js';
+import { getContentFeature, type ContentFeature } from './lib/contentLibrary.js';
 
 /**
  * Generate unique event ID
@@ -93,11 +93,18 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       return response.end();
     }
 
-    // Check if this input should trigger a hardcoded content feature
+    // Check if this input should trigger a content feature
     // (See api/lib/contentLibrary.ts for full list of production content features)
     const contentFeature = getContentFeature(userInput);
     if (contentFeature) {
-      return streamContentFeature(response, miraState, eventTracker, contentFeature);
+      // Handle hardcoded content (like specimen_47)
+      if (contentFeature.isHardcoded && contentFeature.content) {
+        return streamContentFeature(response, miraState, eventTracker, contentFeature);
+      }
+      // Handle Claude-streamed content (like research_proposal)
+      if (!contentFeature.isHardcoded && contentFeature.prompt) {
+        return streamClaudeResponse(response, miraState, eventTracker, contentFeature);
+      }
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -408,6 +415,120 @@ async function streamContentFeature(
       },
       errorSequence
     );
+
+    response.end();
+  }
+}
+
+/**
+ * Stream Claude API response directly with real-time text_delta forwarding
+ *
+ * Unlike streamContentFeature (which sends one large chunk), this forwards each
+ * text_delta event as it arrives from Claude. This is the production-ready pattern
+ * for streaming any long-form Claude response with frontend animation.
+ *
+ * Flow:
+ * 1. Send TEXT_MESSAGE_START with source='claude_streaming'
+ * 2. For each text_delta from Claude, send TEXT_CONTENT event immediately
+ * 3. Send TEXT_MESSAGE_END when complete
+ * 4. Skip confidence updates (per design decision)
+ */
+async function streamClaudeResponse(
+  response: VercelResponse,
+  miraState: MiraState,
+  eventTracker: EventSequence,
+  feature: ContentFeature
+): Promise<void> {
+  if (!feature.prompt) {
+    response.status(500).json({ error: 'Feature missing prompt' });
+    return;
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    response.status(500).json({ error: 'Missing Anthropic API key' });
+    return;
+  }
+
+  try {
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
+    const messageId = generateEventId();
+    const startSequence = eventTracker.getNextSequence();
+
+    // Signal start of streaming response
+    sendAGUIEvent(response, messageId, 'TEXT_MESSAGE_START', {
+      message_id: messageId,
+      source: feature.eventSource,
+    }, startSequence);
+
+    console.log(`📤 [${feature.id}] Starting Claude streaming with prompt`);
+
+    // Call Claude with streaming enabled
+    const stream = await client.messages.stream({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 3000, // Increased for comprehensive grant proposals
+      system: feature.prompt,
+      messages: [
+        {
+          role: 'user',
+          content: 'Please generate content based on your system instructions.',
+        },
+      ],
+    });
+
+    let chunkIndex = 0;
+
+    // Forward each text_delta event immediately as TEXT_CONTENT
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        const chunk = event.delta.text;
+
+        const chunkEventId = generateEventId();
+        const chunkSequence = eventTracker.getNextSequence();
+
+        // Send this chunk immediately (don't buffer)
+        sendAGUIEvent(response, chunkEventId, 'TEXT_CONTENT', {
+          chunk,
+          chunk_index: chunkIndex++,
+        }, chunkSequence, messageId); // Parent event creates causality chain
+
+        console.log(`📥 [${feature.id}] Sent chunk ${chunkIndex}: ${chunk.length} chars`);
+      }
+    }
+
+    // Signal completion
+    const endEventId = generateEventId();
+    const endSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(response, endEventId, 'TEXT_MESSAGE_END', {
+      total_chunks: chunkIndex,
+    }, endSequence, messageId);
+
+    console.log(`✅ [${feature.id}] Finished streaming (${chunkIndex} chunks total)`);
+
+    // Send response complete with no confidence update (per design decision)
+    const completeEventId = generateEventId();
+    const completeSequence = eventTracker.getNextSequence();
+
+    sendAGUIEvent(response, completeEventId, 'RESPONSE_COMPLETE', {
+      updatedState: miraState,
+      response: {
+        source: feature.eventSource,
+      },
+    }, completeSequence, messageId);
+
+    response.end();
+  } catch (error) {
+    console.error(`❌ Error streaming Claude response for ${feature.id}:`, error);
+
+    const errorSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, generateEventId(), 'ERROR', {
+      code: 'CLAUDE_STREAMING_ERROR',
+      message: error instanceof Error ? error.message : 'Failed to stream Claude response',
+      recoverable: true,
+    }, errorSequence);
 
     response.end();
   }
