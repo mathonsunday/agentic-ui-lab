@@ -505,13 +505,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               suggested_mood: data.analysis?.suggested_creature_mood,
             });
 
-            // Reset stream source when complete
-            // For specimen_47, delay clearing until animation finishes (via onRevealedLengthChange)
-            // For claude_streaming, keep source active until END_STREAM (button needs it during animation)
-            // For other sources, clear immediately
-            if (data.response?.source !== 'specimen_47' && data.response?.source !== 'claude_streaming') {
-              setCurrentStreamSource(null);
-            }
+            // Don't reset currentStreamSource here - let the useEffect watching streamState.isStreaming handle cleanup
+            // This prevents premature clearing while renderTrigger changes cause re-renders
 
             // Final state update
             setMiraState(data.updatedState);
