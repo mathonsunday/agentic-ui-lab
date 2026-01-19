@@ -126,17 +126,3 @@ export function getContentFeature(userInput: string): ContentFeature | null {
   return null;
 }
 
-/**
- * List all available content features
- * Useful for documentation, admin panels, or debugging
- */
-export function listContentFeatures(): ContentFeature[] {
-  return Object.values(ContentLibrary);
-}
-
-/**
- * Get a specific content feature by ID
- */
-export function getContentFeatureById(id: string): ContentFeature | null {
-  return Object.values(ContentLibrary).find(f => f.id === id) || null;
-}

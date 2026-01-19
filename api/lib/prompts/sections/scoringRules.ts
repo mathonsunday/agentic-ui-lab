@@ -9,7 +9,7 @@ import type { PromptSection } from '../types.js';
  * Detailed scoring rules used in production
  * More granular and thoughtful than basic scoring
  */
-export const DETAILED_SCORING: PromptSection = {
+const DETAILED_SCORING: PromptSection = {
   title: 'SCORING GUIDELINES (detailed)',
   order: 5,
   content: `SCORING GUIDELINES (be more granular and thoughtful):
@@ -53,7 +53,7 @@ Use your judgment - this is about DEPTH and GENUINE CURIOSITY, not just presence
  * Basic scoring rules used as fallback
  * Simpler, more direct scoring guidelines
  */
-export const BASIC_SCORING: PromptSection = {
+const BASIC_SCORING: PromptSection = {
   title: 'SCORING GUIDELINES (basic)',
   order: 5,
   content: `SCORING GUIDELINES:
