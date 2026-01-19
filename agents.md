@@ -138,6 +138,36 @@ This is the hardest call in an art project. Use these signals:
    - A good refactoring plan is one that makes the currently-fragile parts robust
    - If your "things we should improve" list doesn't match your "things that are hard to change" list, you haven't understood the actual structure yet
 
+## Dead Code: Don't Add It
+
+**CRITICAL RULE: Never add functions, variables, or exports that aren't immediately used by existing code.**
+
+The dead code analysis tool (`npm run dead-code`) catches unused exports. When it flags something as unused, that's a signal to either:
+
+1. **Use it immediately** in the same change where you add it, OR
+2. **Don't add it** - delete it before committing
+
+**Common mistake to avoid:**
+- Adding a utility function "for future use" (e.g., a display name mapping function)
+- Adding an export "in case consuming code needs it" (e.g., exporting a helper that prompt engineering handles)
+- Exports without actual calls: the dead code tool will catch these
+
+**Why this matters:**
+- Unused code creates maintenance burden (is it still correct? is it still needed?)
+- It clutters the API surface and confuses future developers
+- The dead code tool exists specifically to prevent this
+- Trust the tool - if it says something's unused, delete it
+
+**If you think code might be useful later:**
+- Document the need in a GitHub issue or plan file
+- Add it when that need actually arises
+- Don't add speculative code
+
+**Real-world example to avoid:**
+- ❌ Adding `getCreatureDisplayName()` function because prompt engineering might need creature name conversion
+- ✅ If Claude's reasoning needs display names, that's handled through prompt instructions (no code function needed)
+- ✅ Only add the function if consuming code actually calls it
+
 ## Dead Code Removal
 
 **Real user entrypoints (code must be reachable from these):**
