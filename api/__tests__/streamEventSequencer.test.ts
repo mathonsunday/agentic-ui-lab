@@ -125,63 +125,7 @@ describe('StreamEventSequencer', () => {
     });
   });
 
-  describe('sendRapportBar', () => {
-    it('sends complete text message sequence', async () => {
-      const bar = '[RAPPORT] [██████████░░░░░░░░] 50%\n';
-      await sequencer.sendRapportBar(bar);
-
-      expect(mockResponse.writes.length).toBe(3); // START, CONTENT, END
-    });
-
-    it('sends TEXT_MESSAGE_START first', async () => {
-      const bar = '[RAPPORT] [██████████░░░░░░░░] 50%\n';
-      await sequencer.sendRapportBar(bar);
-
-      const json = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
-      expect(json.type).toBe('TEXT_MESSAGE_START');
-    });
-
-    it('sends TEXT_CONTENT with rapport bar', async () => {
-      const bar = '[RAPPORT] [██████████░░░░░░░░] 50%\n';
-      await sequencer.sendRapportBar(bar);
-
-      const json = JSON.parse(mockResponse.writes[1].replace('data: ', ''));
-      expect(json.type).toBe('TEXT_CONTENT');
-      expect(json.data.chunk).toBe(bar);
-      expect(json.data.chunk_index).toBe(0);
-    });
-
-    it('sends TEXT_MESSAGE_END with total chunks', async () => {
-      const bar = '[RAPPORT] [██████████░░░░░░░░] 50%\n';
-      await sequencer.sendRapportBar(bar);
-
-      const json = JSON.parse(mockResponse.writes[2].replace('data: ', ''));
-      expect(json.type).toBe('TEXT_MESSAGE_END');
-      expect(json.data.total_chunks).toBe(1);
-    });
-
-    it('correlates events with parent event ID', async () => {
-      const bar = '[RAPPORT] [██████████░░░░░░░░] 50%\n';
-      await sequencer.sendRapportBar(bar);
-
-      const startJson = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
-      const contentJson = JSON.parse(mockResponse.writes[1].replace('data: ', ''));
-      const endJson = JSON.parse(mockResponse.writes[2].replace('data: ', ''));
-
-      expect(contentJson.parent_event_id).toBe(startJson.event_id);
-      expect(endJson.parent_event_id).toBe(startJson.event_id);
-    });
-
-    it('includes message ID in START event', async () => {
-      const bar = '[RAPPORT] [██████████░░░░░░░░] 50%\n';
-      await sequencer.sendRapportBar(bar);
-
-      const json = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
-      expect(json.data.message_id).toMatch(/^msg_rapport_/);
-    });
-  });
-
-  describe('sendAnalysis', () => {
+describe('sendAnalysis', () => {
     it('sends ANALYSIS_COMPLETE event', async () => {
       await sequencer.sendAnalysis('Test reasoning', {
         thoughtfulness: 75,

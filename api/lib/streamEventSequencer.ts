@@ -152,37 +152,7 @@ export class StreamEventSequencer {
     }, sequence);
   }
 
-  /**
-   * Send rapport bar as a complete TEXT_MESSAGE sequence
-   * DEPRECATED: Use sendRapportUpdate() instead for semantic clarity
-   */
-  async sendRapportBar(confidenceBar: string): Promise<void> {
-    const rapportMessageId = `msg_rapport_${Date.now()}`;
-    const rapportStartEventId = this.generateEventId();
-    const rapportStartSequence = this.eventTracker.getNextSequence();
-
-    // TEXT_MESSAGE_START
-    this.sendAGUIEvent(rapportStartEventId, 'TEXT_MESSAGE_START', {
-      message_id: rapportMessageId,
-    }, rapportStartSequence);
-
-    // TEXT_CONTENT (rapport bar as single chunk)
-    const barChunkId = this.generateEventId();
-    const barChunkSeq = this.eventTracker.getNextSequence();
-    this.sendAGUIEvent(barChunkId, 'TEXT_CONTENT', {
-      chunk: confidenceBar,
-      chunk_index: 0,
-    }, barChunkSeq, rapportStartEventId);
-
-    // TEXT_MESSAGE_END
-    const rapportEndEventId = this.generateEventId();
-    const rapportEndSequence = this.eventTracker.getNextSequence();
-    this.sendAGUIEvent(rapportEndEventId, 'TEXT_MESSAGE_END', {
-      total_chunks: 1,
-    }, rapportEndSequence, rapportStartEventId);
-  }
-
-  /**
+/**
    * Send ANALYSIS_COMPLETE event with reasoning and metrics
    */
   async sendAnalysis(
