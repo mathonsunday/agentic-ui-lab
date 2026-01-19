@@ -134,6 +134,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const currentRevealedLengthRef = useRef(0); // Track current animation position for interrupt
+  const currentAnimatingContentLengthRef = useRef(0); // Track total content length for animation completion
   const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
@@ -141,6 +142,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const lastConfidenceUpdateStreamIdRef = useRef<number | null>(null); // Track stream ID for confidence updates
 
   // Auto-scroll to bottom when new lines are added
+  // KNOWN BUG #1: Viewport does not auto-scroll during specimen 47 character animation.
+  // User must manually scroll down to see text being revealed.
   useEffect(() => {
     if (scrollRef.current) {
       requestAnimationFrame(() => {
@@ -385,6 +388,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
           onMessageStart: (messageId: string, source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
+            // KNOWN BUG #2: INTERRUPT button does not appear during specimen 47 animation.
             setCurrentStreamSource(source || null);
             console.log(`📨 [TerminalInterface] Message started - STREAM #${streamNum}`, { messageId, source });
           },
@@ -411,6 +415,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 // First text chunk: create new line
                 const newLineId = String(lineCountRef.current++);
                 currentAnimatingLineIdRef.current = newLineId;
+                currentAnimatingContentLengthRef.current = chunk.length; // Track total content length
                 responseLineIdsRef.current.push(newLineId);
                 setRenderTrigger(t => t + 1); // Force re-render
                 streamDebugLog(`First chunk - triggering render - STREAM #${streamNum}`, { renderTriggerId: newLineId });
@@ -440,6 +445,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                   content: updated[index].content + chunk
                 };
                 const newLength = updated[index].content.length;
+                currentAnimatingContentLengthRef.current = newLength; // Update total content length
                 console.log(`✏️ [TerminalInterface] ACCUMULATED chunk to line ${currentAnimatingLineIdRef.current}: ${oldLength} → ${newLength} chars (added ${chunk.length})`);
                 return updated;
               }
@@ -463,7 +469,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             });
 
             // Reset stream source when complete
-            setCurrentStreamSource(null);
+            // For specimen_47, delay clearing until animation finishes (via onRevealedLengthChange)
+            // For other sources, clear immediately
+            if (data.response?.source !== 'specimen_47') {
+              setCurrentStreamSource(null);
+            }
 
             // Final state update
             setMiraState(data.updatedState);
@@ -746,6 +756,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                       // Track revealed length for interrupt handling
                       if (line.id === currentAnimatingLineIdRef.current) {
                         currentRevealedLengthRef.current = length;
+                        // Auto-scroll to bottom during character animation
+                        if (scrollRef.current) {
+                          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                        }
+                        // Clear stream source when animation completes
+                        // This allows INTERRUPT button to stay visible until animation finishes
+                        if (length >= currentAnimatingContentLengthRef.current) {
+                          setCurrentStreamSource(null);
+                        }
                       }
                     }}
                   />

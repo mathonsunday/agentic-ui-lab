@@ -45,41 +45,44 @@ When making architectural decisions, ask: "Will this make future features easier
 ### What NOT To Do
 
 - ❌ Spend hours customizing a component when a library solves the problem better
-- ❌ Make visual/rendering changes and push them without user validation
 - ❌ Add logging/debugging as a substitute for proper problem-solving
 - ❌ Repeat failed approaches multiple times
 - ❌ Ignore user feedback about wasted time (this is a critical signal)
 
-## Critical: Read Existing Documentation First
+## Critical: Trust Only Code Comments and Tests as Documentation
 
 **BEFORE making ANY claims about current behavior or proposing changes:**
 
-1. **Search for existing documentation** on the feature/component:
-   - Look for `*_SUMMARY.md`, `*_STATUS.md`, `README.md` files
-   - Check for `.claude/plans/` directory for previous work
-   - Look for test files that document intended behavior
-   - Example: `UX_INVARIANTS_TESTING_SUMMARY.md` documents the exact current state and requirements
-
-2. **Read the test files** that relate to your task:
-   - Tests document the intended behavior and constraints
+1. **Source of truth: Code comments and tests**
+   - Inline code comments in `.ts`, `.tsx`, and `.js` files are authoritative
+   - Test files document intended behavior and constraints
    - Test comments explain WHY things work a certain way
-   - They show what's been tried before and what worked/didn't work
-   - Example: `TypewriterLine.test.tsx` explicitly documents the animation compromise
+   - Code comments explicitly document known issues, compromises, and limitations
 
-3. **Do NOT make assumptions about current behavior:**
-   - Never claim something "works smoothly" without reading existing docs
-   - Never claim something is a "solved problem" without checking what's already been solved
-   - Never propose "fixing" something without understanding why the current implementation exists
-   - Always assume previous work was well-reasoned and documented
+2. **Do NOT rely on separate documentation files:**
+   - `*_SUMMARY.md`, `*_STATUS.md`, `README.md` files often become stale and misleading
+   - Separate docs get out of sync with actual code changes
+   - These files can contain conflicting or contradictory information
+   - **They are not a substitute for reading the actual code**
 
-4. **When you find documentation:**
-   - Read it completely before speaking
-   - Reference it when discussing current state
-   - Build on top of it, don't ignore it
-   - If proposing changes, explain how you're changing from the documented current state
+3. **How to find real documentation:**
+   - Search for inline comments with keywords: ISSUE, TODO, FIXME, NOTE, COMPROMISE, UX ISSUE
+   - Read test files for the component/feature (they document intended behavior)
+   - Read the actual implementation to see how it really works
+   - Look for detailed comments at the top of functions/components
 
-**This is not about being slow. It's about respecting the work that's already been done.** Ignoring documentation wastes time and shows you didn't care enough to understand the project first.
+4. **When documenting new work:**
+   - Write clear inline comments in the code itself
+   - Use specific language: "Known issue:", "UX compromise:", "This requires...", "Do not..."
+   - Document not just WHAT the code does, but WHY
+   - Document known limitations and trade-offs upfront
+   - Keep comments concise and useful (not verbose documentation)
+   - **For bugs: Document the observable behavior, not the hypothesized root cause.** Say "User must manually scroll to see text" not "This only scrolls when terminalLines changes."
 
-## Reference
+5. **Red flag for bad documentation:**
+   - Long separate `.md` files that might be stale
+   - Documentation that contradicts what the code actually does
+   - Claims of "working smoothly" with no code comments explaining how
+   - Multiple conflicting versions of the same information
 
-- Full architectural decision history: `.claude/plans/snug-tumbling-candle.md`
+**This is not about moving fast. It's about accuracy.** Code comments are kept in sync with code changes. Separate documentation files often lie.
