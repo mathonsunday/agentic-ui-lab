@@ -464,6 +464,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                   type: 'text',
                   content: chunk,
                   timestamp: Date.now(),
+                  source: currentStreamSourceRef.current || undefined,
                 };
                 return [...prev, newLine];
               } else {
