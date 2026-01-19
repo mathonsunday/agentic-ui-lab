@@ -30,7 +30,6 @@ export interface ProfileUpdate {
 export interface StreamCallbacks {
   onConfidence?: (update: ConfidenceUpdate) => void;
   onProfile?: (update: ProfileUpdate) => void;
-  onRapportUpdate?: (confidence: number, formattedBar: string) => void;
   onMessageStart?: (messageId: string, source?: string) => void;
   onResponseChunk?: (chunk: string) => void;
   onComplete?: (data: {
@@ -201,7 +200,6 @@ export function streamMiraBackend(
       console.log('✓ [miraBackendStream] Processing onComplete');
       callbacks.onComplete?.(data);
     },
-    onRapportUpdate: callbacks.onRapportUpdate,
     onMessageStart: callbacks.onMessageStart,
     onAnalysis: callbacks.onAnalysis,
     onError: callbacks.onError,
@@ -322,6 +320,15 @@ export function streamMiraBackend(
 
   return {
     promise,
+    /**
+     * Stream Abort Handler
+     *
+     * Called by TerminalInterface.handleInterrupt() to stop streaming.
+     * Sets wasInterrupted flag FIRST, then cancels reader to prevent buffered chunks.
+     *
+     * Coordination: Frontend will handle UI updates (truncation, consequence text).
+     * This function only stops the network stream.
+     */
     abort: () => {
       console.log('🛑 [miraBackendStream] Interrupt requested for', streamId);
       wasInterrupted = true;
@@ -393,15 +400,6 @@ function handleEnvelopeEvent(
           });
         }
       }
-      break;
-    }
-
-    case 'RAPPORT_UPDATE': {
-      const rapportData = envelope.data as {
-        confidence: number;
-        formatted_bar: string;
-      };
-      callbacks.onRapportUpdate?.(rapportData.confidence, rapportData.formatted_bar);
       break;
     }
 

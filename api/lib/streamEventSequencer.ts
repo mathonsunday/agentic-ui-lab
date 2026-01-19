@@ -7,13 +7,87 @@
  *
  * Extracted from analyze-user-stream.ts (~200 LoC reduction)
  *
+ * ===== AG-UI EVENT ARCHITECTURE =====
+ *
+ * This module produces Server-Sent Events in the AG-UI format, an envelope-based
+ * protocol designed for streaming interactions with correlation IDs and ordering.
+ *
+ * EVENT FORMAT:
+ * Each event is a JSON object wrapped in SSE data: prefix
+ * ```
+ * data: {"event_id":"evt_...", "type":"TEXT_CONTENT", "sequence_number":0, ...}
+ * ```
+ *
+ * EVENT TYPES AND FLOW:
+ *
+ * 1. TEXT_MESSAGE_START - Signals start of message streaming
+ *    - sent: When streaming begins
+ *    - contains: message_id (unique identifier), source (event origin)
+ *    - sources: "specimen_47" (hardcoded content), "claude_streaming" (Claude output), "tool_call" (tool interaction)
+ *    - frontend uses: Identifies message stream for UI updates and interrupt eligibility
+ *
+ * 2. TEXT_CONTENT - Character-by-character content chunks
+ *    - sent: For each text_delta received from Claude or for each chunk of hardcoded content
+ *    - contains: chunk (text), chunk_index (sequence number)
+ *    - frontend uses: Drives typewriter animation
+ *
+ * 3. TEXT_MESSAGE_END - Signals end of message streaming
+ *    - sent: When all content chunks have been sent
+ *    - contains: total_chunks (for verification)
+ *    - frontend uses: Completes animation, marks message as done
+ *
+ * 4. STATE_DELTA - Incremental state updates using JSON Patch format
+ *    - sent: When non-confidence state properties change (e.g., userProfile)
+ *    - contains: version, timestamp, operations (array of {op, path, value})
+ *    - note: CONFIDENCE IS NOT SENT HERE - only in RESPONSE_COMPLETE
+ *    - frontend uses: Updates specific state properties without reloading full state
+ *
+ * 5. RESPONSE_COMPLETE - Final authoritative state (SINGLE SOURCE OF TRUTH)
+ *    - sent: At the end of streaming after all analysis is complete
+ *    - contains: updatedState (full MiraState), response (AgentResponse), analysis (optional)
+ *    - note: CONFIDENCE MUST BE PRESENT IN updatedState
+ *    - frontend uses: Full state replacement, confidence updates ONLY from this event
+ *    - critical: Interrupt-safety guard checks interrupt status before applying
+ *
+ * 6. ANALYSIS_COMPLETE - Claude's personality analysis results
+ *    - sent: After Claude finishes analysis but before RESPONSE_COMPLETE
+ *    - contains: reasoning (explanation), metrics (personality scores), confidenceDelta, suggested_creature_mood
+ *    - frontend uses: Displays reasoning to user, selects ASCII creature based on mood
+ *    - note: confidenceDelta is for display only, actual confidence comes from RESPONSE_COMPLETE
+ *
+ * 7. ERROR - Error notifications
+ *    - sent: On any error during streaming
+ *    - contains: code (error type), message (user-friendly), recoverable (boolean)
+ *    - frontend uses: Shows error message, allows recovery if recoverable=true
+ *
+ * DESIGN PRINCIPLES:
+ *
+ * Single Source of Truth:
+ * - Confidence is sent ONLY in RESPONSE_COMPLETE updatedState
+ * - Frontend never updates confidence from STATE_DELTA or other events
+ * - This prevents race conditions between incremental and full updates
+ *
+ * Frontend Logic Separation:
+ * - Backend sends DATA, never formatted strings
+ * - Frontend calculates display formatting (e.g., rapport bar animation)
+ * - No presentation logic in backend (was removed from RAPPORT_UPDATE event)
+ *
+ * Event Ordering:
+ * - Sequence numbers allow frontend to handle out-of-order delivery
+ * - Parent event IDs create causality chains for correlation
+ * - Frontend buffers and reorders using sequence numbers
+ *
+ * Interrupt Safety:
+ * - When user interrupts, frontend blocks updates from interrupted stream
+ * - Confidence penalty applied locally before stream completion
+ * - Backend updates from interrupted streams are ignored
+ *
  * Usage:
  * ```typescript
  * const sequencer = new StreamEventSequencer(response, eventTracker);
- * await sequencer.sendStateUpdate(confidence, profile);
- * await sequencer.sendRapportBar(confidence);
+ * await sequencer.sendStateUpdate(newConfidence, profile);
  * await sequencer.sendAnalysis(reasoning, metrics, delta);
- * await sequencer.sendCompletion(finalState, response);
+ * await sequencer.sendCompletion(finalState, response, analysis);
  * ```
  */
 
@@ -116,11 +190,6 @@ export class StreamEventSequencer {
       operations: [
         {
           op: 'replace',
-          path: '/confidenceInUser',
-          value: newConfidence,
-        },
-        {
-          op: 'replace',
           path: '/userProfile',
           value: {
             thoughtfulness: metrics.thoughtfulness,
@@ -135,24 +204,6 @@ export class StreamEventSequencer {
   }
 
   /**
-   * Send RAPPORT_UPDATE event with confidence change
-   * Semantically separates state metadata from display text
-   * This prevents the confusion that occurred when rapport bar was sent as TEXT_CONTENT
-   */
-  async sendRapportUpdate(
-    confidence: number,
-    formattedBar: string
-  ): Promise<void> {
-    const eventId = this.generateEventId();
-    const sequence = this.eventTracker.getNextSequence();
-
-    this.sendAGUIEvent(eventId, 'RAPPORT_UPDATE', {
-      confidence,
-      formatted_bar: formattedBar,
-    }, sequence);
-  }
-
-/**
    * Send ANALYSIS_COMPLETE event with reasoning and metrics
    */
   async sendAnalysis(
@@ -229,26 +280,14 @@ export class StreamEventSequencer {
 
   /**
    * Send RESPONSE_COMPLETE for tool call (silent rapport update only)
+   *
+   * Tool calls update confidence silently with no user-facing dialogue.
+   * Confidence is sent only in RESPONSE_COMPLETE (single source of truth).
    */
   async sendToolCallCompletion(
     updatedState: MiraState
   ): Promise<void> {
-    // Send state delta with confidence update
-    const stateEventId = this.generateEventId();
-    const stateSequence = this.eventTracker.getNextSequence();
-    this.sendAGUIEvent(stateEventId, 'STATE_DELTA', {
-      version: 1,
-      timestamp: Date.now(),
-      operations: [
-        {
-          op: 'replace',
-          path: '/confidenceInUser',
-          value: updatedState.confidenceInUser,
-        },
-      ],
-    }, stateSequence);
-
-    // Send completion event to signal end of stream
+    // Send completion event with full updated state
     const completeEventId = this.generateEventId();
     const completeSequence = this.eventTracker.getNextSequence();
     this.sendAGUIEvent(completeEventId, 'RESPONSE_COMPLETE', {

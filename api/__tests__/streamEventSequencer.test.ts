@@ -79,7 +79,7 @@ describe('StreamEventSequencer', () => {
       expect(json.type).toBe('STATE_DELTA');
     });
 
-    it('includes confidence in state delta', async () => {
+    it('does not include confidence in state delta (sent via RESPONSE_COMPLETE)', async () => {
       await sequencer.sendStateUpdate(75, {
         thoughtfulness: 60,
         adventurousness: 70,
@@ -90,7 +90,7 @@ describe('StreamEventSequencer', () => {
 
       const json = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
       const confidenceOp = json.data.operations.find((op: any) => op.path === '/confidenceInUser');
-      expect(confidenceOp.value).toBe(75);
+      expect(confidenceOp).toBeUndefined();
     });
 
     it('includes user profile in state delta', async () => {
@@ -264,25 +264,26 @@ describe('sendAnalysis', () => {
   });
 
   describe('sendToolCallCompletion', () => {
-    it('sends state delta and completion for tool calls', async () => {
+    it('sends only RESPONSE_COMPLETE for tool calls (single source of truth)', async () => {
       const mockState: Partial<MiraState> = {
         confidenceInUser: 75,
       };
 
       await sequencer.sendToolCallCompletion(mockState as MiraState);
 
-      expect(mockResponse.writes.length).toBe(2); // STATE_DELTA + RESPONSE_COMPLETE
+      expect(mockResponse.writes.length).toBe(1); // Only RESPONSE_COMPLETE
     });
 
-    it('sends STATE_DELTA first', async () => {
+    it('sends only RESPONSE_COMPLETE (confidence in full state, not STATE_DELTA)', async () => {
       const mockState: Partial<MiraState> = {
         confidenceInUser: 75,
       };
 
       await sequencer.sendToolCallCompletion(mockState as MiraState);
 
+      expect(mockResponse.writes.length).toBe(1);
       const json = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
-      expect(json.type).toBe('STATE_DELTA');
+      expect(json.type).toBe('RESPONSE_COMPLETE');
     });
 
     it('sends RESPONSE_COMPLETE with tool_call source', async () => {
@@ -292,12 +293,12 @@ describe('sendAnalysis', () => {
 
       await sequencer.sendToolCallCompletion(mockState as MiraState);
 
-      const json = JSON.parse(mockResponse.writes[1].replace('data: ', ''));
+      const json = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
       expect(json.type).toBe('RESPONSE_COMPLETE');
       expect(json.data.response.source).toBe('tool_call');
     });
 
-    it('includes confidence in state delta', async () => {
+    it('includes confidence in RESPONSE_COMPLETE updatedState', async () => {
       const mockState: Partial<MiraState> = {
         confidenceInUser: 82,
       };
@@ -305,8 +306,7 @@ describe('sendAnalysis', () => {
       await sequencer.sendToolCallCompletion(mockState as MiraState);
 
       const json = JSON.parse(mockResponse.writes[0].replace('data: ', ''));
-      const confidenceOp = json.data.operations.find((op: any) => op.path === '/confidenceInUser');
-      expect(confidenceOp.value).toBe(82);
+      expect(json.data.updatedState.confidenceInUser).toBe(82);
     });
   });
 

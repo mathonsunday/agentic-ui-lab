@@ -201,11 +201,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       reasoning: analysis.reasoning,
     });
 
-    // Send rapport update with new confidence
-    const confidenceBar = generateConfidenceBar(newConfidence);
-    await sequencer.sendRapportUpdate(newConfidence, confidenceBar);
-
-    // Send analysis event
+    // Send analysis event (frontend will calculate confidence bar formatting)
     await sequencer.sendAnalysis(analysis.reasoning, {
       thoughtfulness: analysis.thoughtfulness,
       adventurousness: analysis.adventurousness,
@@ -306,16 +302,8 @@ async function streamContentFeature(
       startSequence
     );
 
-    // Send rapport update as separate event type (semantic clarity)
+    // Update confidence for hardcoded content feature (frontend will format display)
     const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
-    const confidenceBar = generateConfidenceBar(newConfidence);
-
-    const rapportEventId = generateEventId();
-    const rapportSeq = eventTracker.getNextSequence();
-    sendAGUIEvent(response, rapportEventId, 'RAPPORT_UPDATE', {
-      confidence: newConfidence,
-      formatted_bar: confidenceBar,
-    }, rapportSeq);
 
     // For hardcoded content features, send the entire content as a single chunk
     // The frontend's TypewriterLine component handles character-by-character animation
@@ -532,15 +520,4 @@ async function streamClaudeResponse(
   }
 }
 
-/**
- * Generate ASCII rapport bar
- * Example: [████████░░░░░░░░░░] 42%
- */
-function generateConfidenceBar(confidence: number): string {
-  const percent = Math.round(confidence);
-  const filled = Math.round(percent / 5); // 20 characters total, so 5% per character
-  const empty = 20 - filled;
-  const bar = '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
-  return `[RAPPORT] ${bar} ${percent}%\n`;
-}
 

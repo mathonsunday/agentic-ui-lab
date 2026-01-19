@@ -111,18 +111,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
-  const [currentStreamSource, setCurrentStreamSource] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
   const currentRevealedLengthRef = useRef(0); // Track current animation position for interrupt
   const currentAnimatingContentLengthRef = useRef(0); // Track total content length for animation completion
   const currentStreamSourceRef = useRef<string | null>(null); // Track source for current line
-  const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render when animation completes
   const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
   const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
-  const lastConfidenceUpdateStreamIdRef = useRef<number | null>(null); // Track stream ID for confidence updates
 
   // Auto-scroll to bottom when new lines are added
   // KNOWN BUG #1: Viewport does not auto-scroll during specimen 47 character animation.
@@ -148,9 +145,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     setTerminalLines((prev) => [...prev, asciiLine]);
   }, []);
 
-  // Track when currentStreamSource changes
-  useEffect(() => {
-  }, [currentStreamSource]);
 
   // Update revealed length for claude_streaming (plain text, no TypewriterLine callback)
   // For TypewriterLine (specimen_47), this is tracked in onRevealedLengthChange
@@ -167,8 +161,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   // Reset stream source when stream ends
   useEffect(() => {
-    if (!streamState.isStreaming && currentStreamSource !== null) {
-      setCurrentStreamSource(null);
+    if (!streamState.isStreaming && currentStreamSourceRef.current !== null) {
       currentStreamSourceRef.current = null;
     }
   }, [streamState.isStreaming]);
@@ -309,7 +302,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       // Reset interrupt flag for new stream
       isStreamInterruptedRef.current = false;
       interruptedStreamIdRef.current = null;
-      lastConfidenceUpdateStreamIdRef.current = streamNum;
 
 
       // Add user input to terminal
@@ -326,28 +318,16 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
         // Stream from backend with real-time updates
         const callbacksObject = {
-          onConfidence: (update: any) => {
+          onConfidence: (_update: any) => {
             // Only apply confidence updates if this stream wasn't interrupted
             if (interruptedStreamIdRef.current === streamNum) {
               return;
             }
 
-            // Update state with new confidence
-            setMiraState((prev) => ({
-              ...prev,
-              confidenceInUser: update.to,
-            }));
-            onConfidenceChange?.(update.to);
+            // Confidence updates are handled in onComplete (single source of truth)
           },
-          onProfile: (profile: any) => {
-            // Update user profile as Claude analyzes
-            setMiraState((prev) => ({
-              ...prev,
-              userProfile: {
-                ...prev.userProfile,
-                ...profile,
-              },
-            }));
+          onProfile: (_profile: any) => {
+            // Profile updates are handled in onComplete (single source of truth)
           },
           onRapportUpdate: (_confidence: number, formattedBar: string) => {
             // Rapport bar updates are terminal text lines that display in place
@@ -359,8 +339,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
           onMessageStart: (_messageId: string, source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
-            // Also track in ref for line creation
-            setCurrentStreamSource(source || null);
             currentStreamSourceRef.current = source || null;
           },
           onResponseChunk: (chunk: any) => {
@@ -379,7 +357,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 currentAnimatingLineIdRef.current = newLineId;
                 currentAnimatingContentLengthRef.current = chunk.length; // Track total content length
                 responseLineIdsRef.current.push(newLineId);
-                setRenderTrigger(t => t + 1); // Force re-render
 
                 // Create and add the new line in the same state update
                 const newLine: TerminalLine = {
@@ -422,11 +399,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onComplete: (data: any) => {
 
             // Don't reset currentStreamSource here - let the useEffect watching streamState.isStreaming handle cleanup
-            // This prevents premature clearing while renderTrigger changes cause re-renders
 
-            // Final state update
-            setMiraState(data.updatedState);
-            onConfidenceChange?.(data.updatedState.confidenceInUser);
+            // Only apply state update if this stream wasn't interrupted
+            if (interruptedStreamIdRef.current !== streamNum) {
+              // Final state update (single source of truth for confidence)
+              setMiraState(data.updatedState);
+              onConfidenceChange?.(data.updatedState.confidenceInUser);
+            }
 
             // Only show ASCII art response for text messages, not tool calls or specimen 47
             // Tool calls already updated the ASCII art inline via zoom handlers
@@ -473,14 +452,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onError: (error: any) => {
 
             // Reset stream source on error
-            setCurrentStreamSource(null);
+            currentStreamSourceRef.current = null;
 
             // Check if this is an interrupt (user explicitly stopped)
             const isInterrupt = error.includes('interrupted') || isStreamInterruptedRef.current;
 
-            if (isInterrupt) {
-              // handleInterrupt already handled the consequence text and confidence update
-            } else {
+            if (!isInterrupt) {
               addTerminalLine(
                 'text',
                 '...connection to the depths lost... the abyss is unreachable at this moment...'
@@ -502,7 +479,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           callbacksObject
         );
         // Reset stream source before starting new stream
-        setCurrentStreamSource(null);
         currentStreamSourceRef.current = null;
         dispatchStream({ type: 'START_STREAM', abort });
         await promise;
@@ -524,6 +500,21 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     [miraState, streamState.isStreaming, streamState.streamId, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar]
   );
 
+  /**
+   * INTERRUPT COORDINATION CONTRACT
+   *
+   * This function coordinates between 3 layers:
+   * 1. UI Layer (TerminalInterface) - Truncates visible content, adds consequence text
+   * 2. Service Layer (miraBackendStream) - Aborts HTTP stream, blocks buffered chunks
+   * 3. State Layer (React state) - Applies -15 confidence penalty
+   *
+   * Coordination mechanism:
+   * - interruptedStreamIdRef blocks backend state updates from interrupted stream
+   * - isStreamInterruptedRef blocks chunk processing during interrupt
+   * - streamState.abortController cancels the underlying HTTP request
+   *
+   * Critical: Order matters! Set refs BEFORE calling abortController to prevent race.
+   */
   const handleInterrupt = useCallback(() => {
 
     if (streamState.abortController) {
@@ -583,8 +574,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         // Dispatch INTERRUPT_STREAM to ensure state is updated
         dispatchStream({ type: 'INTERRUPT_STREAM' });
       } catch (error) {
+        // Silent failure - abort may fail if stream already ended
       }
-    } else {
     }
   }, [streamState.abortController, streamState.streamId, miraState, updateRapportBar, onConfidenceChange]);
 
@@ -627,9 +618,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             // We check if line is in responseLineIdsRef - if yes, it's part of current response and should animate
             const shouldAnimate = !isResponseLine || responseLineIdsRef.current.includes(line.id);
 
-            if (isResponseLine) {
-            }
-
             return (
               <div
                 key={line.id}
@@ -662,9 +650,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                           // When animation completes, end the stream and clear source
                           // This allows INTERRUPT button to stay visible until all characters revealed
                           if (length >= currentAnimatingContentLengthRef.current) {
-                            setCurrentStreamSource(null);
+                            currentStreamSourceRef.current = null;
                             // Only dispatch if this is specimen_47 (other sources already dispatched END_STREAM)
-                            if (currentStreamSource === 'specimen_47') {
+                            if (currentStreamSourceRef.current === 'specimen_47') {
                               currentAnimatingLineIdRef.current = null;
                               responseLineIdsRef.current = [];
                               dispatchStream({ type: 'END_STREAM' });
@@ -696,7 +684,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             ];
 
             const shouldShowInterrupt =
-              streamState.isStreaming && (currentStreamSource === 'specimen_47' || currentStreamSource === 'claude_streaming');
+              streamState.isStreaming && (currentStreamSourceRef.current === 'specimen_47' || currentStreamSourceRef.current === 'claude_streaming');
 
 
             if (shouldShowInterrupt) {
@@ -705,7 +693,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 name: 'INTERRUPT',
                 onExecute: handleInterrupt,
               });
-            } else {
             }
 
             return (
@@ -714,7 +701,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, currentStreamSource, handleInterrupt, renderTrigger])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt])}
         </div>
       </div>
 

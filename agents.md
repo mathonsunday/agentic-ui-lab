@@ -71,7 +71,14 @@ When making architectural decisions, ask: "Will this make future features easier
    - Read the actual implementation to see how it really works
    - Look for detailed comments at the top of functions/components
 
-4. **When documenting new work:**
+4. **For architectural analysis and refactoring plans:**
+   - Identify what would be hardest/most annoying to modify first
+   - Map why those parts are hard to change (tight coupling, hidden dependencies, implicit contracts)
+   - Your refactoring recommendations should directly address those identified difficulties
+   - A good refactoring plan is one that makes the currently-fragile parts robust
+   - If your "things we should improve" list doesn't match your "things that are hard to change" list, you haven't understood the actual structure yet
+
+5. **When documenting new work:**
    - Write clear inline comments in the code itself
    - Use specific language: "Known issue:", "UX compromise:", "This requires...", "Do not..."
    - Document not just WHAT the code does, but WHY
@@ -79,7 +86,7 @@ When making architectural decisions, ask: "Will this make future features easier
    - Keep comments concise and useful (not verbose documentation)
    - **For bugs: Document the observable behavior, not the hypothesized root cause.** Say "User must manually scroll to see text" not "This only scrolls when terminalLines changes."
 
-5. **Red flag for bad documentation:**
+6. **Red flag for bad documentation:**
    - Long separate `.md` files that might be stale
    - Documentation that contradicts what the code actually does
    - Claims of "working smoothly" with no code comments explaining how
