@@ -59,6 +59,7 @@ export function TypewriterLine({
       return;
     }
 
+    const startTime = Date.now();
     const timer = setInterval(() => {
       setRevealedLength((prev) => {
         // Read current content via ref, not closure
@@ -66,7 +67,12 @@ export function TypewriterLine({
         if (prev >= currentContent.length) {
           return prev;
         }
-        return prev + 1;
+        const next = prev + 1;
+        // Log every 50 chars for debugging
+        if (next % 50 === 0) {
+          console.log(`[TypewriterLine] Animation progress: ${next}/${currentContent.length} chars, elapsed: ${Date.now() - startTime}ms`);
+        }
+        return next;
       });
     }, charDelayMs);
 
