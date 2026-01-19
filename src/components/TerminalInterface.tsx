@@ -12,7 +12,7 @@ import {
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getCreatureByMood, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
-import { formatAnalysisBox } from '../shared/analysisFormatter';
+import { formatAnalysisBox, generateConfidenceBar } from '../shared/analysisFormatter';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';
@@ -198,11 +198,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   // Update the most recent rapport bar with new confidence value
   const updateRapportBar = useCallback((newConfidence: number) => {
-    const percent = Math.round(newConfidence);
-    const filled = Math.round(percent / 5); // 20 characters total
-    const empty = 20 - filled;
-    const bar = '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
-    const newRapportText = `[RAPPORT] ${bar} ${percent}%`;
+    const newRapportText = generateConfidenceBar(newConfidence).trim();
 
     setTerminalLines((prev) => {
       // Find the last line that contains a rapport bar
