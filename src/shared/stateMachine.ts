@@ -110,7 +110,6 @@ export function loadScenario(state: AgentState, scenarioId: string): AgentState 
     stepIndex: 0,
     totalSteps,
     thoughts: scenario.thoughts,
-    response: scenario.response,
     visibleElements: [],
   };
 }
