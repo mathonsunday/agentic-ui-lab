@@ -509,9 +509,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
 
             // Reset response tracking on successful completion
-            currentAnimatingLineIdRef.current = null;
-            responseLineIdsRef.current = [];
-            dispatchStream({ type: 'END_STREAM' });
+            // For specimen_47, delay END_STREAM until animation finishes (via onRevealedLengthChange)
+            // For other sources, end stream immediately
+            if (data.response?.source !== 'specimen_47') {
+              currentAnimatingLineIdRef.current = null;
+              responseLineIdsRef.current = [];
+              dispatchStream({ type: 'END_STREAM' });
+            }
           },
           onAnalysis: (analysis: any) => {
             // Display Claude's reasoning as full analysis box
@@ -760,10 +764,16 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                         if (scrollRef.current) {
                           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
                         }
-                        // Clear stream source when animation completes
-                        // This allows INTERRUPT button to stay visible until animation finishes
+                        // When animation completes, end the stream and clear source
+                        // This allows INTERRUPT button to stay visible until all characters revealed
                         if (length >= currentAnimatingContentLengthRef.current) {
                           setCurrentStreamSource(null);
+                          // Only dispatch if this is specimen_47 (other sources already dispatched END_STREAM)
+                          if (currentStreamSource === 'specimen_47') {
+                            currentAnimatingLineIdRef.current = null;
+                            responseLineIdsRef.current = [];
+                            dispatchStream({ type: 'END_STREAM' });
+                          }
                         }
                       }
                     }}
