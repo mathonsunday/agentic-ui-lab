@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run TypeScript build to catch any compilation errors (including unused variables)
+npm run build
+
+# Run tests to ensure nothing is broken
+npm test

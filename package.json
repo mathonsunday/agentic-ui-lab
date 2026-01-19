@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -37,7 +38,9 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "happy-dom": "^20.3.1",
+    "husky": "^9.1.7",
     "knip": "^5.82.1",
+    "lint-staged": "^16.2.7",
     "ts-prune": "^0.10.3",
     "ts-unused-exports": "^11.0.1",
     "typescript": "~5.9.3",
