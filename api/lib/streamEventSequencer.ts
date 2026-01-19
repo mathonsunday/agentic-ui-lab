@@ -188,7 +188,8 @@ export class StreamEventSequencer {
   async sendAnalysis(
     reasoning: string,
     metrics: AnalysisMetrics,
-    confidenceDelta: number
+    confidenceDelta: number,
+    suggestedCreatureMood?: string
   ): Promise<void> {
     const analysisEventId = this.generateEventId();
     const analysisSequence = this.eventTracker.getNextSequence();
@@ -198,6 +199,7 @@ export class StreamEventSequencer {
       analysisSequence,
       reasoning: reasoning.substring(0, 50),
       confidenceDelta,
+      suggestedCreatureMood,
     });
 
     this.sendAGUIEvent(analysisEventId, 'ANALYSIS_COMPLETE', {
@@ -210,15 +212,22 @@ export class StreamEventSequencer {
         superficiality: metrics.superficiality,
       },
       confidenceDelta,
+      suggested_creature_mood: suggestedCreatureMood,
     }, analysisSequence);
   }
 
   /**
-   * Send RESPONSE_COMPLETE event with final state
+   * Send RESPONSE_COMPLETE event with final state and optional analysis data
    */
   async sendCompletion(
     finalState: MiraState,
-    response: AgentResponse
+    response: AgentResponse,
+    analysis?: {
+      reasoning: string;
+      confidenceDelta: number;
+      metrics: AnalysisMetrics;
+      suggested_creature_mood?: string;
+    }
   ): Promise<void> {
     const completeEventId = this.generateEventId();
     const completeSequence = this.eventTracker.getNextSequence();
@@ -226,6 +235,7 @@ export class StreamEventSequencer {
     this.sendAGUIEvent(completeEventId, 'RESPONSE_COMPLETE', {
       updatedState: finalState,
       response,
+      analysis,
     }, completeSequence);
   }
 

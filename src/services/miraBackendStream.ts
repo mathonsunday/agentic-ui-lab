@@ -33,9 +33,23 @@ export interface StreamCallbacks {
   onRapportUpdate?: (confidence: number, formattedBar: string) => void;
   onMessageStart?: (messageId: string, source?: string) => void;
   onResponseChunk?: (chunk: string) => void;
-  onComplete?: (data: { updatedState: MiraState; response: AgentResponse }) => void;
+  onComplete?: (data: {
+    updatedState: MiraState;
+    response: AgentResponse;
+    analysis?: {
+      reasoning: string;
+      confidenceDelta: number;
+      metrics: Record<string, number>;
+      suggested_creature_mood?: string;
+    };
+  }) => void;
   onError?: (error: string) => void;
-  onAnalysis?: (data: { reasoning: string; metrics: Record<string, number>; confidenceDelta: number }) => void;
+  onAnalysis?: (data: {
+    reasoning: string;
+    metrics: Record<string, number>;
+    confidenceDelta: number;
+    suggested_creature_mood?: string;
+  }) => void;
 }
 
 /**
@@ -348,7 +362,16 @@ function handleEnvelopeEvent(
       break;
 
     case 'RESPONSE_COMPLETE': {
-      const completeData = envelope.data as { updatedState: MiraState; response: AgentResponse };
+      const completeData = envelope.data as {
+        updatedState: MiraState;
+        response: AgentResponse;
+        analysis?: {
+          reasoning: string;
+          confidenceDelta: number;
+          metrics: Record<string, number>;
+          suggested_creature_mood?: string;
+        };
+      };
       callbacks.onComplete?.(completeData);
       break;
     }
@@ -403,10 +426,12 @@ function handleEnvelopeEvent(
         reasoning: string;
         metrics: Record<string, number>;
         confidenceDelta: number;
+        suggested_creature_mood?: string;
       };
       console.log('📊 [miraBackendStream] ANALYSIS_COMPLETE event received:', {
         reasoning: analysisData.reasoning.substring(0, 50),
         confidenceDelta: analysisData.confidenceDelta,
+        suggestedMood: analysisData.suggested_creature_mood,
         hasCallback: !!callbacks.onAnalysis,
       });
       if (callbacks.onAnalysis) {

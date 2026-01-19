@@ -11,7 +11,7 @@ import {
   type MiraState,
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
-import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getRandomCreature, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
+import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getCreatureByMood, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
 import { formatAnalysisBox } from '../shared/analysisFormatter';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
@@ -459,6 +459,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             streamDebugLog(`onComplete callback - STREAM #${streamNum}`, {
               newConfidence: data.updatedState.confidenceInUser,
               source: data.response?.source,
+              suggested_mood: data.analysis?.suggested_creature_mood,
             });
 
             // Reset stream source when complete
@@ -475,14 +476,21 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               // Add transition phrase
               addTerminalLine('text', '...what do you think about this...');
 
-              // Show ASCII art with tracked creature
-              const { name: randomCreature, art: randomArt } = getRandomCreature();
-              setCurrentCreature(randomCreature);
+              // Use mood-based creature selection
+              const suggestedMood = data.analysis?.suggested_creature_mood;
+              const { name: selectedCreature, art: selectedArt } = getCreatureByMood(suggestedMood);
+
+              console.log('🎭 [TerminalInterface] Creature selected:', {
+                mood: suggestedMood || 'none (random fallback)',
+                creature: selectedCreature,
+              });
+
+              setCurrentCreature(selectedCreature);
               setCurrentZoom('medium');
               const asciiLine: TerminalLine = {
                 id: String(lineCountRef.current++),
                 type: 'ascii',
-                content: randomArt,
+                content: selectedArt,
               };
               setTerminalLines((prev) => [...prev, asciiLine]);
 

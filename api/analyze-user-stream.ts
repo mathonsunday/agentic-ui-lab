@@ -205,7 +205,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       engagement: analysis.engagement,
       curiosity: analysis.curiosity,
       superficiality: analysis.superficiality,
-    }, analysis.confidenceDelta);
+    }, analysis.confidenceDelta, analysis.suggested_creature_mood);
 
     // Create a simple agent response for memory tracking
     const finalState = updateMemory(updatedState, userInput, {
@@ -221,6 +221,17 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       observations: [],
       contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
       confidenceDelta: analysis.confidenceDelta,
+    }, {
+      reasoning: analysis.reasoning,
+      confidenceDelta: analysis.confidenceDelta,
+      metrics: {
+        thoughtfulness: analysis.thoughtfulness,
+        adventurousness: analysis.adventurousness,
+        engagement: analysis.engagement,
+        curiosity: analysis.curiosity,
+        superficiality: analysis.superficiality,
+      },
+      suggested_creature_mood: analysis.suggested_creature_mood,
     });
 
     response.end();

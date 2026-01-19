@@ -136,3 +136,71 @@ export function getRandomCreature(): { name: CreatureName; art: string } {
   const art = getCreatureAtZoom(randomCreature, 'medium');
   return { name: randomCreature, art };
 }
+
+/**
+ * Map of moods to creatures (based on ACTUAL toolkit metadata)
+ * Each mood maps to creatures that have that mood in their tags.mood array
+ */
+const MOOD_TO_CREATURES: Record<string, CreatureName[]> = {
+  // Creatures
+  predatory: ['anglerFish', 'shark'],
+  eerie: ['anglerFish'],
+  majestic: ['giantSquid'],
+  powerful: ['giantSquid'],
+  delicate: ['jellyfish'],
+  ethereal: ['jellyfish'],
+  curious: ['octopus', 'hermitCrab'],
+  intelligent: ['octopus'],
+  peaceful: ['seaTurtle', 'schoolOfFish'],
+  ancient: ['seaTurtle'],
+  aggressive: ['shark'],
+  armored: ['hermitCrab'],
+  magical: ['bioluminescentFish'],
+  alive: ['bioluminescentFish', 'coral'],
+  menacing: ['viperFish'],
+  alien: ['viperFish'],
+
+  // Structures
+  valuable: ['treasureChest'],
+  mysterious: ['treasureChest'],
+  vintage: ['deepSeaDiver'],
+  brave: ['deepSeaDiver'],
+  technological: ['submarine'],
+  exploratory: ['submarine'],
+
+  // Environment
+  diverse: ['coral'],
+  social: ['schoolOfFish'],
+  bioluminescent: ['deepSeaScene'],
+};
+
+/**
+ * Get a creature matching suggested mood
+ * Falls back to random if mood not recognized
+ *
+ * @param mood - Mood string from Claude's analysis (should match toolkit metadata)
+ * @returns Creature name and ASCII art at medium zoom
+ */
+export function getCreatureByMood(mood?: string): { name: CreatureName; art: string } {
+  // Fallback to random if no mood provided
+  if (!mood) {
+    console.warn('[getCreatureByMood] No mood provided, using random creature');
+    return getRandomCreature();
+  }
+
+  const normalizedMood = mood.toLowerCase().trim();
+  const matchingCreatures = MOOD_TO_CREATURES[normalizedMood];
+
+  if (!matchingCreatures || matchingCreatures.length === 0) {
+    console.warn(`[getCreatureByMood] No creatures found for mood "${mood}", using random`);
+    return getRandomCreature();
+  }
+
+  // Randomly select from matching creatures (allows variety within mood category)
+  const randomIndex = Math.floor(Math.random() * matchingCreatures.length);
+  const selectedCreature = matchingCreatures[randomIndex];
+  const art = getCreatureAtZoom(selectedCreature, 'medium');
+
+  console.log(`[getCreatureByMood] Selected "${selectedCreature}" for mood "${mood}"`);
+  return { name: selectedCreature, art };
+}

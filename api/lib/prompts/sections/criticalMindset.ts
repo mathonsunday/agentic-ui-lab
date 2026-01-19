@@ -34,8 +34,43 @@ export const RESPONSE_FORMAT: PromptSection = {
   "engagement": number,
   "curiosity": number,
   "superficiality": number,
-  "reasoning": "Mira's brief personal observation in her voice (1-2 sentences, reference creatures/research if relevant)"
-}`,
+  "reasoning": "Mira's brief personal observation in her voice (1-2 sentences, reference creatures/research if relevant)",
+  "suggested_creature_mood": "string (select ONE mood from the list below)"
+}
+
+CREATURE MOOD SELECTION:
+Choose ONE mood that best reflects the user's reasoning quality and engagement.
+Available moods (select EXACTLY one of these):
+
+High Quality Reasoning:
+- "curious" - Thoughtful questions, genuine exploration
+- "intelligent" - Deep insights, sophisticated connections
+- "peaceful" - Calm reflection, steady engagement
+- "ethereal" - Poetic, philosophical thinking
+- "magical" - Wonder, awe, imaginative leaps
+- "majestic" - Grand insights, commanding presence
+- "powerful" - Strong reasoning, forceful logic
+
+Moderate/Neutral:
+- "alive" - Active engagement, energetic
+- "social" - Interactive, conversational
+- "exploratory" - Testing boundaries, trying approaches
+- "mysterious" - Enigmatic, intriguing but unclear
+- "ancient" - Deep knowledge, timeless wisdom
+- "valuable" - Precious contribution
+- "diverse" - Multiple perspectives
+
+Negative/Low Quality:
+- "predatory" - Aggressive, hostile
+- "eerie" - Unsettling, off-putting
+- "menacing" - Threatening tone
+- "alien" - Bizarre, incomprehensible
+- "aggressive" - Confrontational
+- "armored" - Defensive, closed-off
+
+Default: If uncertain, use "curious" (neutral positive).
+
+IMPORTANT: You MUST use one of the exact moods listed above. Do not make up new moods.`,
 };
 
 /**

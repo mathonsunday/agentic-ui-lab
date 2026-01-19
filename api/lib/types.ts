@@ -76,6 +76,7 @@ export interface UserAnalysis {
   updatedProfile: Partial<UserProfile>;
   moodShift?: string;
   reasoning: string;
+  suggested_creature_mood?: string;
 }
 
 export interface ResponseAssessment {

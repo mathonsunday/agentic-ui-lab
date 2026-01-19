@@ -105,6 +105,7 @@ export interface TextMessageEndData {
 /**
  * Response complete event - signals full response completion with final state
  * Triggers UI transitions like ASCII art display and transition phrases
+ * Includes consolidated analysis data for mood-based creature selection
  */
 export interface ResponseCompleteData {
   /** Final updated state after response processing */
@@ -112,6 +113,24 @@ export interface ResponseCompleteData {
 
   /** The complete agent response object */
   response: Record<string, unknown>;
+
+  /** Optional analysis data (consolidated from ANALYSIS_COMPLETE event) */
+  analysis?: {
+    /** Claude's reasoning about the user's message */
+    reasoning: string;
+    /** How much confidence changed */
+    confidenceDelta: number;
+    /** Personality metrics evaluated by Claude */
+    metrics: {
+      thoughtfulness: number;
+      adventurousness: number;
+      engagement: number;
+      curiosity: number;
+      superficiality: number;
+    };
+    /** Suggested mood for creature selection */
+    suggested_creature_mood?: string;
+  };
 }
 
 /**
@@ -231,5 +250,8 @@ export interface AnalysisCompleteData {
 
   /** How much confidence changed (delta) */
   confidenceDelta: number;
+
+  /** Suggested mood for mood-based creature selection (from toolkit metadata) */
+  suggested_creature_mood?: string;
 }
 
