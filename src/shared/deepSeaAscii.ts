@@ -45,7 +45,7 @@ const CREATURE_ID_MAP: Record<CreatureName, string> = {
   shark: 'deep-sea:shark',
   treasureChest: 'deep-sea:treasure-chest',
   submarine: 'deep-sea:submarine',
-  schoolOfFish: 'deep-sea:school-of-fish',
+  schoolOfFish: 'deep-sea:bioluminescent-fish',
   bioluminescentFish: 'deep-sea:bioluminescent-fish',
   viperFish: 'deep-sea:viperfish',
   coral: 'deep-sea:coral-reef',
