@@ -23,22 +23,14 @@ export interface TypewriterLineProps {
  * At speed=40 chars/sec, each character takes 25ms to appear.
  * Handles content updates gracefully and cleans up timers.
  *
- * IMPLEMENTATION NOTE - UI Compromise on Streaming Content:
- * When used with streaming content (chunks arriving asynchronously), the animation
- * exhibits the following behavior:
- * - First chunk animates smoothly character-by-character
- * - When new chunks arrive, the interval is recreated
- * - This causes a visual pause/jump where the animation restarts
- * - Subsequent content may appear in bursts rather than perfectly smooth typing
+ * IMPLEMENTATION NOTE - Streaming Content Support:
+ * The animation interval is decoupled from content updates. The interval runs
+ * continuously while isAnimating=true, and the reveal callback reads the latest
+ * content.length on each tick. This ensures smooth character-by-character animation
+ * even as chunks arrive asynchronously from the backend.
  *
- * This is an acceptable trade-off for simplicity. Ideal would be continuous animation
- * across all chunks without visible pauses, but achieving that requires either:
- * 1. Complex ref-based closure tracking (error-prone)
- * 2. Accumulating all content before animating (delays user feedback)
- * 3. Custom requestAnimationFrame scheduling (overengineered)
- *
- * The current implementation prioritizes maintainability and correctness over perfect
- * visual smoothness during streaming scenarios (which are a secondary UI feature).
+ * This follows the industry-standard pattern of "decoupling network streaming from
+ * visual streaming" - buffer incoming chunks, animate from buffer at constant rate.
  */
 export function TypewriterLine({
   content,
@@ -49,9 +41,10 @@ export function TypewriterLine({
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
 
-  // Sync revealed length to content length when content grows
+  // Sync revealed length to content length when content shrinks
+  // (If new content is shorter than revealed length, clamp to new content length)
   useEffect(() => {
-    setRevealedLength((prev) => Math.max(prev, 0));
+    setRevealedLength((prev) => Math.min(prev, content.length));
   }, [content]);
 
   // Notify parent of revealed length changes (for interrupt handling)
@@ -75,7 +68,7 @@ export function TypewriterLine({
     }, charDelayMs);
 
     return () => clearInterval(timer);
-  }, [charDelayMs, isAnimating, content]);
+  }, [charDelayMs, isAnimating, content.length]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;

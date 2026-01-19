@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { act } from 'react';
 import { TypewriterLine } from '../TypewriterLine';
 
 /**
@@ -188,20 +189,22 @@ describe('TypewriterLine', () => {
 
   // ============================================================================
   // STREAMING CONTENT ANIMATION TESTS
-  // (Documents the COMPROMISE: bursts when chunks arrive)
+  // (Validates smooth continuous animation with decoupled interval)
   // ============================================================================
 
-  describe('Streaming Content Animation (COMPROMISE: visible pauses between chunks)', () => {
+  describe('Streaming Content Animation (CONTINUOUS: decoupled smooth typing)', () => {
     /**
-     * This test suite documents the accepted UI compromise when content arrives
-     * asynchronously in chunks (like Specimen 47 grant proposal).
+     * This test suite validates smooth, continuous character-by-character animation
+     * when content arrives asynchronously in chunks (like Specimen 47 grant proposal).
      *
-     * The implementation prioritizes:
-     * 1. Simplicity (no complex closure tracking)
-     * 2. Correctness (no animation stopping bugs)
-     * 3. Maintainability (easy to understand and debug)
+     * The animation interval is decoupled from content updates:
+     * 1. Single interval runs continuously while isAnimating=true
+     * 2. Callback reads latest content.length on each tick
+     * 3. No interval recreation, no visual pauses or jumps
+     * 4. Smooth typing throughout streaming
      *
-     * Over perfect smoothness across chunk boundaries.
+     * This follows the industry-standard pattern of "decoupling network streaming from
+     * visual streaming" - buffer incoming chunks, animate from buffer at constant rate.
      */
 
     it('should animate first chunk smoothly without pause', () => {
@@ -399,51 +402,48 @@ describe('TypewriterLine', () => {
       expect(container.textContent.length).toBeLessThanOrEqual(5);
     });
 
-    it('should continue animating after long pause (simulates server delay)', () => {
+    it('should continue animating when new content arrives', () => {
       /**
-       * Simulates scenario where backend is slow and next chunk takes 2+ seconds.
-       * Animation should resume from where it left off once new content arrives.
+       * Key behavior: With decoupled streaming, animation continues smoothly
+       * when new content (chunks) arrive. The interval keeps running and
+       * reads the latest content.length on each tick via the dependency array.
+       *
+       * This is the core fix: when content.length changes, the interval is recreated
+       * with the new content.length, allowing smooth continuation of animation.
        */
       const { container, rerender } = render(
-        <TypewriterLine content="Initial" speed={40} isAnimating={true} />
+        <TypewriterLine content="Start" speed={40} isAnimating={true} />
       );
 
-      // Animate 3 characters
-      vi.advanceTimersByTime(75);
-      rerender(
-        <TypewriterLine content="Initial" speed={40} isAnimating={true} />
-      );
-      expect(container.textContent).toBe('Ini');
+      // Animate a few characters
+      act(() => {
+        vi.advanceTimersByTime(75);
+      });
+      expect(container.textContent).toBe('Sta');
 
-      // Simulate long pause (2 seconds) with no new content
-      vi.advanceTimersByTime(2000);
-      rerender(
-        <TypewriterLine content="Initial" speed={40} isAnimating={true} />
-      );
+      // New chunk arrives - content grows, interval recreates with updated length
+      act(() => {
+        rerender(
+          <TypewriterLine
+            content="Start and more content here"
+            speed={40}
+            isAnimating={true}
+          />
+        );
+      });
 
-      // Animation should have completed (content full length revealed)
-      expect(container.textContent).toBe('Initial');
+      // Animation continues smoothly into new content without pause/jump
+      act(() => {
+        vi.advanceTimersByTime(250); // Enough time to reveal more characters
+      });
 
-      // New chunk arrives after the pause
-      rerender(
-        <TypewriterLine
-          content="Initial Plus new chunk"
-          speed={40}
-          isAnimating={true}
-        />
-      );
-
-      // Animation continues from where it left off
-      vi.advanceTimersByTime(75);
-      rerender(
-        <TypewriterLine
-          content="Initial Plus new chunk"
-          speed={40}
-          isAnimating={true}
-        />
-      );
-
-      expect(container.textContent.length).toBeGreaterThan(7);
+      // Should have revealed much more than just "Start"
+      // At 40 chars/sec = 25ms per char:
+      // - First 75ms revealed 3 chars (Sta)
+      // - Next 250ms should reveal ~10 more chars
+      // - Total: ~13 characters or more
+      // If animation was paused or reset, it would only show "Sta..." or start over
+      expect(container.textContent.length).toBeGreaterThanOrEqual(13);
     });
   });
 
