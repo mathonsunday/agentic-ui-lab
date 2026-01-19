@@ -24,55 +24,6 @@ export interface ToolCallData {
 }
 
 /**
- * MCP-UI compatible tool result format - Discriminated union by status
- * Returned when a tool is executed
- */
-export type ToolResult =
-  | {
-      /** Status of tool execution */
-      status: 'success';
-
-      /** The actual result data */
-      result: unknown;
-
-      /** Metadata about the tool execution */
-      metadata?: {
-        execution_time_ms?: number;
-        artifacts?: Record<string, unknown>;
-      };
-
-      /** UI update commands (server-driven updates) */
-      ui_updates?: Array<{
-        type: string;
-        target: string;
-        data: unknown;
-      }>;
-    }
-  | {
-      /** Status of tool execution - failure or partial */
-      status: 'failure' | 'partial';
-
-      /** The actual result data */
-      result: unknown;
-
-      /** Error message - required for failures */
-      error: string;
-
-      /** Metadata about the tool execution */
-      metadata?: {
-        execution_time_ms?: number;
-        artifacts?: Record<string, unknown>;
-      };
-
-      /** UI update commands (server-driven updates) */
-      ui_updates?: Array<{
-        type: string;
-        target: string;
-        data: unknown;
-      }>;
-    };
-
-/**
  * Discriminated union for interaction memory - discriminated by type field
  */
 export type InteractionMemory =
@@ -140,14 +91,3 @@ export interface AgentResponse {
   confidenceDelta: number;
 }
 
-export interface AnalyzeUserRequest {
-  userInput: string;
-  miraState: MiraState;
-  assessment: ResponseAssessment;
-  interactionDuration: number;
-}
-
-export interface AnalyzeUserResponse {
-  updatedState: MiraState;
-  response: AgentResponse;
-}

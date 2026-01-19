@@ -58,23 +58,6 @@ export type EventType =
   | 'ANALYSIS_COMPLETE';
 
 /**
- * Discriminated union of all event payloads
- */
-export type StreamEventPayload =
-  | { type: 'TEXT_MESSAGE_START'; data: TextMessageStartData }
-  | { type: 'TEXT_CONTENT'; data: TextContentData }
-  | { type: 'TEXT_MESSAGE_END'; data: TextMessageEndData }
-  | { type: 'RESPONSE_START'; data: ResponseStartData }
-  | { type: 'RESPONSE_COMPLETE'; data: ResponseCompleteData }
-  | { type: 'STATE_DELTA'; data: StateDeltaData }
-  | { type: 'TOOL_CALL_START'; data: ToolCallStartData }
-  | { type: 'TOOL_CALL_RESULT'; data: ToolCallResultData }
-  | { type: 'TOOL_CALL_END'; data: ToolCallEndData }
-  | { type: 'ERROR'; data: ErrorData }
-  | { type: 'ACK'; data: AckData }
-  | { type: 'ANALYSIS_COMPLETE'; data: AnalysisCompleteData };
-
-/**
  * Text message start event - begins a streaming text response
  */
 export interface TextMessageStartData {

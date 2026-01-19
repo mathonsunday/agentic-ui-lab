@@ -10,14 +10,6 @@
 
 import type { ThoughtFragment, VisualElement } from './Character';
 
-export type Mood = 'wonder' | 'obsession' | 'calm' | 'distress';
-
-export interface VisualResponse {
-  mood: Mood;
-  depth: number;
-  elements: VisualElement[];
-}
-
 export type SystemLogType = 'EVALUATION' | 'OBSERVATION' | 'THOUGHT' | 'CONFIDENCE';
 
 export interface SystemLogEntry {
@@ -40,7 +32,6 @@ export interface AgentState {
   stepIndex: number;
   totalSteps: number;
   thoughts: ThoughtFragment[];
-  response: VisualResponse | null;
   visibleElements: VisualElement[];
   researchEvaluation: ResearchEvaluation;
   systemLog: SystemLogEntry[];
@@ -51,7 +42,8 @@ export interface Scenario {
   name: string;
   description: string;
   thoughts: ThoughtFragment[];
-  response: VisualResponse;
+  moods: string;
+  elements: VisualElement[];
 }
 
 // Deterministic scenarios for testing
@@ -66,16 +58,13 @@ export const SCENARIOS: Record<string, Scenario> = {
       { text: '...why do I keep counting?...', intensity: 0.6, decay: 'slow' },
       { text: '...47...', intensity: 1.0, decay: 'linger', glitch: true },
     ],
-    response: {
-      mood: 'obsession',
-      depth: 3500,
-      elements: [
-        { type: 'text', content: 'Specimen 47.', position: { x: 50, y: 25 } },
-        { type: 'text', content: 'It watches back.', position: { x: 50, y: 45 } },
-        { type: 'creature', content: 'leviathan-eye', position: { x: 50, y: 70 } },
-        { type: 'text', content: '...always watching...', position: { x: 30, y: 85 } },
-      ],
-    },
+    moods: 'obsession',
+    elements: [
+      { type: 'text', content: 'Specimen 47.', position: { x: 50, y: 25 } },
+      { type: 'text', content: 'It watches back.', position: { x: 50, y: 45 } },
+      { type: 'creature', content: 'leviathan-eye', position: { x: 50, y: 70 } },
+      { type: 'text', content: '...always watching...', position: { x: 30, y: 85 } },
+    ],
   },
 };
 
@@ -87,7 +76,6 @@ export function createInitialState(): AgentState {
     stepIndex: 0,
     totalSteps: 0,
     thoughts: [],
-    response: null,
     visibleElements: [],
     researchEvaluation: {
       confidence: 0,
@@ -113,8 +101,8 @@ export function loadScenario(state: AgentState, scenarioId: string): AgentState 
   const scenario = SCENARIOS[scenarioId];
   if (!scenario) return state;
 
-  // Total steps = thoughts + response elements
-  const totalSteps = scenario.thoughts.length + scenario.response.elements.length;
+  // Total steps = thoughts + elements
+  const totalSteps = scenario.thoughts.length + scenario.elements.length;
 
   return {
     ...state,
@@ -134,7 +122,7 @@ export function stepForward(state: AgentState): AgentState {
   if (!scenario) return state;
 
   const thoughtCount = scenario.thoughts.length;
-  const elementCount = scenario.response.elements.length;
+  const elementCount = scenario.elements.length;
 
   // Already at end
   if (state.stepIndex >= state.totalSteps) {
@@ -148,7 +136,7 @@ export function stepForward(state: AgentState): AgentState {
 
   if (newStepIndex > thoughtCount && newStepIndex <= thoughtCount + elementCount) {
     const elementIndex = newStepIndex - thoughtCount - 1;
-    visibleElements = scenario.response.elements.slice(0, elementIndex + 1);
+    visibleElements = scenario.elements.slice(0, elementIndex + 1);
   }
 
   return {
