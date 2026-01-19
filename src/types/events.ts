@@ -47,6 +47,7 @@ export type EventType =
   | 'TEXT_MESSAGE_START'
   | 'TEXT_CONTENT'
   | 'TEXT_MESSAGE_END'
+  | 'RESPONSE_START'
   | 'RESPONSE_COMPLETE'
   | 'STATE_DELTA'
   | 'TOOL_CALL_START'
@@ -63,6 +64,7 @@ export type StreamEventPayload =
   | { type: 'TEXT_MESSAGE_START'; data: TextMessageStartData }
   | { type: 'TEXT_CONTENT'; data: TextContentData }
   | { type: 'TEXT_MESSAGE_END'; data: TextMessageEndData }
+  | { type: 'RESPONSE_START'; data: ResponseStartData }
   | { type: 'RESPONSE_COMPLETE'; data: ResponseCompleteData }
   | { type: 'STATE_DELTA'; data: StateDeltaData }
   | { type: 'TOOL_CALL_START'; data: ToolCallStartData }
@@ -98,6 +100,27 @@ export interface TextContentData {
 export interface TextMessageEndData {
   /** Total chunks sent in this message */
   total_chunks: number;
+}
+
+/**
+ * Response start event - signals analysis is beginning with initial metrics
+ * Fired immediately when Claude analysis is received, before detailed analysis/content
+ */
+export interface ResponseStartData {
+  /** Initial confidence delta from analysis */
+  confidenceDelta: number;
+
+  /** Initial personality metrics from early analysis */
+  metrics?: {
+    thoughtfulness: number;
+    adventurousness: number;
+    engagement: number;
+    curiosity: number;
+    superficiality: number;
+  };
+
+  /** Whether more detailed analysis is coming */
+  hasAnalysisFollowing: boolean;
 }
 
 /**

@@ -175,6 +175,31 @@ export class StreamEventSequencer {
   }
 
   /**
+   * Send RESPONSE_START event - signals analysis beginning with confidence delta
+   * Fired immediately when Claude analysis is received, before detailed content
+   */
+  async sendResponseStart(
+    confidenceDelta: number,
+    metrics?: AnalysisMetrics,
+    hasAnalysisFollowing: boolean = true
+  ): Promise<void> {
+    const startEventId = this.generateEventId();
+    const startSequence = this.eventTracker.getNextSequence();
+
+    this.sendAGUIEvent(startEventId, 'RESPONSE_START', {
+      confidenceDelta,
+      metrics: metrics ? {
+        thoughtfulness: metrics.thoughtfulness,
+        adventurousness: metrics.adventurousness,
+        engagement: metrics.engagement,
+        curiosity: metrics.curiosity,
+        superficiality: metrics.superficiality,
+      } : undefined,
+      hasAnalysisFollowing,
+    }, startSequence);
+  }
+
+  /**
    * Send STATE_DELTA event with confidence and profile updates
    */
   async sendStateUpdate(

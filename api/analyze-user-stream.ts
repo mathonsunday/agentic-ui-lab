@@ -179,6 +179,15 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       Math.min(100, miraState.confidenceInUser + analysis.confidenceDelta)
     );
 
+    // Send RESPONSE_START event first - signals analysis beginning with confidence delta
+    await sequencer.sendResponseStart(analysis.confidenceDelta, {
+      thoughtfulness: analysis.thoughtfulness,
+      adventurousness: analysis.adventurousness,
+      engagement: analysis.engagement,
+      curiosity: analysis.curiosity,
+      superficiality: analysis.superficiality,
+    });
+
     // Send state delta with confidence and profile updates
     await sequencer.sendStateUpdate(newConfidence, {
       thoughtfulness: analysis.thoughtfulness,

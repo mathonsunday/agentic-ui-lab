@@ -33,7 +33,7 @@ export interface StreamCallbacks {
   onProfile?: (update: ProfileUpdate) => void;
   onMessageStart?: (messageId: string, source?: string) => void;
   onResponseChunk?: (chunk: string) => void;
-  onRapportUpdate?: (confidence: number, formattedBar: string) => void;
+  onResponseStart?: (confidenceDelta: number, formattedBar: string) => void;
   onComplete?: (data: {
     updatedState: MiraState;
     response: AgentResponse;
@@ -193,14 +193,12 @@ export function streamMiraBackend(
       console.log(`✓ [miraBackendStream] Processing chunk #${chunkCount} (${chunk.length} chars)`);
       callbacks.onResponseChunk?.(chunk);
     },
-    onRapportUpdate: (confidence, formattedBar) => {
-      // Don't process rapport bar after interrupt
+    onResponseStart: (confidenceDelta, formattedBar) => {
+      // Don't process response start after interrupt
       if (wasInterrupted) {
-        console.log('🛑 [miraBackendStream] BLOCKING onRapportUpdate - stream was interrupted');
         return;
       }
-      console.log('✓ [miraBackendStream] Processing onRapportUpdate');
-      callbacks.onRapportUpdate?.(confidence, formattedBar);
+      callbacks.onResponseStart?.(confidenceDelta, formattedBar);
     },
     onComplete: (data) => {
       // Don't process completion after interrupt
@@ -379,6 +377,18 @@ function handleEnvelopeEvent(
       // Message streaming complete
       break;
 
+    case 'RESPONSE_START': {
+      const startData = envelope.data as {
+        confidenceDelta: number;
+        metrics?: Record<string, number>;
+        hasAnalysisFollowing: boolean;
+      };
+
+      const rapportBar = generateConfidenceBar(Math.max(0, Math.min(100, startData.confidenceDelta)));
+      callbacks.onResponseStart?.(startData.confidenceDelta, rapportBar);
+      break;
+    }
+
     case 'RESPONSE_COMPLETE': {
       const completeData = envelope.data as {
         updatedState: MiraState;
@@ -390,22 +400,6 @@ function handleEnvelopeEvent(
           suggested_creature_mood?: string;
         };
       };
-
-      // Generate and display rapport bar using final confidence from updatedState
-      const confidence = completeData.updatedState.confidenceInUser;
-      const rapportBar = generateConfidenceBar(confidence);
-      console.log('🎯 [miraBackendStream] RESPONSE_COMPLETE received', {
-        confidence,
-        rapportBar,
-        hasCallback: !!callbacks.onRapportUpdate,
-      });
-
-      if (callbacks.onRapportUpdate) {
-        console.log('📊 [miraBackendStream] Calling onRapportUpdate with:', { confidence, rapportBar });
-        callbacks.onRapportUpdate(confidence, rapportBar);
-      } else {
-        console.warn('⚠️ [miraBackendStream] onRapportUpdate callback is NOT defined!');
-      }
 
       callbacks.onComplete?.(completeData);
       break;

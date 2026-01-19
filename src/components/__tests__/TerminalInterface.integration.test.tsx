@@ -67,16 +67,15 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
                 });
               }
 
-              // Send completion - this triggers rapport bar generation
+              // Send response start event first (triggers rapport bar display)
               if (testData.completeData) {
-                // Extract confidence and trigger rapport bar callback (matching real flow)
-                const confidence = testData.completeData.updatedState?.confidenceInUser;
-                if (confidence !== undefined) {
-                  const rapportBar = generateMockRapportBar(confidence);
-                  callbacks.onRapportUpdate?.(confidence, rapportBar);
-                }
+                const confidenceDelta = testData.completeData.analysis?.confidenceDelta ?? 0;
+                const rapportBar = generateMockRapportBar(confidenceDelta);
+                callbacks.onResponseStart?.(confidenceDelta, rapportBar);
+              }
 
-                // Send completion callback
+              // Send completion callback
+              if (testData.completeData) {
                 callbacks.onComplete?.(testData.completeData);
               }
             }

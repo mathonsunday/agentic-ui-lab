@@ -349,22 +349,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onProfile: (_profile: any) => {
             // Profile updates are handled in onComplete (single source of truth)
           },
-          onRapportUpdate: (_confidence: number, formattedBar: string) => {
-            // Rapport bar updates are terminal text lines that display in place
-            // They are semantic state updates sent as separate events now
-            console.log('🎬 [TerminalInterface] onRapportUpdate callback FIRED', {
-              confidence: _confidence,
-              formattedBar,
-              lineCountBefore: lineCountRef.current,
-            });
-
-            const newLineId = String(lineCountRef.current++);
-            responseLineIdsRef.current.push(newLineId);
-            console.log('🎬 [TerminalInterface] Adding rapport bar line:', {
-              newLineId,
-              formattedBar,
-              lineCountAfter: lineCountRef.current,
-            });
+          onResponseStart: (confidenceDelta: number, formattedBar: string) => {
+            // Display rapport bar when response starts (first thing the user sees)
             addTerminalLine('text', formattedBar);
           },
           onMessageStart: (_messageId: string, source?: string) => {
@@ -473,19 +459,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
           },
           onAnalysis: (analysis: any) => {
-            // Display rapport bar FIRST (before analysis box)
-            // Calculate the new confidence after applying the delta
-            const currentConfidence = miraState.confidenceInUser;
-            const newConfidence = Math.max(0, Math.min(100, currentConfidence + analysis.confidenceDelta));
-            const rapportBar = generateConfidenceBar(newConfidence);
-            console.log('📊 [TerminalInterface] onAnalysis: displaying rapport bar before analysis', {
-              currentConfidence,
-              delta: analysis.confidenceDelta,
-              newConfidence,
-            });
-            addTerminalLine('text', rapportBar);
-
-            // Then display Claude's reasoning as full analysis box
+            // Display Claude's reasoning as analysis box
+            // (Rapport bar is already displayed by onResponseStart)
             const box = formatAnalysisBox({
               reasoning: analysis.reasoning,
               confidenceDelta: analysis.confidenceDelta,
@@ -515,7 +490,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         };
 
         console.log('🌊 [TerminalInterface.handleInput] Calling streamMiraBackend with callbacks object', {
-          hasOnRapportUpdate: !!callbacksObject.onRapportUpdate,
+          hasOnResponseStart: !!callbacksObject.onResponseStart,
           callbacks: Object.keys(callbacksObject),
         });
 
