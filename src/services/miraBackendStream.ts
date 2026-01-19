@@ -12,6 +12,7 @@
 
 import type { MiraState, AgentResponse, ResponseAssessment, ToolCallData } from '../../api/lib/types';
 import type { EventEnvelope } from '../types/events';
+import { generateConfidenceBar } from '../shared/analysisFormatter';
 
 export interface ConfidenceUpdate {
   from: number;
@@ -32,6 +33,7 @@ export interface StreamCallbacks {
   onProfile?: (update: ProfileUpdate) => void;
   onMessageStart?: (messageId: string, source?: string) => void;
   onResponseChunk?: (chunk: string) => void;
+  onRapportUpdate?: (confidence: number, formattedBar: string) => void;
   onComplete?: (data: {
     updatedState: MiraState;
     response: AgentResponse;
@@ -379,6 +381,12 @@ function handleEnvelopeEvent(
           suggested_creature_mood?: string;
         };
       };
+
+      // Generate and display rapport bar using final confidence from updatedState
+      const confidence = completeData.updatedState.confidenceInUser;
+      const rapportBar = generateConfidenceBar(confidence);
+      callbacks.onRapportUpdate?.(confidence, rapportBar);
+
       callbacks.onComplete?.(completeData);
       break;
     }

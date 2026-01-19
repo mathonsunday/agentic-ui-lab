@@ -33,6 +33,17 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
   });
 
   /**
+   * Helper function to generate rapport bar for tests
+   */
+  function generateMockRapportBar(confidence: number): string {
+    const percent = Math.round(confidence);
+    const filled = Math.round(percent / 5);
+    const empty = 20 - filled;
+    const bar = '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
+    return `[RAPPORT] ${bar} ${percent}%\n`;
+  }
+
+  /**
    * Helper to mock streamMiraBackend with specific test data
    */
   function mockStreamMiraBackend(testData: { chunks?: string[]; completeData?: any; error?: string }) {
@@ -46,23 +57,28 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
               // Send error
               callbacks.onError?.(testData.error);
             } else {
-              // Send each chunk
+              // Send each chunk (filter out any [RAPPORT] chunks since rapport bar now comes from onComplete)
               if (testData.chunks) {
-                testData.chunks.forEach((chunk, index) => {
-                  // First chunk starting with [RAPPORT] is now a rapport update
-                  if (index === 0 && chunk.includes('[RAPPORT]')) {
-                    // Extract confidence from formatted bar (e.g., "[RAPPORT] [████░░░░░░░░░░░░░░] 50%")
-                    const match = chunk.match(/(\d+)%/);
-                    const confidence = match ? parseInt(match[1], 10) : 50;
-                    callbacks.onRapportUpdate?.(confidence, chunk);
-                  } else {
-                    // Regular text chunks
+                testData.chunks.forEach((chunk) => {
+                  // Skip [RAPPORT] chunks - they're now handled in onComplete
+                  if (!chunk.includes('[RAPPORT]')) {
                     callbacks.onResponseChunk?.(chunk);
                   }
                 });
               }
-              // Send completion
-              callbacks.onComplete?.(testData.completeData);
+
+              // Send completion - this triggers rapport bar generation
+              if (testData.completeData) {
+                // Extract confidence and trigger rapport bar callback (matching real flow)
+                const confidence = testData.completeData.updatedState?.confidenceInUser;
+                if (confidence !== undefined) {
+                  const rapportBar = generateMockRapportBar(confidence);
+                  callbacks.onRapportUpdate?.(confidence, rapportBar);
+                }
+
+                // Send completion callback
+                callbacks.onComplete?.(testData.completeData);
+              }
             }
             resolve();
           });
