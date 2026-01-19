@@ -79,11 +79,6 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
 
 const logger = createLogger('TerminalInterface');
 
-// Stream debugging logger with timestamps
-const streamDebugLog = (message: string, data?: any) => {
-  const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
-  console.log(`[STREAM_DEBUG ${timestamp}] ${message}`, data || '');
-};
 
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
@@ -212,8 +207,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   const handleToolCall = useCallback(
     async (toolAction: string, toolData: Record<string, unknown>) => {
-      const streamNum = streamState.streamId + 1;
-
       // Allow zoom actions to execute concurrently with other streams
       const isZoomAction = toolAction === 'zoom_in' || toolAction === 'zoom_out';
       if (streamState.isStreaming && !isZoomAction) {
@@ -343,7 +336,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               },
             }));
           },
-          onRapportUpdate: (confidence: number, formattedBar: string) => {
+          onRapportUpdate: (_confidence: number, formattedBar: string) => {
             // Rapport bar updates are terminal text lines that display in place
             // They are semantic state updates sent as separate events now
             const newLineId = String(lineCountRef.current++);
@@ -351,10 +344,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             addTerminalLine('text', formattedBar);
 
           },
-          onMessageStart: (messageId: string, source?: string) => {
+          onMessageStart: (_messageId: string, source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
             // Also track in ref for line creation
-            // KNOWN BUG #2: INTERRUPT button does not appear during specimen 47 animation.
             setCurrentStreamSource(source || null);
             currentStreamSourceRef.current = source || null;
           },
@@ -394,7 +386,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 }
 
                 const updated = [...prev];
-                const oldLength = updated[index].content.length;
                 updated[index] = {
                   ...updated[index],
                   content: updated[index].content + chunk
@@ -502,11 +493,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         currentStreamSourceRef.current = null;
         dispatchStream({ type: 'START_STREAM', abort });
         await promise;
-      } catch (error) {
+      } catch (_error) {
         // Error handling: graceful degradation
-        const errorMsg =
-          error instanceof Error ? error.message : 'Unknown error';
-
         addTerminalLine(
           'text',
           '...connection to the depths lost... the abyss is unreachable at this moment...'
