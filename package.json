@@ -11,17 +11,24 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "type-check": "tsc -b --noEmit",
+    "type:coverage": "type-coverage --detail --strict",
+    "type:report": "typescript-coverage-report",
+    "dead-code": "knip",
+    "dead-code:fix": "knip --fix",
+    "verify": "npm run type-check && npm run lint && npm run dead-code && npm test",
     "prepare": "husky install"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@mathonsunday/ascii-art-toolkit": "^0.1.0",
     "jotai": "^2.15.0",
-    "motion": "^12.27.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
@@ -41,9 +48,10 @@
     "husky": "^9.1.7",
     "knip": "^5.82.1",
     "lint-staged": "^16.2.7",
-    "ts-prune": "^0.10.3",
-    "ts-unused-exports": "^11.0.1",
+    "prettier": "^3.8.0",
+    "type-coverage": "^2.29.7",
     "typescript": "~5.9.3",
+    "typescript-coverage-report": "^1.1.1",
     "typescript-eslint": "^8.46.4",
     "vite": "^5.4.0",
     "vitest": "^4.0.17"

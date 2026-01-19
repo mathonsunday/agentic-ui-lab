@@ -11,7 +11,7 @@
  */
 
 import { callMiraBackend } from '../services/miraBackendClient';
-import type { UserProfile, InteractionMemory, MiraState, AgentResponse } from '../../api/lib/types';
+import type { UserProfile, InteractionMemory, MiraState, AgentResponse, ResponseAssessment } from '../../api/lib/types';
 import { getPersonalityFromConfidence, type Personality } from './personalityHelper';
 
 // Re-export types for backward compatibility
@@ -104,13 +104,6 @@ export async function evaluateUserResponseWithBackend(
   }
 }
 
-interface ResponseAssessment {
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore';
-  depth: 'surface' | 'moderate' | 'deep';
-  confidenceDelta: number;
-  traits: Partial<UserProfile>;
-}
-
 /**
  * Frontend assessment: Simple rules for type and depth
  * Claude will do deeper analysis in the backend
@@ -126,7 +119,7 @@ export function assessResponse(
   // Simple frontend rules - Claude refines these via backend analysis
   let depth: 'surface' | 'moderate' | 'deep' = 'surface';
   let confidenceDelta = 0;
-  let type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore' = 'response';
+  let type: 'response' | 'question' = 'response';
 
   // Determine type first
   if (hasQuestionMark) {

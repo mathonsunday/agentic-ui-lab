@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "project": "tsconfig.app.json"
+  },
+  "enableCache": true,
+  "cacheDirectory": ".typecoverage",
+  "ignore": [
+    "dist",
+    "node_modules",
+    "**/*.d.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ],
+  "ignoreCatch": true,
+  "ignoreUnread": false,
+  "checkPropertyAccess": true,
+  "suppressError": false,
+  "lines": 0,
+  "statements": 0,
+  "functions": 0,
+  "branches": 0
+}

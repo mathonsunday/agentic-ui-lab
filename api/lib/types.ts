@@ -24,41 +24,73 @@ export interface ToolCallData {
 }
 
 /**
- * MCP-UI compatible tool result format
+ * MCP-UI compatible tool result format - Discriminated union by status
  * Returned when a tool is executed
  */
-export interface ToolResult {
-  /** Status of tool execution */
-  status: 'success' | 'failure' | 'partial';
+export type ToolResult =
+  | {
+      /** Status of tool execution */
+      status: 'success';
 
-  /** The actual result data */
-  result: unknown;
+      /** The actual result data */
+      result: unknown;
 
-  /** Any error message if status is 'failure' or 'partial' */
-  error?: string;
+      /** Metadata about the tool execution */
+      metadata?: {
+        execution_time_ms?: number;
+        artifacts?: Record<string, unknown>;
+      };
 
-  /** Metadata about the tool execution */
-  metadata?: {
-    execution_time_ms?: number;
-    artifacts?: Record<string, unknown>;
-  };
+      /** UI update commands (server-driven updates) */
+      ui_updates?: Array<{
+        type: string;
+        target: string;
+        data: unknown;
+      }>;
+    }
+  | {
+      /** Status of tool execution - failure or partial */
+      status: 'failure' | 'partial';
 
-  /** UI update commands (server-driven updates) */
-  ui_updates?: Array<{
-    type: string;
-    target: string;
-    data: unknown;
-  }>;
-}
+      /** The actual result data */
+      result: unknown;
 
-export interface InteractionMemory {
-  timestamp: number;
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore' | 'tool_call';
-  content: string;
-  duration: number;
-  depth: 'surface' | 'moderate' | 'deep';
-  toolData?: ToolCallData;
-}
+      /** Error message - required for failures */
+      error: string;
+
+      /** Metadata about the tool execution */
+      metadata?: {
+        execution_time_ms?: number;
+        artifacts?: Record<string, unknown>;
+      };
+
+      /** UI update commands (server-driven updates) */
+      ui_updates?: Array<{
+        type: string;
+        target: string;
+        data: unknown;
+      }>;
+    };
+
+/**
+ * Discriminated union for interaction memory - discriminated by type field
+ */
+export type InteractionMemory =
+  | {
+      timestamp: number;
+      type: 'response' | 'question';
+      content: string;
+      duration: number;
+      depth: 'surface' | 'moderate' | 'deep';
+    }
+  | {
+      timestamp: number;
+      type: 'tool_call';
+      content: string;
+      duration: number;
+      depth: 'surface' | 'moderate' | 'deep';
+      toolData: ToolCallData;
+    };
 
 export interface MiraState {
   confidenceInUser: number;
@@ -79,12 +111,27 @@ export interface UserAnalysis {
   suggested_creature_mood?: string;
 }
 
-export interface ResponseAssessment {
-  type: 'response' | 'reaction' | 'question' | 'hover' | 'ignore' | 'tool_call';
+/**
+ * Frontend assessment of user response type and depth
+ * Narrowed to only types that are assigned by assessResponse()
+ */
+export type ResponseAssessment = {
+  type: 'response' | 'question';
   depth: 'surface' | 'moderate' | 'deep';
   confidenceDelta: number;
   traits?: Partial<UserProfile>;
-}
+};
+
+/**
+ * Extended assessment union including tool_call for streaming interactions
+ * Used by streamMiraBackend to support both user responses and tool calls
+ */
+export type StreamAssessment = ResponseAssessment | {
+  type: 'tool_call';
+  depth: 'surface' | 'moderate' | 'deep';
+  confidenceDelta: number;
+  traits?: Partial<UserProfile>;
+};
 
 export interface AgentResponse {
   streaming: string[];
