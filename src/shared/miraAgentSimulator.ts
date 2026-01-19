@@ -12,24 +12,11 @@
 
 import { callMiraBackend } from '../services/miraBackendClient';
 import type { UserProfile, InteractionMemory, MiraState, AgentResponse } from '../../api/lib/types';
+import { getPersonalityFromConfidence, type Personality } from './personalityHelper';
 
 // Re-export types for backward compatibility
-export type { UserProfile, InteractionMemory, MiraState, AgentResponse };
-
-export type Personality = 'negative' | 'chaotic' | 'glowing';
-
-/**
- * Map confidence level to personality
- * 3-personality system with equal 33% ranges:
- * - 0-33%: negative (dismissive)
- * - 34-67%: chaotic (philosophical)
- * - 68-100%: glowing (reverent)
- */
-export function getPersonalityFromConfidence(confidence: number): Personality {
-  if (confidence < 34) return 'negative';
-  if (confidence < 68) return 'chaotic';
-  return 'glowing';
-}
+export type { UserProfile, InteractionMemory, MiraState, AgentResponse, Personality };
+export { getPersonalityFromConfidence };
 
 /**
  * Initialize Mira's internal state at start of research phase

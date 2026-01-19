@@ -78,6 +78,27 @@ When making architectural decisions, ask: "Will this make future features easier
    - A good refactoring plan is one that makes the currently-fragile parts robust
    - If your "things we should improve" list doesn't match your "things that are hard to change" list, you haven't understood the actual structure yet
 
+## Dead Code Removal
+
+**Real user entrypoints (code must be reachable from these):**
+- Frontend: `src/main.tsx` (Vite entry point, app loads from here)
+- Backend: `api/` folder (called from frontend via HTTP requests)
+
+**Safe to delete:**
+- Not imported by any file reachable from the above entry points
+- No other code depends on it
+
+**Do NOT delay deletion with:**
+- `@deprecated` comments as a holding pattern
+- "Will remove this later" comments
+- Backup copies of functions alongside new implementations
+- If code is dead now, delete it now in the same change that replaced it
+
+**When you find potentially dead code:**
+- Trace imports to verify it's unreachable from entry points
+- If unreachable, delete it
+- Do not ask "should we keep this just in case?" - if it's not used, it's gone
+
 5. **When documenting new work:**
    - Write clear inline comments in the code itself
    - Use specific language: "Known issue:", "UX compromise:", "This requires...", "Do not..."

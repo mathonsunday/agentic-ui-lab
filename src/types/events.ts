@@ -49,7 +49,6 @@ export type EventType =
   | 'TEXT_MESSAGE_END'
   | 'RESPONSE_COMPLETE'
   | 'STATE_DELTA'
-  | 'RAPPORT_UPDATE'
   | 'TOOL_CALL_START'
   | 'TOOL_CALL_RESULT'
   | 'TOOL_CALL_END'
@@ -66,7 +65,6 @@ export type StreamEventPayload =
   | { type: 'TEXT_MESSAGE_END'; data: TextMessageEndData }
   | { type: 'RESPONSE_COMPLETE'; data: ResponseCompleteData }
   | { type: 'STATE_DELTA'; data: StateDeltaData }
-  | { type: 'RAPPORT_UPDATE'; data: RapportUpdateData }
   | { type: 'TOOL_CALL_START'; data: ToolCallStartData }
   | { type: 'TOOL_CALL_RESULT'; data: ToolCallResultData }
   | { type: 'TOOL_CALL_END'; data: ToolCallEndData }
@@ -153,19 +151,6 @@ export interface StateDeltaData {
 
   /** Full state for initial sync or large changes */
   full_state?: Record<string, unknown>;
-}
-
-/**
- * Rapport update event - confidence and rapport bar display
- * Semantically separates state metadata from display text
- * This prevents confusion that occurred when rapport bar was sent as TEXT_CONTENT
- */
-export interface RapportUpdateData {
-  /** Current confidence level (0-100) */
-  confidence: number;
-
-  /** Formatted confidence bar for display (includes [RAPPORT] prefix and visual bar) */
-  formatted_bar: string;
 }
 
 /**

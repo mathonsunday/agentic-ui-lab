@@ -15,6 +15,7 @@ import {
   UserProfile,
   ToolCallData,
 } from './types.js';
+import { getPersonalityFromConfidence } from '../../src/shared/personalityHelper.js';
 
 /**
  * Step 1: Update confidence and profile based on Claude's analysis
@@ -51,19 +52,6 @@ export function updateConfidenceAndProfile(
     userProfile: updatedProfile,
     currentMood: moodMap[personality],
   };
-}
-
-/**
- * Helper: Determine personality from confidence level
- * 3-personality system with equal 33% ranges:
- * - 0-33%: negative (dismissive)
- * - 34-67%: chaotic (philosophical)
- * - 68-100%: glowing (reverent)
- */
-export function getPersonalityFromConfidence(confidence: number): string {
-  if (confidence < 34) return 'negative';
-  if (confidence < 68) return 'chaotic';
-  return 'glowing';
 }
 
 /**

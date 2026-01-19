@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DebugPanel } from './components/DebugPanel';
 import { ResearchRecruitment } from './components/ResearchRecruitment';
-import { ResearchExperience } from './components/ResearchExperience';
+import { TerminalInterface } from './components/TerminalInterface';
 import {
   createInitialState,
   type AgentState,
@@ -118,7 +118,7 @@ export function MiraExperience() {
 
   // If user has joined research, show research experience instead
   if (showResearch) {
-    return <ResearchExperience onReturn={handleReturnFromResearch} initialConfidence={state.researchEvaluation.confidence} onConfidenceChange={handleConfidenceChange} />;
+    return <TerminalInterface onReturn={handleReturnFromResearch} initialConfidence={state.researchEvaluation.confidence} onConfidenceChange={handleConfidenceChange} />;
   }
 
   // Show recruitment interface with debug panel
