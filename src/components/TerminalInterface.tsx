@@ -177,6 +177,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
     });
   }, [currentStreamSource]);
 
+  // Reset stream source when stream ends
+  useEffect(() => {
+    if (!streamState.isStreaming && currentStreamSource !== null) {
+      console.log(`🔄 [EFFECT] Stream ended, clearing currentStreamSource`);
+      setCurrentStreamSource(null);
+      currentStreamSourceRef.current = null;
+    }
+  }, [streamState.isStreaming]);
+
   const addTerminalLine = useCallback(
     (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: string) => {
       const newLine: TerminalLine = {
@@ -498,8 +507,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
             // Reset stream source when complete
             // For specimen_47, delay clearing until animation finishes (via onRevealedLengthChange)
+            // For claude_streaming, keep source active until END_STREAM (button needs it during animation)
             // For other sources, clear immediately
-            if (data.response?.source !== 'specimen_47') {
+            if (data.response?.source !== 'specimen_47' && data.response?.source !== 'claude_streaming') {
               setCurrentStreamSource(null);
             }
 
