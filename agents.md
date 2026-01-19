@@ -50,6 +50,36 @@ When making architectural decisions, ask: "Will this make future features easier
 - ❌ Repeat failed approaches multiple times
 - ❌ Ignore user feedback about wasted time (this is a critical signal)
 
+## Critical: Read Existing Documentation First
+
+**BEFORE making ANY claims about current behavior or proposing changes:**
+
+1. **Search for existing documentation** on the feature/component:
+   - Look for `*_SUMMARY.md`, `*_STATUS.md`, `README.md` files
+   - Check for `.claude/plans/` directory for previous work
+   - Look for test files that document intended behavior
+   - Example: `UX_INVARIANTS_TESTING_SUMMARY.md` documents the exact current state and requirements
+
+2. **Read the test files** that relate to your task:
+   - Tests document the intended behavior and constraints
+   - Test comments explain WHY things work a certain way
+   - They show what's been tried before and what worked/didn't work
+   - Example: `TypewriterLine.test.tsx` explicitly documents the animation compromise
+
+3. **Do NOT make assumptions about current behavior:**
+   - Never claim something "works smoothly" without reading existing docs
+   - Never claim something is a "solved problem" without checking what's already been solved
+   - Never propose "fixing" something without understanding why the current implementation exists
+   - Always assume previous work was well-reasoned and documented
+
+4. **When you find documentation:**
+   - Read it completely before speaking
+   - Reference it when discussing current state
+   - Build on top of it, don't ignore it
+   - If proposing changes, explain how you're changing from the documented current state
+
+**This is not about being slow. It's about respecting the work that's already been done.** Ignoring documentation wastes time and shows you didn't care enough to understand the project first.
+
 ## Reference
 
 - Full architectural decision history: `.claude/plans/snug-tumbling-candle.md`
