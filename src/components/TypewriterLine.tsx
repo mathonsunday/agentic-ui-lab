@@ -67,12 +67,7 @@ export function TypewriterLine({
         if (prev >= currentContent.length) {
           return prev;
         }
-        const next = prev + 1;
-        // Log every 50 chars for debugging
-        if (next % 50 === 0) {
-          console.log(`[TypewriterLine] Animation progress: ${next}/${currentContent.length} chars, elapsed: ${Date.now() - startTime}ms`);
-        }
-        return next;
+        return prev + 1;
       });
     }, charDelayMs);
 

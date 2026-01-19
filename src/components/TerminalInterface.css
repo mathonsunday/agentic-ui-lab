@@ -56,7 +56,8 @@
 }
 
 .terminal-interface__line {
-  animation: fadeIn 0.3s ease-out;
+  /* Fade-in animation removed to prevent visual stuttering during streaming */
+  /* Content updates (TypewriterLine animation) are smooth without line-level animation interference */
 }
 
 @keyframes fadeIn {
