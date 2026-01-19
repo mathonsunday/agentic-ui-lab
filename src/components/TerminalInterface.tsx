@@ -12,7 +12,7 @@ import {
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getCreatureByMood, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
-import { formatAnalysisBox } from '../shared/analysisFormatter';
+import { formatAnalysisBox, generateConfidenceBar } from '../shared/analysisFormatter';
 import { streamMiraBackend } from '../services/miraBackendStream';
 import { ToolButtonRow } from './ToolButtonRow';
 import './TerminalInterface.css';
@@ -473,7 +473,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
           },
           onAnalysis: (analysis: any) => {
-            // Display Claude's reasoning as full analysis box
+            // Display rapport bar FIRST (before analysis box)
+            // Calculate the new confidence after applying the delta
+            const currentConfidence = miraState.confidenceInUser;
+            const newConfidence = Math.max(0, Math.min(100, currentConfidence + analysis.confidenceDelta));
+            const rapportBar = generateConfidenceBar(newConfidence);
+            console.log('📊 [TerminalInterface] onAnalysis: displaying rapport bar before analysis', {
+              currentConfidence,
+              delta: analysis.confidenceDelta,
+              newConfidence,
+            });
+            addTerminalLine('text', rapportBar);
+
+            // Then display Claude's reasoning as full analysis box
             const box = formatAnalysisBox({
               reasoning: analysis.reasoning,
               confidenceDelta: analysis.confidenceDelta,
