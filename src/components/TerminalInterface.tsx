@@ -679,7 +679,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         });
 
         // Clear response tracking for next stream
+        // CRITICAL: Must clear currentAnimatingLineIdRef so next stream creates new line (not reuse old one)
         responseLineIdsRef.current = [];
+        currentAnimatingLineIdRef.current = null;
+        currentAnimatingContentLengthRef.current = 0;
 
         streamState.abortController();
         console.log(`✅ Abort function executed for STREAM #${streamState.streamId}`);
