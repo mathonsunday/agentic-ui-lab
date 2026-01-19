@@ -8,7 +8,7 @@
  * providing natural pacing and rhythm to text streaming.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface TypewriterLineProps {
   content: string;
@@ -40,10 +40,12 @@ export function TypewriterLine({
 }: TypewriterLineProps) {
   const [revealedLength, setRevealedLength] = useState(0);
   const charDelayMs = Math.max(10, Math.round(1000 / speed));
+  const contentRef = useRef(content);
 
-  // Sync revealed length to content length when content shrinks
-  // (If new content is shorter than revealed length, clamp to new content length)
+  // Keep ref in sync with current content
   useEffect(() => {
+    contentRef.current = content;
+    // Clamp revealed length if content shrinks
     setRevealedLength((prev) => Math.min(prev, content.length));
   }, [content]);
 
@@ -59,8 +61,9 @@ export function TypewriterLine({
 
     const timer = setInterval(() => {
       setRevealedLength((prev) => {
-        // Always check current content prop, not closure value
-        if (prev >= content.length) {
+        // Read current content via ref, not closure
+        const currentContent = contentRef.current;
+        if (prev >= currentContent.length) {
           return prev;
         }
         return prev + 1;
@@ -68,7 +71,7 @@ export function TypewriterLine({
     }, charDelayMs);
 
     return () => clearInterval(timer);
-  }, [charDelayMs, isAnimating, content.length]);
+  }, [charDelayMs, isAnimating]);
 
   const revealed = content.substring(0, revealedLength);
   return <span className="terminal-interface__text">{revealed}</span>;
