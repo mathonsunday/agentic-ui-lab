@@ -13,6 +13,7 @@
 import type { MiraState, AgentResponse, StreamAssessment, ToolCallData } from '../../api/lib/types';
 import type { EventEnvelope } from '../types/events';
 import { generateConfidenceBar } from '../shared/analysisFormatter';
+import { generateStreamId } from '../../api/lib/utils/idGenerator';
 
 export interface ConfidenceUpdate {
   from: number;
@@ -126,12 +127,6 @@ class EventBuffer {
  */
 const activeStreams = new Map<string, AbortController>();
 
-/**
- * Create a stream ID for tracking
- */
-function generateStreamId(): string {
-  return `stream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 /**
  * Stream user input or tool call to backend and receive real-time updates

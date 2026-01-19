@@ -27,6 +27,7 @@ import { buildContextInjectionSection } from './sections/contextInjection.js';
 import {
   CRITICAL_MINDSET,
   CREATURE_MOOD_SELECTION,
+  CREATURE_SELF_AWARENESS,
   RESPONSE_FORMAT,
   INTRODUCTION,
   GLOWING_VOICE_INSTRUCTIONS,
@@ -92,6 +93,11 @@ export class MiraSystemPromptBuilder {
     return this;
   }
 
+  addCreatureSelfAwareness(): this {
+    this.sections.set('creatureSelfAwareness', CREATURE_SELF_AWARENESS);
+    return this;
+  }
+
   addResponseFormat(): this {
     this.sections.set('format', RESPONSE_FORMAT);
     return this;
@@ -150,6 +156,7 @@ export function createAdvancedMiraPrompt(
     .addContextInjection(miraState, messageCount, toolCallCount)
     .addMindsetGuidance()
     .addCreatureMoodSelection()
+    .addCreatureSelfAwareness()
     .addResponseFormat()
     .build();
 }

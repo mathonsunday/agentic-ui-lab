@@ -22,13 +22,7 @@ import { updateConfidenceAndProfile, updateMemory, processToolCall } from './lib
 import { createAdvancedMiraPrompt } from './lib/prompts/systemPromptBuilder.js';
 import { StreamEventSequencer } from './lib/streamEventSequencer.js';
 import { getContentFeature, type ContentFeature } from './lib/contentLibrary.js';
-
-/**
- * Generate unique event ID
- */
-function generateEventId(): string {
-  return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+import { generateEventId } from './lib/utils/idGenerator.js';
 
 /**
  * Event tracking for session

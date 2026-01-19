@@ -93,6 +93,7 @@
 
 import type { VercelResponse } from '@vercel/node';
 import type { MiraState, AgentResponse } from './types.js';
+import { generateEventId } from './utils/idGenerator.js';
 
 interface AnalysisMetrics {
   thoughtfulness: number;
@@ -144,12 +145,6 @@ export class StreamEventSequencer {
     }
   }
 
-  /**
-   * Generate unique event ID
-   */
-  private generateEventId(): string {
-    return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
 
   /**
    * Send AG-UI formatted event envelope
@@ -184,7 +179,7 @@ export class StreamEventSequencer {
     metrics?: AnalysisMetrics,
     hasAnalysisFollowing: boolean = true
   ): Promise<void> {
-    const startEventId = this.generateEventId();
+    const startEventId = generateEventId();
     const startSequence = this.eventTracker.getNextSequence();
 
     this.sendAGUIEvent(startEventId, 'RESPONSE_START', {
@@ -208,7 +203,7 @@ export class StreamEventSequencer {
     newConfidence: number,
     metrics: AnalysisMetrics
   ): Promise<void> {
-    const stateEventId = this.generateEventId();
+    const stateEventId = generateEventId();
     const stateSequence = this.eventTracker.getNextSequence();
 
     this.sendAGUIEvent(stateEventId, 'STATE_DELTA', {
@@ -239,7 +234,7 @@ export class StreamEventSequencer {
     confidenceDelta: number,
     suggestedCreatureMood?: string
   ): Promise<void> {
-    const analysisEventId = this.generateEventId();
+    const analysisEventId = generateEventId();
     const analysisSequence = this.eventTracker.getNextSequence();
 
     console.log('📊 [Backend] Sending ANALYSIS_COMPLETE event:', {
@@ -277,7 +272,7 @@ export class StreamEventSequencer {
       suggested_creature_mood?: string;
     }
   ): Promise<void> {
-    const completeEventId = this.generateEventId();
+    const completeEventId = generateEventId();
     const completeSequence = this.eventTracker.getNextSequence();
 
     this.sendAGUIEvent(completeEventId, 'RESPONSE_COMPLETE', {
@@ -295,7 +290,7 @@ export class StreamEventSequencer {
     message: string,
     recoverable: boolean = false
   ): Promise<void> {
-    const errorId = this.generateEventId();
+    const errorId = generateEventId();
     const errorSequence = this.eventTracker.getNextSequence();
 
     this.sendAGUIEvent(errorId, 'ERROR', {
@@ -315,7 +310,7 @@ export class StreamEventSequencer {
     updatedState: MiraState
   ): Promise<void> {
     // Send completion event with full updated state
-    const completeEventId = this.generateEventId();
+    const completeEventId = generateEventId();
     const completeSequence = this.eventTracker.getNextSequence();
     this.sendAGUIEvent(completeEventId, 'RESPONSE_COMPLETE', {
       updatedState,
