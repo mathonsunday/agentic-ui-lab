@@ -59,7 +59,6 @@ export function TypewriterLine({
       return;
     }
 
-    const startTime = Date.now();
     const timer = setInterval(() => {
       setRevealedLength((prev) => {
         // Read current content via ref, not closure
