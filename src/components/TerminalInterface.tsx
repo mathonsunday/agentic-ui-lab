@@ -349,8 +349,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onProfile: (_profile: any) => {
             // Profile updates are handled in onComplete (single source of truth)
           },
-          onResponseStart: (_confidenceDelta: number, formattedBar: string) => {
+          onResponseStart: (confidenceDelta: number, formattedBar: string) => {
             // Display rapport bar when response starts (first thing the user sees)
+            // This variable is unused - hook should catch this
             addTerminalLine('text', formattedBar);
           },
           onMessageStart: (_messageId: string, source?: string) => {
