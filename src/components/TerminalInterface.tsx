@@ -394,9 +394,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             // Track the stream source to conditionally show INTERRUPT button
             // Also track in ref for line creation
             // KNOWN BUG #2: INTERRUPT button does not appear during specimen 47 animation.
+            console.log(`📨 [TerminalInterface] onMessageStart called - STREAM #${streamNum}`, {
+              messageId,
+              source,
+              hasSource: !!source,
+              isStreaming: streamState.isStreaming,
+            });
             setCurrentStreamSource(source || null);
             currentStreamSourceRef.current = source || null;
-            console.log(`📨 [TerminalInterface] Message started - STREAM #${streamNum}`, { messageId, source });
+            console.log(`📨 [TerminalInterface] Message started - STREAM #${streamNum}`, {
+              messageId,
+              source,
+              setStateSource: source || null,
+            });
           },
           onResponseChunk: (chunk: any) => {
             console.log(`📥 [TerminalInterface] onResponseChunk callback invoked with ${chunk.length} chars - STREAM #${streamNum}`);
@@ -814,7 +824,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
             ];
 
-            if (streamState.isStreaming && (currentStreamSource === 'specimen_47' || currentStreamSource === 'claude_streaming')) {
+            const shouldShowInterrupt =
+              streamState.isStreaming && (currentStreamSource === 'specimen_47' || currentStreamSource === 'claude_streaming');
+
+            console.log(`🎨 [BUTTON RENDER] Evaluating interrupt button - STREAM #${streamState.streamId}`, {
+              isStreaming: streamState.isStreaming,
+              currentStreamSource,
+              isSpecimen47: currentStreamSource === 'specimen_47',
+              isClaudeStreaming: currentStreamSource === 'claude_streaming',
+              shouldShowInterrupt,
+              renderTrigger,
+            });
+
+            if (shouldShowInterrupt) {
               tools.push({
                 id: 'interrupt',
                 name: 'INTERRUPT',
