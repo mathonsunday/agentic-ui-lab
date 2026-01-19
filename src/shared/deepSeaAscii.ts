@@ -5,7 +5,8 @@
  * It maintains backward compatibility with existing code while using the ascii-art-toolkit
  * library as the data source.
  *
- * All creatures support 3 zoom levels: far, medium, close
+ * Only creatures with complete zoom support (all 3 levels: far, medium, close) are included.
+ * Creatures without zoom variants are automatically filtered out to ensure zoom buttons always work.
  */
 
 import { library } from '@mathonsunday/ascii-art-toolkit';
@@ -56,6 +57,10 @@ const CREATURE_ID_MAP: Record<CreatureName, string> = {
 
 /**
  * Build ZOOMABLE_CREATURES object from toolkit for backward compatibility
+ *
+ * Only includes creatures with COMPLETE zoom support (all 3 levels: far, medium, close).
+ * Creatures without all zoom levels are skipped to prevent broken zoom functionality.
+ * This filters out environment pieces and incomplete structures from the toolkit.
  */
 const buildZoomableCreatures = () => {
   const creatures: Record<
@@ -71,13 +76,27 @@ const buildZoomableCreatures = () => {
         return;
       }
 
+      // CRITICAL: Only include creatures with COMPLETE zoom support
+      // Missing zoom levels = broken zoom button behavior
+      if (!piece.zoom?.far || !piece.zoom?.medium || !piece.zoom?.close) {
+        console.warn(
+          `[deepSeaAscii] Skipping ${toolkitId} - incomplete zoom support ` +
+          `(far: ${!!piece.zoom?.far}, medium: ${!!piece.zoom?.medium}, close: ${!!piece.zoom?.close})`
+        );
+        return;
+      }
+
       creatures[camelName] = {
-        far: piece.zoom?.far || piece.art,
-        medium: piece.zoom?.medium || piece.art,
-        close: piece.zoom?.close || piece.art,
+        far: piece.zoom.far,
+        medium: piece.zoom.medium,
+        close: piece.zoom.close,
       };
     }
   );
+
+  if (Object.keys(creatures).length === 0) {
+    console.error('[deepSeaAscii] No creatures with complete zoom support found in toolkit!');
+  }
 
   return creatures;
 };
