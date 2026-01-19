@@ -152,6 +152,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   useEffect(() => {
   }, [currentStreamSource]);
 
+  // Update revealed length for claude_streaming (plain text, no TypewriterLine callback)
+  // For TypewriterLine (specimen_47), this is tracked in onRevealedLengthChange
+  useEffect(() => {
+    if (currentAnimatingLineIdRef.current) {
+      const animatingLine = terminalLines.find(
+        line => line.id === currentAnimatingLineIdRef.current
+      );
+      if (animatingLine) {
+        currentRevealedLengthRef.current = animatingLine.content.length;
+      }
+    }
+  }, [terminalLines]);
+
   // Reset stream source when stream ends
   useEffect(() => {
     if (!streamState.isStreaming && currentStreamSource !== null) {
