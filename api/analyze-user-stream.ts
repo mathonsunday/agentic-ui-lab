@@ -311,6 +311,20 @@ async function streamContentFeature(
       startSequence
     );
 
+    // Send RESPONSE_START for rapport bar display
+    const responseStartEventId = generateEventId();
+    const responseStartSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(
+      response,
+      responseStartEventId,
+      'RESPONSE_START',
+      {
+        confidenceDelta: feature.confidenceDelta,
+        hasAnalysisFollowing: false,
+      },
+      responseStartSequence
+    );
+
     // Update confidence for hardcoded content feature (frontend will format display)
     const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
 
@@ -457,6 +471,14 @@ async function streamClaudeResponse(
       message_id: messageId,
       source: feature.eventSource,
     }, startSequence);
+
+    // Send RESPONSE_START for rapport bar display
+    const responseStartEventId = generateEventId();
+    const responseStartSequence = eventTracker.getNextSequence();
+    sendAGUIEvent(response, responseStartEventId, 'RESPONSE_START', {
+      confidenceDelta: feature.confidenceDelta,
+      hasAnalysisFollowing: false,
+    }, responseStartSequence);
 
     console.log(`📤 [${feature.id}] Starting Claude streaming with prompt`);
 
