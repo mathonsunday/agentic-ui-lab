@@ -246,7 +246,6 @@ describe('StreamEventSequencer', () => {
       const mockResponse_data: AgentResponse = {
         streaming: [],
         observations: [],
-        contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
         confidenceDelta: 5,
       };
 
@@ -263,7 +262,6 @@ describe('StreamEventSequencer', () => {
       const mockResponse_data: AgentResponse = {
         streaming: [],
         observations: [],
-        contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
         confidenceDelta: 5,
       };
 
@@ -280,7 +278,6 @@ describe('StreamEventSequencer', () => {
       const mockResponse_data: AgentResponse = {
         streaming: [],
         observations: [],
-        contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
         confidenceDelta: 5,
       };
 

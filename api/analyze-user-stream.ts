@@ -218,7 +218,6 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     const finalState = updateMemory(updatedState, userInput, {
       streaming: [],
       observations: [],
-      contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
       confidenceDelta: analysis.confidenceDelta,
     });
 
@@ -226,7 +225,6 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     await sequencer.sendCompletion(finalState, {
       streaming: [],
       observations: [],
-      contentSelection: { sceneId: 'shadows', creatureId: 'jellyfish', revealLevel: 'surface' },
       confidenceDelta: analysis.confidenceDelta,
     }, {
       reasoning: analysis.reasoning,

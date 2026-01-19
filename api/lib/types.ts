@@ -89,11 +89,6 @@ export interface ResponseAssessment {
 export interface AgentResponse {
   streaming: string[];
   observations: string[];
-  contentSelection: {
-    sceneId: string;
-    creatureId: string;
-    revealLevel: 'surface' | 'moderate' | 'deep';
-  };
   moodShift?: string;
   confidenceDelta: number;
 }

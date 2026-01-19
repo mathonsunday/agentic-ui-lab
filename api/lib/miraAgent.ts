@@ -69,11 +69,6 @@ export function selectResponse(
     return {
       streaming: ['...the connection is unclear...'],
       observations: [],
-      contentSelection: {
-        sceneId: 'shadows',
-        creatureId: 'jellyfish',
-        revealLevel: 'surface',
-      },
       confidenceDelta: 0,
     };
   }
@@ -106,48 +101,11 @@ export function selectResponse(
   // Pick response with bias toward longer ones (more interesting zingers)
   const response = selectWeightedResponse(selectedResponses);
 
-  // Determine content selection based on user profile
-  const contentSelection = selectContent(miraState);
-
   return {
     streaming: chunkResponse(response),
     observations: generateObservations(miraState, assessment),
-    contentSelection,
     confidenceDelta: assessment.confidenceDelta,
   };
-}
-
-/**
- * Helper: Determine content selection based on user profile
- */
-function selectContent(
-  miraState: MiraState
-): AgentResponse['contentSelection'] {
-  let sceneId = 'shadows'; // default: safe, beautiful
-  let creatureId = 'jellyfish'; // safe starting point
-  let revealLevel: 'surface' | 'moderate' | 'deep' = 'surface';
-
-  // If they seem thoughtful and curious, show more complex creatures
-  if (miraState.userProfile.thoughtfulness > 70 && miraState.userProfile.curiosity > 70) {
-    sceneId = 'giant-squid'; // more complex
-    creatureId = 'giant-squid';
-    revealLevel = 'moderate';
-  }
-
-  // If they're adventurous, push toward the abyss
-  if (miraState.userProfile.adventurousness > 80) {
-    sceneId = 'leviathan'; // the intense one
-    creatureId = 'leviathan';
-    revealLevel = 'deep';
-  }
-
-  // If she feels they're kindred, show her perspective
-  if (miraState.hasFoundKindred) {
-    sceneId = 'rov-exterior'; // the vulnerable view
-    creatureId = 'rov-self'; // reference to the ROV itself
-  }
-
-  return { sceneId, creatureId, revealLevel };
 }
 
 /**

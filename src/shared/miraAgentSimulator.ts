@@ -111,11 +111,6 @@ export async function evaluateUserResponseWithBackend(
       response: {
         streaming: ['...connection to the depths lost... the abyss is unreachable at this moment...'],
         observations: [],
-        contentSelection: {
-          sceneId: 'shadows',
-          creatureId: 'jellyfish',
-          revealLevel: 'surface',
-        },
         confidenceDelta: 0,
       },
     };
