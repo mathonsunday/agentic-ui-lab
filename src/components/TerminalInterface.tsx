@@ -586,6 +586,16 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             depth: 'surface',
           };
 
+          console.log('🛑 INTERRUPT RECORDED', {
+            interruptNumber: interruptMemory.interruptNumber,
+            timestamp: new Date(interruptMemory.timestamp).toISOString(),
+            blockedResponseStart: interruptMemory.blockedResponseStart,
+            blockedResponseLength: interruptMemory.blockedResponseLength,
+            confidenceBefore: miraState.confidenceInUser,
+            confidenceAfter: newConfidence,
+            totalMemories: miraState.memories.length + 1,
+          });
+
           setMiraState((prevState) => ({
             ...prevState,
             confidenceInUser: newConfidence,

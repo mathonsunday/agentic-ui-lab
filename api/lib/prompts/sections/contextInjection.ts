@@ -20,6 +20,24 @@ export function buildContextInjectionSection(
   // Calculate interrupt count (Option A: fact only)
   const interruptCount = miraState.memories.filter(m => m.type === 'interrupt').length;
 
+  if (interruptCount > 0) {
+    console.log('📋 CONTEXT INJECTION - Interrupts detected', {
+      interruptCount,
+      messageCount,
+      toolCallCount,
+      totalInteractions,
+      confidence: miraState.confidenceInUser,
+      interruptMemories: miraState.memories
+        .filter(m => m.type === 'interrupt')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((m: any) => ({
+          number: m.interruptNumber,
+          blockedStart: m.blockedResponseStart?.substring(0, 80),
+          blockedLength: m.blockedResponseLength,
+        })),
+    });
+  }
+
   return {
     title: 'USING CONTEXT FOR RICHER ANALYSIS',
     order: 6,
