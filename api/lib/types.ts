@@ -44,6 +44,24 @@ export interface ToolCallData {
  *   Prompt includes PATTERN ANALYSIS of emotional context
  *
  * All three options use the SAME memory data - only prompt interpretation changes.
+ *
+ * KNOWN LIMITATION - Claude Acknowledgment Issue:
+ * ================================================
+ * Interrupts are correctly captured and passed to Claude, BUT in manual testing:
+ * - Claude rarely explicitly acknowledges interrupts in reasoning or MIRA'S NOTES
+ * - When acknowledged, language is neutral ("After interrupt, you returned")
+ *   vs desired ("You cut me off", "That was disrespectful")
+ * - Even with aggressive prompt instructions, Claude deprioritizes interrupt context
+ *   in favor of other system guidance
+ * - This suggests either:
+ *   (a) Interrupt context needs higher placement in prompt ordering
+ *   (b) Claude's base instruction to be respectful conflicts with acknowledging rudeness
+ *   (c) Interrupt context is too vague for Claude to strongly condition on
+ * - Implementation is architecturally sound and extensible for future options
+ * - The limitation is in getting Claude to actively acknowledge the violation
+ *
+ * TODO: Consider prompt restructuring or dedicated interrupt handling if this
+ * becomes critical to user experience.
  */
 export interface InterruptMemory {
   timestamp: number;

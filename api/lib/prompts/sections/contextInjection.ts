@@ -1,6 +1,36 @@
 /**
  * Runtime context injection into system prompt
  * Includes user state, interaction history, and confidence level
+ *
+ * INTERRUPT MEMORY IMPLEMENTATION STATUS:
+ * ========================================
+ * ✅ WORKING:
+ * - Interrupts are captured in memory (InterruptMemory type)
+ * - Interrupt count is calculated and passed to Claude
+ * - Confidence penalty (-15) is applied and visible in state
+ * - Memory inspection logs show interrupts reach the backend
+ *
+ * ⚠️ LIMITATION - Claude Acknowledgment:
+ * - In manual testing, Claude RARELY acknowledges interrupts explicitly
+ * - When interrupts ARE mentioned, the language is too neutral:
+ *   Example: "After an interrupt, you return with curiosity"
+ *   Problem: Sounds like neutral context, not a violation
+ * - Even with aggressive prompt instructions ("DO NOT soften this", "You cut me off"),
+ *   Claude tends to treat interrupts as neutral data points
+ * - The interrupt context IS sent to Claude (logging confirms this)
+ *   but Claude seems to deprioritize it in favor of other instructions
+ *
+ * ARCHITECTURAL NOTES:
+ * - Option A: Tracks interrupt count only (current)
+ * - Option B: Would add blocked response snippets (future, no code change needed)
+ * - Option C: Would add emotional context at interrupt time (future, no code change needed)
+ * - All data is captured for B/C, only prompt interpretation differs
+ *
+ * TODO: If interrupt acknowledgment becomes critical, consider:
+ * 1. Moving interrupt context EARLIER in prompt (higher priority)
+ * 2. Using stronger negative framing in prompt examples
+ * 3. Testing with lower temperature to reduce Claude's interpretation flexibility
+ * 4. Creating dedicated system for interrupt-specific responses (not general analysis)
  */
 
 import type { PromptSection } from '../types.js';
