@@ -358,6 +358,11 @@ function handleEnvelopeEvent(
   switch (envelope.type) {
     case 'TEXT_MESSAGE_START': {
       const messageData = envelope.data as { message_id: string; source?: string };
+      console.log('📥 [FRONTEND SERVICE] Received TEXT_MESSAGE_START', {
+        messageId: messageData.message_id,
+        source: messageData.source,
+        timestamp: Date.now()
+      });
       callbacks.onMessageStart?.(messageData.message_id, messageData.source);
       break;
     }

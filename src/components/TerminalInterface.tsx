@@ -353,9 +353,22 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           onMessageStart: (_messageId: string, _source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
             // Use both state (for re-renders) and ref (for accessing without recreating callbacks)
+            console.log('🎯 [TERMINAL INTERFACE] onMessageStart called', {
+              messageId: _messageId,
+              source: _source,
+              refBeforeSet: currentStreamSourceRef.current,
+              timestamp: Date.now()
+            });
+
             const newSource = _source || null;
             currentStreamSourceRef.current = newSource;
             setStreamSource(newSource);
+
+            console.log('🎯 [TERMINAL INTERFACE] onMessageStart updated both state and ref', {
+              refAfterSet: currentStreamSourceRef.current,
+              stateSetTo: newSource,
+              timestamp: Date.now()
+            });
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onResponseChunk: (chunk: any) => {
@@ -709,6 +722,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           />
 
           {useMemo(() => {
+            console.log('🔄 [TERMINAL INTERFACE] useMemo recalculating tools', {
+              isStreaming: streamState.isStreaming,
+              streamSource,
+              timestamp: Date.now()
+            });
+
             const tools = [
               { id: 'zoom-in', name: 'ZOOM IN', onExecute: handleZoomIn },
               { id: 'zoom-out', name: 'ZOOM OUT', onExecute: handleZoomOut },
@@ -717,6 +736,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             const shouldShowInterrupt =
               streamState.isStreaming && streamSource === 'claude_streaming';
 
+            console.log('🔄 [TERMINAL INTERFACE] shouldShowInterrupt calculated', {
+              shouldShowInterrupt,
+              isStreaming: streamState.isStreaming,
+              source: streamSource,
+              timestamp: Date.now()
+            });
+
             if (shouldShowInterrupt) {
               tools.push({
                 id: 'interrupt',
@@ -724,6 +750,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 onExecute: handleInterrupt,
               });
             }
+
+            console.log('🔄 [TERMINAL INTERFACE] Final tools array', {
+              toolIds: tools.map(t => t.id),
+              hasInterrupt: tools.some(t => t.id === 'interrupt'),
+              timestamp: Date.now()
+            });
 
             return (
               <ToolButtonRow
