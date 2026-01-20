@@ -17,7 +17,6 @@
  * - Centralized content management: changes to text happen in one place
  */
 
-import { SPECIMEN_47_GRANT_PROPOSAL } from './responseLibrary.js';
 
 export interface ContentFeature {
   /** Unique identifier for this content feature */
@@ -62,23 +61,6 @@ export interface ContentFeature {
  * on specific topics while keeping the core Claude analysis path clean.
  */
 const ContentLibrary: Record<string, ContentFeature> = {
-  SPECIMEN_47: {
-    id: 'specimen_47',
-    name: 'Specimen 47 - Deep Sea Research Proposal',
-    description:
-      'A hardcoded research grant proposal about a bioluminescent organism discovered at hadal depths. ' +
-      'Used as a core product feature to showcase streaming, interruption, and character-by-character animation.',
-    content: SPECIMEN_47_GRANT_PROPOSAL,
-    triggers: ['specimen 47', 'specimen47'],
-    eventSource: 'specimen_47',
-    confidenceDelta: 8,
-    isHardcoded: true,
-    purpose:
-      'Deliver a consistent, high-quality narrative experience that demonstrates the streaming UI capabilities. ' +
-      'The proposal is thematically connected to Mira (deep-sea exploration, scientific discovery) and serves ' +
-      'as both a product feature and a technical showcase of character-by-character animation with streaming content.',
-    status: 'production',
-  },
   RESEARCH_PROPOSAL: {
     id: 'research_proposal',
     name: 'Claude-Streamed Research Grant Proposal',

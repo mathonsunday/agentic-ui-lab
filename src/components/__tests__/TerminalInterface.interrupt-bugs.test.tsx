@@ -24,7 +24,7 @@ describe('TerminalInterface - Interrupt Bug Fixes', () => {
   describe('Bug #1: No Output Until Interrupt (Cross-Stream Contamination)', () => {
     it('should reset stream-specific interrupt flag for new streams', () => {
       /**
-       * Scenario: User interrupts STREAM #19, then starts STREAM #20 (specimen 47)
+       * Scenario: User interrupts STREAM #19, then starts STREAM #20
        *
        * Before fix:
        * - isStreamInterruptedRef set to true for STREAM #19
@@ -276,7 +276,7 @@ describe('TerminalInterface - Interrupt Bug Fixes', () => {
       currentConfidence = Math.max(0, currentConfidence - 15); // → 47
       expect(currentConfidence).toBe(47);
 
-      // STREAM #19 starts (specimen 47 again)
+      // STREAM #19 starts
       isInterrupted = false; // Reset for new stream
       interruptedStreamId = 18; // Still tracks previous
       const stream19Id = 19;

@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
 import { useAtom } from 'jotai';
 import { MinimalInput } from './MinimalInput';
-import { TypewriterLine } from './TypewriterLine';
 import { settingsAtom } from '../stores/settings';
 import { createLogger } from '../utils/debugLogger';
 import { useTerminalLineZoomUpdate } from '../hooks/useTerminalLineZoomUpdate';
@@ -36,8 +35,8 @@ interface TerminalLine {
     reasoning: string;
     confidenceDelta: number;
   };
-  // Source of the content (e.g., 'specimen_47', 'claude_streaming')
-  source?: string;
+  // Source of the content
+  source?: 'claude_streaming';
 }
 
 // Stream state management with useReducer
@@ -54,13 +53,14 @@ type StreamAction =
 
 function streamReducer(state: StreamState, action: StreamAction): StreamState {
   switch (action.type) {
-    case 'START_STREAM':
+    case 'START_STREAM': {
       const newStreamId = state.streamId + 1;
       return {
         isStreaming: true,
         streamId: newStreamId,
         abortController: action.abort,
       };
+    }
     case 'END_STREAM':
       return {
         ...state,
@@ -112,7 +112,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
-  const [currentStreamSource, setCurrentStreamSource] = useState<string | null>(null); // For UI reactivity (memoization)
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
@@ -124,8 +123,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
 
   // Auto-scroll to bottom when new lines are added
-  // KNOWN BUG #1: Viewport does not auto-scroll during specimen 47 character animation.
-  // User must manually scroll down to see text being revealed.
   useEffect(() => {
     if (scrollRef.current) {
       requestAnimationFrame(() => {
@@ -148,8 +145,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   }, []);
 
 
-  // Update revealed length for claude_streaming (plain text, no TypewriterLine callback)
-  // For TypewriterLine (specimen_47), this is tracked in onRevealedLengthChange
+  // Update revealed length for streaming text
   useEffect(() => {
     if (currentAnimatingLineIdRef.current) {
       const animatingLine = terminalLines.find(
@@ -165,19 +161,18 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   useEffect(() => {
     if (!streamState.isStreaming && currentStreamSourceRef.current !== null) {
       currentStreamSourceRef.current = null;
-      setCurrentStreamSource(null);
     }
   }, [streamState.isStreaming]);
 
   const addTerminalLine = useCallback(
-    (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: string) => {
+    (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: 'claude_streaming') => {
       const newLine: TerminalLine = {
         id: String(lineCountRef.current++),
         type,
         content,
         timestamp: Date.now(),
         analysisData,
-        source: source || currentStreamSourceRef.current || undefined,
+        source: (source || currentStreamSourceRef.current) as 'claude_streaming' | undefined,
       };
       console.log('📝 [TerminalInterface.addTerminalLine] Adding line:', {
         id: newLine.id,
@@ -276,7 +271,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         }
       }
     },
-    [miraState, streamState.isStreaming, streamState.streamId, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
+    [miraState, streamState.isStreaming, interactionCount, addTerminalLine, onConfidenceChange, updateRapportBar]
   );
 
   // Tool handlers for zoom interactions
@@ -335,6 +330,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
         // Stream from backend with real-time updates
         const callbacksObject = {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onConfidence: (_update: any) => {
             // Only apply confidence updates if this stream wasn't interrupted
             if (interruptedStreamIdRef.current === streamNum) {
@@ -343,6 +339,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
             // Confidence updates are handled in onComplete (single source of truth)
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onProfile: (_profile: any) => {
             // Profile updates are handled in onComplete (single source of truth)
           },
@@ -350,11 +347,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             // Display rapport bar when response starts (first thing the user sees)
             addTerminalLine('text', formattedBar);
           },
-          onMessageStart: (_messageId: string, source?: string) => {
+           
+          onMessageStart: (_messageId: string, _source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
-            currentStreamSourceRef.current = source || null;
-            setCurrentStreamSource(source || null); // Update state for memoization reactivity
+            currentStreamSourceRef.current = _source || null;
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onResponseChunk: (chunk: any) => {
             // Check if stream was interrupted - only block chunks from the interrupted stream
             if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
@@ -362,7 +360,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
 
             // Accumulate chunks into a single terminal line (not one line per chunk)
-            // This prevents rapid scrolling when streaming long content like specimen 47
             // CRITICAL: Use functional state update to ensure line exists before accumulating
             setTerminalLines((prev) => {
               if (!currentAnimatingLineIdRef.current) {
@@ -378,7 +375,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                   type: 'text',
                   content: chunk,
                   timestamp: Date.now(),
-                  source: currentStreamSourceRef.current || undefined,
+                  source: (currentStreamSourceRef.current || undefined) as 'claude_streaming' | undefined,
                 };
                 return [...prev, newLine];
               } else {
@@ -410,6 +407,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }
             }
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onComplete: (data: any) => {
 
             // Don't reset currentStreamSource here - let the useEffect watching streamState.isStreaming handle cleanup
@@ -421,10 +419,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               onConfidenceChange?.(data.updatedState.confidenceInUser);
             }
 
-            // Only show ASCII art response for text messages, not tool calls or specimen 47
+            // Only show ASCII art response for text messages, not tool calls
             // Tool calls already updated the ASCII art inline via zoom handlers
-            // Specimen 47 is a special grant proposal that shouldn't show ASCII art after
-            if (data.response?.source !== 'tool_call' && data.response?.source !== 'specimen_47') {
+            if (data.response?.source !== 'tool_call') {
               // Add transition phrase
               addTerminalLine('text', '...what do you think about this...');
 
@@ -447,14 +444,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
 
             // Reset response tracking on successful completion
-            // For specimen_47, delay END_STREAM until animation finishes (via onRevealedLengthChange)
-            // For other sources, end stream immediately
-            if (data.response?.source !== 'specimen_47') {
-              currentAnimatingLineIdRef.current = null;
-              responseLineIdsRef.current = [];
-              dispatchStream({ type: 'END_STREAM' });
-            }
+            currentAnimatingLineIdRef.current = null;
+            responseLineIdsRef.current = [];
+            dispatchStream({ type: 'END_STREAM' });
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onAnalysis: (analysis: any) => {
             // Display Claude's reasoning as analysis box
             // (Rapport bar is already displayed by onResponseStart)
@@ -464,6 +458,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             });
             addTerminalLine('analysis', box);
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onError: (error: any) => {
 
             // Reset stream source on error
@@ -509,7 +504,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         console.log('🌊 [TerminalInterface.handleInput] Stream started, awaiting promise...');
         await promise;
         console.log('🌊 [TerminalInterface.handleInput] Stream promise resolved');
-      } catch (_error) {
+      } catch (_err) {
         // Error handling: graceful degradation
         addTerminalLine(
           'text',
@@ -524,7 +519,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         }
       }
     },
-    [miraState, streamState.isStreaming, streamState.streamId, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [miraState, streamState.isStreaming, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar]
   );
 
   /**
@@ -640,11 +636,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         streamState.abortController();
         // Dispatch INTERRUPT_STREAM to ensure state is updated
         dispatchStream({ type: 'INTERRUPT_STREAM' });
-      } catch (error) {
+      } catch {
         // Silent failure - abort may fail if stream already ended
       }
     }
-  }, [streamState.abortController, streamState.streamId, miraState, updateRapportBar, onConfidenceChange]);
+  }, [streamState, miraState, updateRapportBar, onConfidenceChange]);
 
   return (
     <div className="terminal-interface">
@@ -679,12 +675,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }
             }
 
-            // Animate response lines during streaming
-            // For normal (multi-line) responses: only animate the currently active line
-            // For single-line streams (like Specimen 47): animate as content grows
-            // We check if line is in responseLineIdsRef - if yes, it's part of current response and should animate
-            const shouldAnimate = !isResponseLine || responseLineIdsRef.current.includes(line.id);
-
             return (
               <div
                 key={line.id}
@@ -697,38 +687,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                     {line.analysisData ? formatAnalysisBox(line.analysisData) : line.content}
                   </span>
                 ) : isResponseLine ? (
-                  // For claude_streaming: use simple text render (chunks arrive in real-time)
-                  // For specimen_47: use TypewriterLine for single-chunk animation
-                  line.source === 'claude_streaming' ? (
-                    <span className="terminal-interface__text">{line.content}</span>
-                  ) : (
-                    <TypewriterLine
-                      content={line.content}
-                      speed={settings.typingSpeed}
-                      isAnimating={shouldAnimate && (line.isAnimating !== false)}
-                      onRevealedLengthChange={(length) => {
-                        // Track revealed length for interrupt handling
-                        if (line.id === currentAnimatingLineIdRef.current) {
-                          currentRevealedLengthRef.current = length;
-                          // Auto-scroll to bottom during character animation
-                          if (scrollRef.current) {
-                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                          }
-                          // When animation completes, end the stream and clear source
-                          // This allows INTERRUPT button to stay visible until all characters revealed
-                          if (length >= currentAnimatingContentLengthRef.current) {
-                            currentStreamSourceRef.current = null;
-                            // Only dispatch if this is specimen_47 (other sources already dispatched END_STREAM)
-                            if (currentStreamSourceRef.current === 'specimen_47') {
-                              currentAnimatingLineIdRef.current = null;
-                              responseLineIdsRef.current = [];
-                              dispatchStream({ type: 'END_STREAM' });
-                            }
-                          }
-                        }
-                      }}
-                    />
-                  )
+                  <span className="terminal-interface__text">{line.content}</span>
                 ) : (
                   <span className="terminal-interface__text">{line.content}</span>
                 )}
@@ -751,7 +710,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             ];
 
             const shouldShowInterrupt =
-              streamState.isStreaming && (currentStreamSourceRef.current === 'specimen_47' || currentStreamSourceRef.current === 'claude_streaming');
+              streamState.isStreaming && currentStreamSourceRef.current === 'claude_streaming';
 
 
             if (shouldShowInterrupt) {
@@ -768,7 +727,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt, currentStreamSource])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt])}
         </div>
       </div>
 

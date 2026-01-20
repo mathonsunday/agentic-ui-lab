@@ -395,18 +395,6 @@ describe('analyze-user-stream API Endpoint', () => {
   });
 
   describe('Grant Proposal Trigger', () => {
-    it('should detect "specimen 47" keyword trigger', () => {
-      const triggers = ['specimen 47', 'Specimen 47', 'SPECIMEN 47', 'specimen 47?'];
-
-      for (const trigger of triggers) {
-        const lowerInput = trigger.toLowerCase();
-        const isTriggered =
-          lowerInput.includes('specimen 47') || lowerInput.includes('grant');
-
-        expect(isTriggered).toBe(true);
-      }
-    });
-
     it('should detect "grant" keyword trigger', () => {
       const triggers = ['grant', 'Grant', 'GRANT', 'grant proposal'];
 

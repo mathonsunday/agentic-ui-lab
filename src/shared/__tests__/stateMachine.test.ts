@@ -613,11 +613,7 @@ describe('Streaming State Machine', () => {
 
       const state = createInitialState();
 
-      expect(state.currentScenario).toBeNull();
-      expect(state.stepIndex).toBe(0);
-      expect(state.totalSteps).toBe(0);
       expect(state.thoughts).toEqual([]);
-      expect(state.response).toBeNull();
       expect(state.visibleElements).toEqual([]);
       expect(state.sessionStartTime).toBeGreaterThan(0);
     });

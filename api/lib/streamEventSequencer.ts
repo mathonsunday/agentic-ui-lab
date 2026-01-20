@@ -23,7 +23,7 @@
  * 1. TEXT_MESSAGE_START - Signals start of message streaming
  *    - sent: When streaming begins
  *    - contains: message_id (unique identifier), source (event origin)
- *    - sources: "specimen_47" (hardcoded content), "claude_streaming" (Claude output), "tool_call" (tool interaction)
+ *    - sources: "claude_streaming" (Claude output), "tool_call" (tool interaction)
  *    - frontend uses: Identifies message stream for UI updates and interrupt eligibility
  *
  * 2. TEXT_CONTENT - Character-by-character content chunks

@@ -91,7 +91,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     // (See api/lib/contentLibrary.ts for full list of production content features)
     const contentFeature = getContentFeature(userInput);
     if (contentFeature) {
-      // Handle hardcoded content (like specimen_47)
+      // Handle hardcoded content
       if (contentFeature.isHardcoded && contentFeature.content) {
         return streamContentFeature(response, miraState, eventTracker, contentFeature);
       }

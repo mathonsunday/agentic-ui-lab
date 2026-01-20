@@ -27,7 +27,6 @@ import { TypewriterLine } from '../TypewriterLine';
  * 4. Multiple content updates = multiple interval recreations = visible pauses
  *
  * ACCEPTABLE BECAUSE:
- * - Feature is secondary (Specimen 47 grant proposal is experimental)
  * - Simplicity prevents closure capture bugs (our previous problem)
  * - Users see character-by-character typing (just with pauses between chunks)
  * - Alternative solutions require complex ref-based tracking or delay user feedback
@@ -195,7 +194,7 @@ describe('TypewriterLine', () => {
   describe('Streaming Content Animation (CONTINUOUS: decoupled smooth typing)', () => {
     /**
      * This test suite validates smooth, continuous character-by-character animation
-     * when content arrives asynchronously in chunks (like Specimen 47 grant proposal).
+     * when content arrives asynchronously in chunks.
      *
      * The animation interval is decoupled from content updates:
      * 1. Single interval runs continuously while isAnimating=true
@@ -267,7 +266,6 @@ describe('TypewriterLine', () => {
     it('should handle rapid content growth without stopping animation', () => {
       /**
        * Simulates rapid backend chunks arriving faster than animation progresses.
-       * This is typical for Specimen 47: backend sends ~77 chunks of ~77 chars each.
        *
        * Expected behavior: Animation continues but with visible pauses as interval
        * recreates on each chunk arrival.
