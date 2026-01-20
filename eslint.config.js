@@ -33,6 +33,8 @@ export default defineConfig([
           varsIgnorePattern: '^_',
         },
       ],
+      // Cyclomatic complexity limit
+      'complexity': ['error', { max: 10 }],
     },
   },
   {
@@ -56,6 +58,8 @@ export default defineConfig([
           varsIgnorePattern: '^_',
         },
       ],
+      // Cyclomatic complexity limit
+      'complexity': ['error', { max: 10 }],
     },
   },
 ])
