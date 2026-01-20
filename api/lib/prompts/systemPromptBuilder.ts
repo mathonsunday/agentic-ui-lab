@@ -4,8 +4,11 @@
  * Composable, testable prompt construction using reusable sections.
  * Replaces the 275-line embedded system prompt with a structured approach.
  *
+ * Supports provider-agnostic prompt ordering via strategies.
+ *
  * Usage:
  * ```typescript
+ * // Use default Claude strategy
  * const systemPrompt = new MiraSystemPromptBuilder()
  *   .addIntroduction()
  *   .addVoiceExamples('glowing')
@@ -16,11 +19,18 @@
  *   .addMindsetGuidance()
  *   .addResponseFormat()
  *   .build();
+ *
+ * // Or use a specific provider strategy
+ * const systemPrompt = new MiraSystemPromptBuilder({ provider: 'openai-gpt' })
+ *   // ... add sections as before, builder applies provider-specific ordering
+ *   .build();
  * ```
  */
 
 import type { PromptSection, PersonalityTier } from './types.js';
 import type { MiraState } from '../types.js';
+import type { PromptOrderingStrategy, LLMProvider } from './strategies/types.js';
+import { getStrategyForProvider } from './strategies/strategyFactory.js';
 import { getVoiceExamplesForPersonality } from './sections/voiceExamples.js';
 import { getScoringRulesSection } from './sections/scoringRules.js';
 import { buildContextInjectionSection } from './sections/contextInjection.js';
@@ -34,30 +44,69 @@ import {
   GENERIC_INSTRUCTIONS,
 } from './sections/criticalMindset.js';
 
-export class MiraSystemPromptBuilder {
-  private sections: Map<string, PromptSection> = new Map();
+interface PromptSectionWithKey extends PromptSection {
+  key: string;
+}
 
-  constructor() {
-    // Initialize with no sections - user must add them explicitly
+export interface MiraSystemPromptBuilderOptions {
+  /**
+   * The LLM provider to optimize for. Defaults to 'claude'.
+   * Determines section ordering strategy.
+   */
+  provider?: LLMProvider;
+
+  /**
+   * Custom ordering strategy. If provided, overrides provider selection.
+   */
+  strategy?: PromptOrderingStrategy;
+}
+
+export class MiraSystemPromptBuilder {
+  private sections: Map<string, PromptSectionWithKey> = new Map();
+  private strategy: PromptOrderingStrategy;
+
+  constructor(options: MiraSystemPromptBuilderOptions = {}) {
+    // Use custom strategy if provided, otherwise get strategy for provider
+    if (options.strategy) {
+      this.strategy = options.strategy;
+    } else {
+      const provider = options.provider ?? 'claude';
+      this.strategy = getStrategyForProvider(provider);
+    }
   }
 
   addIntroduction(): this {
-    this.sections.set('introduction', INTRODUCTION);
+    this.sections.set('introduction', {
+      key: 'introduction',
+      ...INTRODUCTION,
+    });
     return this;
   }
 
   addVoiceExamples(personality: PersonalityTier): this {
-    this.sections.set('voice', getVoiceExamplesForPersonality(personality));
+    const section = getVoiceExamplesForPersonality(personality);
+    this.sections.set('voice', {
+      key: 'voice',
+      ...section,
+    });
     return this;
   }
 
   addDetailedScoringRules(): this {
-    this.sections.set('scoring', getScoringRulesSection(true));
+    const section = getScoringRulesSection(true);
+    this.sections.set('scoring', {
+      key: 'scoring',
+      ...section,
+    });
     return this;
   }
 
   addBasicScoringRules(): this {
-    this.sections.set('scoring', getScoringRulesSection(false));
+    const section = getScoringRulesSection(false);
+    this.sections.set('scoring', {
+      key: 'scoring',
+      ...section,
+    });
     return this;
   }
 
@@ -66,51 +115,85 @@ export class MiraSystemPromptBuilder {
     messageCount: number,
     toolCallCount: number
   ): this {
-    this.sections.set(
-      'context',
-      buildContextInjectionSection(miraState, messageCount, toolCallCount)
+    const section = buildContextInjectionSection(
+      miraState,
+      messageCount,
+      toolCallCount
     );
+    this.sections.set('context', {
+      key: 'context',
+      ...section,
+    });
     return this;
   }
 
   addGenericInstructions(): this {
-    this.sections.set('generic', GENERIC_INSTRUCTIONS);
+    this.sections.set('generic', {
+      key: 'generic',
+      ...GENERIC_INSTRUCTIONS,
+    });
     return this;
   }
 
   addGlowingVoiceInstructions(): this {
-    this.sections.set('glowingVoice', GLOWING_VOICE_INSTRUCTIONS);
+    this.sections.set('glowingVoice', {
+      key: 'glowingVoice',
+      ...GLOWING_VOICE_INSTRUCTIONS,
+    });
     return this;
   }
 
   addMindsetGuidance(): this {
-    this.sections.set('mindset', CRITICAL_MINDSET);
+    this.sections.set('mindset', {
+      key: 'mindset',
+      ...CRITICAL_MINDSET,
+    });
     return this;
   }
 
   addCreatureMoodSelection(): this {
-    this.sections.set('creatureMood', CREATURE_MOOD_SELECTION);
+    this.sections.set('creatureMood', {
+      key: 'creatureMood',
+      ...CREATURE_MOOD_SELECTION,
+    });
     return this;
   }
 
   addCreatureSelfAwareness(): this {
-    this.sections.set('creatureSelfAwareness', CREATURE_SELF_AWARENESS);
+    this.sections.set('creatureSelfAwareness', {
+      key: 'creatureSelfAwareness',
+      ...CREATURE_SELF_AWARENESS,
+    });
     return this;
   }
 
   addResponseFormat(): this {
-    this.sections.set('format', RESPONSE_FORMAT);
+    this.sections.set('format', {
+      key: 'format',
+      ...RESPONSE_FORMAT,
+    });
     return this;
   }
 
   /**
    * Build the complete system prompt by concatenating all sections in order
+   * determined by the current strategy
    */
   build(): string {
-    // Sort sections by order field and concatenate
-    const sorted = Array.from(this.sections.values()).sort(
-      (a, b) => a.order - b.order
-    );
+    // Validate strategy before building
+    const errors = this.strategy.validate();
+    if (errors.length > 0) {
+      throw new Error(
+        `Strategy validation failed: ${errors.map((e) => `${e.field} - ${e.message}`).join('; ')}`
+      );
+    }
+
+    // Sort sections using strategy's ordering
+    const sorted = Array.from(this.sections.values()).sort((a, b) => {
+      const orderA = this.strategy.getOrder(a.key);
+      const orderB = this.strategy.getOrder(b.key);
+      return orderA - orderB;
+    });
 
     return sorted.map((section) => section.content).join('\n\n');
   }
@@ -126,8 +209,13 @@ export class MiraSystemPromptBuilder {
   /**
    * Get all current sections (useful for debugging)
    */
-  getSections(): PromptSection[] {
-    return Array.from(this.sections.values()).sort((a, b) => a.order - b.order);
+  getSections(): PromptSectionWithKey[] {
+    const sorted = Array.from(this.sections.values()).sort((a, b) => {
+      const orderA = this.strategy.getOrder(a.key);
+      const orderB = this.strategy.getOrder(b.key);
+      return orderA - orderB;
+    });
+    return sorted;
   }
 
   /**
@@ -136,18 +224,31 @@ export class MiraSystemPromptBuilder {
   hasSection(key: string): boolean {
     return this.sections.has(key);
   }
+
+  /**
+   * Get the current strategy
+   */
+  getStrategy(): PromptOrderingStrategy {
+    return this.strategy;
+  }
 }
 
 /**
  * Convenience function to create the advanced prompt used in production
  * (This is what analyze-user-stream.ts uses)
+ *
+ * @param miraState - Current Mira state
+ * @param messageCount - Number of messages in conversation
+ * @param toolCallCount - Number of tool calls made
+ * @param provider - LLM provider to optimize for (defaults to 'claude')
  */
 export function createAdvancedMiraPrompt(
   miraState: MiraState,
   messageCount: number,
-  toolCallCount: number
+  toolCallCount: number,
+  provider: LLMProvider = 'claude'
 ): string {
-  return new MiraSystemPromptBuilder()
+  return new MiraSystemPromptBuilder({ provider })
     .addIntroduction()
     .addVoiceExamples('glowing')
     .addGlowingVoiceInstructions()
@@ -164,9 +265,15 @@ export function createAdvancedMiraPrompt(
 /**
  * Convenience function to create a basic prompt for simple analysis
  * (Fallback for non-streaming endpoints)
+ *
+ * @param miraState - Current Mira state
+ * @param provider - LLM provider to optimize for (defaults to 'claude')
  */
-export function createBasicMiraPrompt(miraState: MiraState): string {
-  return new MiraSystemPromptBuilder()
+export function createBasicMiraPrompt(
+  miraState: MiraState,
+  provider: LLMProvider = 'claude'
+): string {
+  return new MiraSystemPromptBuilder({ provider })
     .addIntroduction()
     .addVoiceExamples('glowing')
     .addBasicScoringRules()

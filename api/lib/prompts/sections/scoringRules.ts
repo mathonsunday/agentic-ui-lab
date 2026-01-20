@@ -52,6 +52,12 @@ Use your judgment - this is about DEPTH and GENUINE CURIOSITY, not just presence
 /**
  * Basic scoring rules used as fallback
  * Simpler, more direct scoring guidelines
+ *
+ * Note: BASIC_SCORING and DETAILED_SCORING both use order: 5 because
+ * they are mutually exclusive - the builder only adds one or the other
+ * (addDetailedScoringRules() vs addBasicScoringRules()).
+ * This is safe because the same section key ('scoring') is reused,
+ * so only one variant exists in the final prompt at any time.
  */
 const BASIC_SCORING: PromptSection = {
   title: 'SCORING GUIDELINES (basic)',
