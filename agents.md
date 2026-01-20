@@ -138,6 +138,38 @@ This is the hardest call in an art project. Use these signals:
    - A good refactoring plan is one that makes the currently-fragile parts robust
    - If your "things we should improve" list doesn't match your "things that are hard to change" list, you haven't understood the actual structure yet
 
+## Git Operations: Respect Uncommitted Work
+
+**CRITICAL RULE: Never revert, discard, or modify uncommitted changes without explicit permission.**
+
+When you encounter uncommitted modifications (detected via `git status` or `git diff`):
+
+1. **Assume the user made intentional changes** - even if they're confusing or seem unrelated to the current task
+2. **Do NOT:**
+   - `git checkout <file>` to discard changes
+   - `git reset` to unstage files
+   - Remove files from staging because they seem "unrelated"
+   - Revert changes to make linting pass
+3. **INSTEAD, always:**
+   - Ask the user what the changes are for
+   - Explain why the changes conflict with your current work (e.g., ESLint errors, unrelated to task)
+   - Wait for permission before modifying or reverting
+   - If you must stage selectively, explain exactly which files you're staging and why you're excluding others
+
+**Real-world example of what NOT to do:**
+
+- ❌ User makes README edits, you see them while staging for commit, they conflict with ESLint
+- ❌ You decide "those are unrelated" and revert with `git checkout README.md`
+- ❌ User's work is now lost
+- ✅ Instead: Stage only your code, explain the README edits exist and aren't staged, ask user what they want to do
+
+**Why this matters:**
+
+- The user might be working on documentation updates, style improvements, or other changes
+- Even if they seem unrelated to the current feature work, that's the user's decision to make
+- Reverting someone's work without asking is disrespectful and creates trust issues
+- If changes conflict with your work, that's a conversation to have, not a unilateral decision to make
+
 ## Dead Code: Don't Add It
 
 **CRITICAL RULE: Never add functions, variables, or exports that aren't immediately used by existing code.**
@@ -148,22 +180,26 @@ The dead code analysis tool (`npm run dead-code`) catches unused exports. When i
 2. **Don't add it** - delete it before committing
 
 **Common mistake to avoid:**
+
 - Adding a utility function "for future use" (e.g., a display name mapping function)
 - Adding an export "in case consuming code needs it" (e.g., exporting a helper that prompt engineering handles)
 - Exports without actual calls: the dead code tool will catch these
 
 **Why this matters:**
+
 - Unused code creates maintenance burden (is it still correct? is it still needed?)
 - It clutters the API surface and confuses future developers
 - The dead code tool exists specifically to prevent this
 - Trust the tool - if it says something's unused, delete it
 
 **If you think code might be useful later:**
+
 - Document the need in a GitHub issue or plan file
 - Add it when that need actually arises
 - Don't add speculative code
 
 **Real-world example to avoid:**
+
 - ❌ Adding `getCreatureDisplayName()` function because prompt engineering might need creature name conversion
 - ✅ If Claude's reasoning needs display names, that's handled through prompt instructions (no code function needed)
 - ✅ Only add the function if consuming code actually calls it
