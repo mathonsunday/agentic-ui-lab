@@ -7,7 +7,6 @@ import { useTerminalLineZoomUpdate } from '../hooks/useTerminalLineZoomUpdate';
 import { useStreamingSession } from '../hooks/useStreamingSession';
 import {
   initializeMiraState,
-  assessResponse,
   type MiraState,
   type InterruptMemory,
 } from '../shared/miraAgentSimulator';
@@ -230,7 +229,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         const { promise, abort } = streamMiraBackend(
           null,
           miraState,
-          { type: 'tool_call', depth: 'moderate', confidenceDelta: 0, traits: {} },
           {
             action: toolAction,
             timestamp: Date.now(),
@@ -322,9 +320,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       playStreamingSound('thinking').catch(() => {});
 
       try {
-        // Frontend assessment: type and basic depth from word count
-        const assessment = assessResponse(userInput, 3000, miraState);
-
         // Stream from backend with real-time updates
         const callbacksObject = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -506,7 +501,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         const { promise, abort } = streamMiraBackend(
           userInput,
           miraState,
-          assessment,
           null,
           callbacksObject
         );

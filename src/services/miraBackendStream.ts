@@ -10,7 +10,7 @@
  * Supports AG-UI event envelope format with correlation IDs, versioning, and sequence tracking.
  */
 
-import type { MiraState, AgentResponse, StreamAssessment, ToolCallData } from '../../api/lib/types';
+import type { MiraState, AgentResponse, ToolCallData } from '../../api/lib/types';
 import type { EventEnvelope } from '../types/events';
 import { generateConfidenceBar } from '../shared/analysisFormatter';
 import { generateStreamId } from '../../api/lib/utils/idGenerator';
@@ -135,7 +135,6 @@ const activeStreams = new Map<string, AbortController>();
 export function streamMiraBackend(
   userInput: string | null,
   miraState: MiraState,
-  assessment: StreamAssessment,
   toolData: ToolCallData | null,
   callbacks: StreamCallbacks
 ): { promise: Promise<void>; abort: () => void } {
@@ -221,8 +220,6 @@ export function streamMiraBackend(
         body: JSON.stringify({
           userInput: userInput || undefined,
           miraState,
-          assessment,
-          interactionDuration: 0,
           toolData,
         }),
         signal: abortController.signal,

@@ -17,7 +17,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
-import type { MiraState, ResponseAssessment, ToolCallData } from './lib/types.js';
+import type { MiraState, ToolCallData } from './lib/types.js';
 import { updateConfidenceAndProfile, updateMemory, processToolCall } from './lib/miraAgent.js';
 import { createAdvancedMiraPrompt } from './lib/prompts/systemPromptBuilder.js';
 import { StreamEventSequencer } from './lib/streamEventSequencer.js';
@@ -62,15 +62,14 @@ export default async (request: VercelRequest, response: VercelResponse) => {
   const sequencer = new StreamEventSequencer(response, eventTracker);
 
   try {
-    const { userInput, miraState, assessment, toolData } = request.body as {
+    const { userInput, miraState, toolData } = request.body as {
       userInput?: string;
       miraState: MiraState;
-      assessment: ResponseAssessment;
       toolData?: ToolCallData;
     };
 
-    if (!miraState || !assessment) {
-      await sequencer.sendError('MISSING_FIELDS', 'Missing required fields');
+    if (!miraState) {
+      await sequencer.sendError('MISSING_FIELDS', 'Missing required miraState');
       return response.end();
     }
 

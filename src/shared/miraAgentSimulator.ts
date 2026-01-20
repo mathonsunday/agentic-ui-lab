@@ -1,16 +1,11 @@
 /**
- * Mira Agent Simulator - HYBRID MODE
+ * Mira Agent Simulator
  *
- * ARCHITECTURE:
- * - Frontend assessment: User response type & depth (word count, question detection)
- * - Claude analysis: Smart understanding of user thoughtfulness, curiosity, adventurousness
- * - Hardcoded responses: All 27+ curated personality responses preserved
- * - Response selection: Uses both assessment AND personality to pick response
- *
- * This preserves your artistic vision while adding Claude's intelligence for understanding users.
+ * State initialization for the Mira research agent.
+ * All user analysis is performed by Claude on the backend.
  */
 
-import type { MiraState, ResponseAssessment, InterruptMemory } from '../../api/lib/types';
+import type { MiraState, InterruptMemory } from '../../api/lib/types';
 
 // Re-export types needed by frontend components
 export type { MiraState, InterruptMemory };
@@ -33,57 +28,6 @@ export function initializeMiraState(initialConfidence?: number): MiraState {
     currentMood: 'testing',
     confidenceInUser: confidence,
     hasFoundKindred: false,
-    responseIndices: {}, // tracks which response index to use next per personality+depth
-  };
-}
-
-/**
- * Frontend assessment: Simple rules for type and depth
- * Claude will do deeper analysis in the backend
- */
-export function assessResponse(
-  response: string,
-  _duration: number,
-  _state: MiraState
-): ResponseAssessment {
-  const wordCount = response.trim().split(/\s+/).filter(w => w.length > 0).length;
-  const hasQuestionMark = response.includes('?');
-
-  // Simple frontend rules - Claude refines these via backend analysis
-  let depth: 'surface' | 'moderate' | 'deep' = 'surface';
-  let confidenceDelta = 0;
-  let type: 'response' | 'question' = 'response';
-
-  // Determine type first
-  if (hasQuestionMark) {
-    type = 'question';
-    confidenceDelta = 12;
-  } else {
-    type = 'response';
-  }
-
-  // Determine depth by word count (Claude refines this in backend)
-  if (wordCount === 1) {
-    depth = 'surface';
-    if (type === 'response') confidenceDelta = -5;
-  } else if (wordCount === 2) {
-    depth = 'moderate';
-    if (type === 'response') confidenceDelta = 8;
-  } else {
-    depth = 'deep';
-    if (type === 'response') confidenceDelta = 15;
-  }
-
-  return {
-    type,
-    depth,
-    confidenceDelta,
-    traits: {
-      thoughtfulness: depth === 'deep' ? 75 : depth === 'moderate' ? 60 : 40,
-      adventurousness: depth === 'deep' ? 70 : depth === 'moderate' ? 50 : 30,
-      engagement: depth === 'deep' ? 85 : depth === 'moderate' ? 65 : 35,
-      curiosity: depth === 'deep' ? 80 : depth === 'moderate' ? 60 : 35,
-      superficiality: depth === 'surface' ? 75 : depth === 'moderate' ? 40 : 20,
-    },
+    responseIndices: {},
   };
 }

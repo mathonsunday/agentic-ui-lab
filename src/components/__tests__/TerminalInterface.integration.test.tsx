@@ -48,7 +48,7 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
    */
   function mockStreamMiraBackend(testData: { chunks?: string[]; completeData?: any; error?: string }) {
     (miraBackendStream.streamMiraBackend as any).mockImplementation(
-      (_userInput: any, _state: any, _assessment: any, _toolData: any, callbacks: any) => {
+      (_userInput: any, _state: any, _toolData: any, callbacks: any) => {
         // Return promise and abort function
         const promise = new Promise<void>((resolve) => {
           // Schedule callbacks on next microtask
