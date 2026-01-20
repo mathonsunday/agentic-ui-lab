@@ -498,6 +498,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           null,
           callbacksObject
         );
+        // Reset stream source before starting new stream
+        currentStreamSourceRef.current = null;
         dispatchStream({ type: 'START_STREAM', abort });
         console.log('🌊 [TerminalInterface.handleInput] Stream started, awaiting promise...');
         await promise;
