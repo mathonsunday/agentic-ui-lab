@@ -530,5 +530,135 @@ describe('TerminalInterface Integration - Streaming Flow', () => {
       expect(returnButton).not.toBeInTheDocument();
     });
   });
+
+  describe('Terminal Line Type Rendering', () => {
+    it('should render ASCII lines inside <pre> elements with correct class', async () => {
+      mockStreamMiraBackend({
+        chunks: ['response text'],
+        completeData: {
+          updatedState: { confidenceInUser: 60 },
+          response: { streaming: ['response text'] },
+          analysis: { confidenceDelta: 10, suggested_creature_mood: 'curious' },
+        },
+      });
+
+      render(<TerminalInterface />);
+
+      const textarea = screen.getByPlaceholderText('> share your thoughts...');
+      const submitButton = screen.getByRole('button', { name: /send/i });
+
+      await userEvent.type(textarea, 'hello');
+      fireEvent.click(submitButton);
+
+      // Wait for ASCII art to appear (triggered by onComplete with suggested_creature_mood)
+      await waitFor(() => {
+        const preElements = document.querySelectorAll('pre.terminal-interface__ascii');
+        expect(preElements.length).toBeGreaterThan(0);
+      });
+
+      // Verify the pre element is inside a line div with ascii type class
+      const asciiLine = document.querySelector('.terminal-interface__line--ascii');
+      expect(asciiLine).toBeInTheDocument();
+      expect(asciiLine?.querySelector('pre.terminal-interface__ascii')).toBeInTheDocument();
+    });
+
+    it('should render analysis lines with formatted analysis box', async () => {
+      mockStreamMiraBackend({
+        chunks: ['response text'],
+        completeData: {
+          updatedState: { confidenceInUser: 60 },
+          response: { streaming: ['response text'] },
+          analysis: {
+            reasoning: 'User shows genuine curiosity',
+            confidenceDelta: 10,
+            metrics: { thoughtfulness: 70 },
+            suggested_creature_mood: 'curious',
+          },
+        },
+      });
+
+      // Extend mock to call onAnalysis callback
+      (miraBackendStream.streamMiraBackend as any).mockImplementation(
+        (_userInput: any, _state: any, _toolData: any, callbacks: any) => {
+          const promise = new Promise<void>((resolve) => {
+            Promise.resolve().then(() => {
+              callbacks.onResponseStart?.(10, '[RAPPORT] [████░░░░░░░░░░░░░░░░] 60%\n');
+              callbacks.onResponseChunk?.('response text');
+              callbacks.onAnalysis?.({
+                reasoning: 'User shows genuine curiosity',
+                confidenceDelta: 10,
+                metrics: { thoughtfulness: 70 },
+              });
+              callbacks.onComplete?.({
+                updatedState: { confidenceInUser: 60 },
+                response: { streaming: ['response text'] },
+              });
+              resolve();
+            });
+          });
+          return { promise, abort: () => {} };
+        }
+      );
+
+      render(<TerminalInterface />);
+
+      const textarea = screen.getByPlaceholderText('> share your thoughts...');
+      const submitButton = screen.getByRole('button', { name: /send/i });
+
+      await userEvent.type(textarea, 'I find this fascinating');
+      fireEvent.click(submitButton);
+
+      // Wait for analysis box to appear with the reasoning text
+      await waitFor(() => {
+        expect(screen.getByText(/User shows genuine curiosity/)).toBeInTheDocument();
+      });
+
+      // Verify the analysis line has correct class
+      const analysisLine = document.querySelector('.terminal-interface__line--analysis');
+      expect(analysisLine).toBeInTheDocument();
+    });
+
+    it('should render text lines inside <span> elements', async () => {
+      mockStreamMiraBackend({
+        chunks: ['hello from the deep'],
+        completeData: {
+          updatedState: { confidenceInUser: 55 },
+          response: { streaming: ['hello from the deep'] },
+        },
+      });
+
+      render(<TerminalInterface />);
+
+      const textarea = screen.getByPlaceholderText('> share your thoughts...');
+      const submitButton = screen.getByRole('button', { name: /send/i });
+
+      await userEvent.type(textarea, 'test');
+      fireEvent.click(submitButton);
+
+      // Wait for response text
+      await waitFor(() => {
+        expect(screen.getByText('hello from the deep')).toBeInTheDocument();
+      });
+
+      // Verify text is in a span with correct class
+      const textLine = document.querySelector('.terminal-interface__line--text');
+      expect(textLine).toBeInTheDocument();
+      expect(textLine?.querySelector('.terminal-interface__text')).toBeInTheDocument();
+    });
+
+    it('should apply correct CSS class based on line type', () => {
+      render(<TerminalInterface />);
+
+      // Initial system messages should have text type
+      const systemLines = document.querySelectorAll('.terminal-interface__line--text');
+      expect(systemLines.length).toBeGreaterThan(0);
+
+      // Each line should have the base class plus type-specific class
+      systemLines.forEach((line) => {
+        expect(line.classList.contains('terminal-interface__line')).toBe(true);
+        expect(line.classList.contains('terminal-interface__line--text')).toBe(true);
+      });
+    });
+  });
 });
 

@@ -1,8 +1,7 @@
-import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useReducer, useMemo, memo } from 'react';
 import { useAtom } from 'jotai';
 import { MinimalInput } from './MinimalInput';
 import { settingsAtom } from '../stores/settings';
-import { createLogger } from '../utils/debugLogger';
 import { useTerminalLineZoomUpdate } from '../hooks/useTerminalLineZoomUpdate';
 import { useStreamingSession } from '../hooks/useStreamingSession';
 import {
@@ -78,9 +77,29 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
   }
 }
 
-const logger = createLogger('TerminalInterface');
+/**
+ * Memoized terminal line component
+ * Prevents unnecessary re-renders when other lines update during streaming
+ */
+interface TerminalLineProps {
+  line: TerminalLine;
+}
 
-
+const TerminalLineComponent = memo(function TerminalLineComponent({ line }: TerminalLineProps) {
+  return (
+    <div className={`terminal-interface__line terminal-interface__line--${line.type}`}>
+      {line.type === 'ascii' ? (
+        <pre className="terminal-interface__ascii">{line.content}</pre>
+      ) : line.type === 'analysis' ? (
+        <span className="terminal-interface__text">
+          {line.analysisData ? formatAnalysisBox(line.analysisData) : line.content}
+        </span>
+      ) : (
+        <span className="terminal-interface__text">{line.content}</span>
+      )}
+    </div>
+  );
+});
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
@@ -657,46 +676,9 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
       <div className="terminal-interface__content">
         <div className="terminal-interface__conversation" ref={scrollRef}>
-          {terminalLines.map((line) => {
-            const responseLineIds = streamingSession.getResponseLineIds();
-            const isResponseLine = responseLineIds.includes(line.id);
-
-            // VALIDATION: Warn if expected response line is missing from tracking
-            if (import.meta.env.DEV) {
-              const lineNum = parseInt(line.id);
-              const expectedResponseLineIds = responseLineIds.map(id => parseInt(id));
-              if (!isNaN(lineNum) && expectedResponseLineIds.length > 0) {
-                const minExpected = Math.min(...expectedResponseLineIds);
-                const maxExpected = Math.max(...expectedResponseLineIds);
-                if (lineNum >= minExpected && lineNum <= maxExpected && !isResponseLine) {
-                  logger.warn('ID MISMATCH:', {
-                    lineId: line.id,
-                    trackedIds: responseLineIds,
-                    message: 'Line ID falls within response range but not tracked!',
-                  });
-                }
-              }
-            }
-
-            return (
-              <div
-                key={line.id}
-                className={`terminal-interface__line terminal-interface__line--${line.type}`}
-              >
-                {line.type === 'ascii' ? (
-                  <pre className="terminal-interface__ascii">{line.content}</pre>
-                ) : line.type === 'analysis' ? (
-                  <span className="terminal-interface__text">
-                    {line.analysisData ? formatAnalysisBox(line.analysisData) : line.content}
-                  </span>
-                ) : isResponseLine ? (
-                  <span className="terminal-interface__text">{line.content}</span>
-                ) : (
-                  <span className="terminal-interface__text">{line.content}</span>
-                )}
-              </div>
-            );
-          })}
+          {terminalLines.map((line) => (
+            <TerminalLineComponent key={line.id} line={line} />
+          ))}
         </div>
 
         <div className="terminal-interface__input-section">
