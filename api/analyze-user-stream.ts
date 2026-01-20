@@ -46,6 +46,166 @@ class EventSequence {
   }
 }
 
+// =============================================================================
+// Request Handlers - Extracted to reduce handler complexity
+// =============================================================================
+
+interface ClaudeAnalysis {
+  confidenceDelta: number;
+  reasoning: string;
+  thoughtfulness: number;
+  adventurousness: number;
+  engagement: number;
+  curiosity: number;
+  superficiality: number;
+  suggested_creature_mood?: string;
+}
+
+/**
+ * Parses Claude's streaming response and extracts JSON analysis
+ */
+async function parseClaudeAnalysis(
+  stream: AsyncIterable<{ type: string; delta: { type: string; text: string } }>,
+  sequencer: StreamEventSequencer,
+  response: VercelResponse
+): Promise<ClaudeAnalysis | null> {
+  let fullResponse = '';
+
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      fullResponse += event.delta.text;
+    }
+  }
+
+  const jsonMatch = fullResponse.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    await sequencer.sendError('INVALID_RESPONSE', 'Invalid Claude response format');
+    response.end();
+    return null;
+  }
+
+  const cleanedJson = jsonMatch[0].replace(/:\s*\+/g, ': ');
+  try {
+    return JSON.parse(cleanedJson) as ClaudeAnalysis;
+  } catch (parseError) {
+    await sequencer.sendError('JSON_PARSE_ERROR', `Failed to parse Claude response: ${parseError}`);
+    response.end();
+    return null;
+  }
+}
+
+/**
+ * Sends all analysis-related events to the client
+ */
+async function sendAnalysisEvents(
+  analysis: ClaudeAnalysis,
+  miraState: MiraState,
+  userInput: string,
+  sequencer: StreamEventSequencer
+): Promise<void> {
+  const newConfidence = Math.max(0, Math.min(100, miraState.confidenceInUser + analysis.confidenceDelta));
+
+  const metrics = {
+    thoughtfulness: analysis.thoughtfulness,
+    adventurousness: analysis.adventurousness,
+    engagement: analysis.engagement,
+    curiosity: analysis.curiosity,
+    superficiality: analysis.superficiality,
+  };
+
+  await sequencer.sendResponseStart(analysis.confidenceDelta, newConfidence, metrics);
+  await sequencer.sendStateUpdate(newConfidence, metrics);
+
+  const updatedState = updateConfidenceAndProfile(miraState, {
+    confidenceDelta: analysis.confidenceDelta,
+    updatedProfile: metrics,
+    reasoning: analysis.reasoning,
+  });
+
+  await sequencer.sendAnalysis(analysis.reasoning, metrics, analysis.confidenceDelta, analysis.suggested_creature_mood);
+
+  const finalState = updateMemory(updatedState, userInput, {
+    streaming: [],
+    observations: [],
+    confidenceDelta: analysis.confidenceDelta,
+  });
+
+  await sequencer.sendCompletion(finalState, {
+    streaming: [],
+    observations: [],
+    confidenceDelta: analysis.confidenceDelta,
+  }, {
+    reasoning: analysis.reasoning,
+    confidenceDelta: analysis.confidenceDelta,
+    metrics,
+    suggested_creature_mood: analysis.suggested_creature_mood,
+  });
+}
+
+/**
+ * Handles the main text input flow with Claude analysis
+ */
+async function handleTextInput(
+  userInput: string,
+  miraState: MiraState,
+  sequencer: StreamEventSequencer,
+  response: VercelResponse
+): Promise<void> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await sequencer.sendError('SERVER_CONFIG_ERROR', 'Server configuration error');
+    response.end();
+    return;
+  }
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const messageCount = miraState.memories.filter(m => m.type !== 'tool_call' && m.type !== 'interrupt').length;
+  const toolCallCount = miraState.memories.filter(m => m.type === 'tool_call').length;
+  const systemPrompt = createAdvancedMiraPrompt(miraState, messageCount, toolCallCount);
+
+  const stream = await client.messages.stream({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 300,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: `User message: "${userInput}"` }],
+  });
+
+  const analysis = await parseClaudeAnalysis(stream as AsyncIterable<{ type: string; delta: { type: string; text: string } }>, sequencer, response);
+  if (!analysis) return;
+
+  await sendAnalysisEvents(analysis, miraState, userInput, sequencer);
+  response.end();
+}
+
+/**
+ * Handles content feature routing (hardcoded or Claude-streamed)
+ * Returns true if a feature was handled, false otherwise
+ */
+async function tryHandleContentFeature(
+  userInput: string,
+  miraState: MiraState,
+  response: VercelResponse,
+  eventTracker: EventSequence
+): Promise<boolean> {
+  const contentFeature = getContentFeature(userInput);
+  if (!contentFeature) return false;
+
+  if (contentFeature.isHardcoded && contentFeature.content) {
+    await streamContentFeature(response, miraState, eventTracker, {
+      id: contentFeature.id,
+      content: contentFeature.content,
+      eventSource: contentFeature.eventSource,
+      confidenceDelta: contentFeature.confidenceDelta,
+    });
+    return true;
+  }
+  if (!contentFeature.isHardcoded && contentFeature.prompt) {
+    await streamClaudeResponse(response, miraState, eventTracker, contentFeature);
+    return true;
+  }
+  return false;
+}
+
 export default async (request: VercelRequest, response: VercelResponse) => {
   // Only accept POST requests
   if (request.method !== 'POST') {
@@ -87,164 +247,12 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     }
 
     // Check if this input should trigger a content feature
-    // (See api/lib/contentLibrary.ts for full list of production content features)
-    const contentFeature = getContentFeature(userInput);
-    if (contentFeature) {
-      // Handle hardcoded content
-      if (contentFeature.isHardcoded && contentFeature.content) {
-        return streamContentFeature(response, miraState, eventTracker, contentFeature);
-      }
-      // Handle Claude-streamed content (like research_proposal)
-      if (!contentFeature.isHardcoded && contentFeature.prompt) {
-        return streamClaudeResponse(response, miraState, eventTracker, contentFeature);
-      }
+    if (await tryHandleContentFeature(userInput, miraState, response, eventTracker)) {
+      return;
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      await sequencer.sendError('SERVER_CONFIG_ERROR', 'Server configuration error');
-      return response.end();
-    }
-
-    // Initialize Claude client
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
-    // Calculate separate counts for messages vs tool interactions
-    // NOTE: Exclude both tool_call AND interrupt - interrupts are reactions, not conversational exchanges
-    const messageCount = miraState.memories.filter(m =>
-      m.type !== 'tool_call' && m.type !== 'interrupt'
-    ).length;
-    const toolCallCount = miraState.memories.filter(m => m.type === 'tool_call').length;
-
-    // Build system prompt using the structured prompt builder
-    // This replaces 143 lines of embedded prompt text with a composable, testable approach
-    const systemPrompt = createAdvancedMiraPrompt(miraState, messageCount, toolCallCount);
-
-    // Call Claude with streaming
-    // System prompt is cached with ephemeral cache control for cost savings
-    // First request: full prompt sent (~75 tokens) = ~0.30¢
-    // 2nd+ requests: cached = ~0.03¢ (90% savings!)
-    const stream = await client.messages.stream({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      system: [
-        {
-          type: 'text',
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [
-        {
-          role: 'user',
-          content: `User message: "${userInput}"`,
-        },
-      ],
-    });
-
-    let fullResponse = '';
-
-    // Stream Claude's response in real-time
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        fullResponse += event.delta.text;
-      }
-    }
-
-    // Parse the JSON response from Claude
-    const jsonMatch = fullResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      await sequencer.sendError('INVALID_RESPONSE', 'Invalid Claude response format');
-      return response.end();
-    }
-
-    // Clean up JSON: remove leading + signs (Claude includes "+15" instead of "15")
-    const cleanedJson = jsonMatch[0].replace(/:\s*\+/g, ': ');
-    let analysis;
-    try {
-      analysis = JSON.parse(cleanedJson);
-    } catch (parseError) {
-      await sequencer.sendError('JSON_PARSE_ERROR', `Failed to parse Claude response: ${parseError}`);
-      return response.end();
-    }
-
-    // Calculate new confidence
-    const newConfidence = Math.max(
-      0,
-      Math.min(100, miraState.confidenceInUser + analysis.confidenceDelta)
-    );
-
-    // Send RESPONSE_START event first - signals analysis beginning with confidence delta
-    await sequencer.sendResponseStart(
-      analysis.confidenceDelta,
-      newConfidence,
-      {
-        thoughtfulness: analysis.thoughtfulness,
-        adventurousness: analysis.adventurousness,
-        engagement: analysis.engagement,
-        curiosity: analysis.curiosity,
-        superficiality: analysis.superficiality,
-      }
-    );
-
-    // Send state delta with confidence and profile updates
-    await sequencer.sendStateUpdate(newConfidence, {
-      thoughtfulness: analysis.thoughtfulness,
-      adventurousness: analysis.adventurousness,
-      engagement: analysis.engagement,
-      curiosity: analysis.curiosity,
-      superficiality: analysis.superficiality,
-    });
-
-    // Update state with analysis
-    const updatedState = updateConfidenceAndProfile(miraState, {
-      confidenceDelta: analysis.confidenceDelta,
-      updatedProfile: {
-        thoughtfulness: analysis.thoughtfulness,
-        adventurousness: analysis.adventurousness,
-        engagement: analysis.engagement,
-        curiosity: analysis.curiosity,
-        superficiality: analysis.superficiality,
-      },
-      reasoning: analysis.reasoning,
-    });
-
-    // Send analysis event (frontend will calculate confidence bar formatting)
-    await sequencer.sendAnalysis(analysis.reasoning, {
-      thoughtfulness: analysis.thoughtfulness,
-      adventurousness: analysis.adventurousness,
-      engagement: analysis.engagement,
-      curiosity: analysis.curiosity,
-      superficiality: analysis.superficiality,
-    }, analysis.confidenceDelta, analysis.suggested_creature_mood);
-
-    // Create a simple agent response for memory tracking
-    const finalState = updateMemory(updatedState, userInput, {
-      streaming: [],
-      observations: [],
-      confidenceDelta: analysis.confidenceDelta,
-    });
-
-    // Send completion event
-    await sequencer.sendCompletion(finalState, {
-      streaming: [],
-      observations: [],
-      confidenceDelta: analysis.confidenceDelta,
-    }, {
-      reasoning: analysis.reasoning,
-      confidenceDelta: analysis.confidenceDelta,
-      metrics: {
-        thoughtfulness: analysis.thoughtfulness,
-        adventurousness: analysis.adventurousness,
-        engagement: analysis.engagement,
-        curiosity: analysis.curiosity,
-        superficiality: analysis.superficiality,
-      },
-      suggested_creature_mood: analysis.suggested_creature_mood,
-    });
-
-    response.end();
+    // Handle standard text input with Claude analysis
+    await handleTextInput(userInput, miraState, sequencer, response);
   } catch (error) {
     console.error('Streaming error:', error);
     await sequencer.sendError(
