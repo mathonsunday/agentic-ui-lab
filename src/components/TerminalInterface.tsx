@@ -112,6 +112,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
+  const [streamSource, setStreamSource] = useState<string | null>(null); // State to trigger re-renders when stream source changes
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
   const currentAnimatingLineIdRef = useRef<string | null>(null);
@@ -159,10 +160,11 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   // Reset stream source when stream ends
   useEffect(() => {
-    if (!streamState.isStreaming && currentStreamSourceRef.current !== null) {
+    if (!streamState.isStreaming && streamSource !== null) {
+      setStreamSource(null);
       currentStreamSourceRef.current = null;
     }
-  }, [streamState.isStreaming]);
+  }, [streamState.isStreaming, streamSource]);
 
   const addTerminalLine = useCallback(
     (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: 'claude_streaming') => {
@@ -350,6 +352,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
            
           onMessageStart: (_messageId: string, _source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
+            // Use both state (for re-renders) and ref (for accessing without recreating callbacks)
             console.log('🎯 [TERMINAL INTERFACE] onMessageStart called', {
               messageId: _messageId,
               source: _source,
@@ -357,10 +360,13 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               timestamp: Date.now()
             });
 
-            currentStreamSourceRef.current = _source || null;
+            const newSource = _source || null;
+            currentStreamSourceRef.current = newSource;
+            setStreamSource(newSource);
 
-            console.log('🎯 [TERMINAL INTERFACE] onMessageStart ref updated', {
+            console.log('🎯 [TERMINAL INTERFACE] onMessageStart updated both state and ref', {
               refAfterSet: currentStreamSourceRef.current,
+              stateSetTo: newSource,
               timestamp: Date.now()
             });
           },
@@ -718,7 +724,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           {useMemo(() => {
             console.log('🔄 [TERMINAL INTERFACE] useMemo recalculating tools', {
               isStreaming: streamState.isStreaming,
-              currentStreamSourceRef: currentStreamSourceRef.current,
+              streamSource,
               timestamp: Date.now()
             });
 
@@ -728,12 +734,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             ];
 
             const shouldShowInterrupt =
-              streamState.isStreaming && currentStreamSourceRef.current === 'claude_streaming';
+              streamState.isStreaming && streamSource === 'claude_streaming';
 
             console.log('🔄 [TERMINAL INTERFACE] shouldShowInterrupt calculated', {
               shouldShowInterrupt,
               isStreaming: streamState.isStreaming,
-              refValue: currentStreamSourceRef.current,
+              source: streamSource,
               timestamp: Date.now()
             });
 
@@ -757,7 +763,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt, streamSource])}
         </div>
       </div>
 
