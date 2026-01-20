@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { MiraState, ResponseAssessment } from '../../api/lib/types';
+import type { MiraState, ResponseAssessment } from '../../shared/miraAgentSimulator';
 
 // Note: These tests focus on the interrupt behavior contract rather than
 // unit testing internal implementation details, since the streaming

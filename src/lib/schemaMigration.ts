@@ -56,6 +56,7 @@ export type SchemaMigration<From, To> = (data: From) => To;
  * Schema migrator for handling version transitions
  */
 export class SchemaMigrator {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private migrations = new Map<string, Map<string, SchemaMigration<any, any>>>();
 
   /**
@@ -108,6 +109,7 @@ export class SchemaMigrator {
     data: T,
     knownKeys: string[]
   ): Partial<T> & { __extensions?: Record<string, unknown> } {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = {};
     const extensions: Record<string, unknown> = {};
 
@@ -128,13 +130,6 @@ export class SchemaMigrator {
 }
 
 /**
- * Discriminated union type helper for type-safe events
- */
-export type Discriminator<T extends { type: string }> = {
-  [K in T['type']]: T extends { type: K } ? T : never;
-};
-
-/**
  * Type guard helper
  */
 export function isType<T extends { type: string }>(
@@ -145,6 +140,7 @@ export function isType<T extends { type: string }>(
     event !== null &&
     typeof event === 'object' &&
     'type' in event &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (event as any).type === type
   );
 }
@@ -183,7 +179,7 @@ export const globalSchemaRegistry = {
 /**
  * JSON Schema for Mira event types
  */
-export const MiraEventSchema = {
+const MiraEventSchema = {
   TEXT_MESSAGE_START: {
     type: 'object',
     properties: {

@@ -61,7 +61,7 @@ export interface ContentFeature {
  * instead of routing to Claude. This allows for consistent, high-quality responses
  * on specific topics while keeping the core Claude analysis path clean.
  */
-export const ContentLibrary: Record<string, ContentFeature> = {
+const ContentLibrary: Record<string, ContentFeature> = {
   SPECIMEN_47: {
     id: 'specimen_47',
     name: 'Specimen 47 - Deep Sea Research Proposal',

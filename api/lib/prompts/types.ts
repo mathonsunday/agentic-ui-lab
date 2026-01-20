@@ -10,16 +10,3 @@ export interface PromptSection {
 }
 
 export type PersonalityTier = 'negative' | 'chaotic' | 'glowing';
-
-export interface PersonalityTierDefinition {
-  name: PersonalityTier;
-  examples: string[];
-  keyTraits: string;
-}
-
-export interface ScoringLevel {
-  name: string;
-  range: [number, number];
-  description: string;
-  examples: string[];
-}

@@ -8,7 +8,19 @@
  * - Deterministic scenarios for testing
  */
 
-import type { ThoughtFragment, VisualElement } from './Character';
+export interface ThoughtFragment {
+  text: string;
+  intensity: number;
+  decay: 'fast' | 'slow' | 'linger';
+  glitch?: boolean;
+}
+
+export interface VisualElement {
+  type: 'text' | 'image' | 'creature' | 'particle' | 'sound';
+  content: string;
+  position?: { x: number; y: number };
+  style?: Record<string, string | number>;
+}
 
 export type SystemLogType = 'EVALUATION' | 'OBSERVATION' | 'THOUGHT' | 'CONFIDENCE';
 
@@ -28,9 +40,6 @@ export interface ResearchEvaluation {
 }
 
 export interface AgentState {
-  currentScenario: string | null;
-  stepIndex: number;
-  totalSteps: number;
   thoughts: ThoughtFragment[];
   visibleElements: VisualElement[];
   researchEvaluation: ResearchEvaluation;
@@ -38,43 +47,10 @@ export interface AgentState {
   sessionStartTime: number;
 }
 
-export interface Scenario {
-  name: string;
-  description: string;
-  thoughts: ThoughtFragment[];
-  moods: string;
-  elements: VisualElement[];
-}
-
-// Deterministic scenarios for testing
-export const SCENARIOS: Record<string, Scenario> = {
-  specimen47: {
-    name: 'Specimen 47',
-    description: 'Mira talks about her obsession',
-    thoughts: [
-      { text: '...it\'s been watching me...', intensity: 0.5, decay: 'fast' },
-      { text: '...I can feel its presence...', intensity: 0.7, decay: 'slow' },
-      { text: '...the eyes, those eyes...', intensity: 0.9, decay: 'slow', glitch: true },
-      { text: '...why do I keep counting?...', intensity: 0.6, decay: 'slow' },
-      { text: '...47...', intensity: 1.0, decay: 'linger', glitch: true },
-    ],
-    moods: 'obsession',
-    elements: [
-      { type: 'text', content: 'Specimen 47.', position: { x: 50, y: 25 } },
-      { type: 'text', content: 'It watches back.', position: { x: 50, y: 45 } },
-      { type: 'creature', content: 'leviathan-eye', position: { x: 50, y: 70 } },
-      { type: 'text', content: '...always watching...', position: { x: 30, y: 85 } },
-    ],
-  },
-};
-
 // Initial state
 export function createInitialState(): AgentState {
   const now = Date.now();
   return {
-    currentScenario: null,
-    stepIndex: 0,
-    totalSteps: 0,
     thoughts: [],
     visibleElements: [],
     researchEvaluation: {
@@ -94,63 +70,6 @@ export function createInitialState(): AgentState {
     ],
     sessionStartTime: now,
   };
-}
-
-// State transitions
-export function loadScenario(state: AgentState, scenarioId: string): AgentState {
-  const scenario = SCENARIOS[scenarioId];
-  if (!scenario) return state;
-
-  // Total steps = thoughts + elements
-  const totalSteps = scenario.thoughts.length + scenario.elements.length;
-
-  return {
-    ...state,
-    currentScenario: scenarioId,
-    stepIndex: 0,
-    totalSteps,
-    thoughts: scenario.thoughts,
-    visibleElements: [],
-  };
-}
-
-export function stepForward(state: AgentState): AgentState {
-  if (!state.currentScenario) return state;
-
-  const scenario = SCENARIOS[state.currentScenario];
-  if (!scenario) return state;
-
-  const thoughtCount = scenario.thoughts.length;
-  const elementCount = scenario.elements.length;
-
-  // Already at end
-  if (state.stepIndex >= state.totalSteps) {
-    return state;
-  }
-
-  const newStepIndex = state.stepIndex + 1;
-
-  // Determine visible elements based on step
-  let visibleElements = state.visibleElements;
-
-  if (newStepIndex > thoughtCount && newStepIndex <= thoughtCount + elementCount) {
-    const elementIndex = newStepIndex - thoughtCount - 1;
-    visibleElements = scenario.elements.slice(0, elementIndex + 1);
-  }
-
-  return {
-    ...state,
-    stepIndex: newStepIndex,
-    visibleElements,
-  };
-}
-
-export function reset(state: AgentState): AgentState {
-  if (!state.currentScenario) {
-    return createInitialState();
-  }
-
-  return loadScenario(state, state.currentScenario);
 }
 
 // ============================================================================

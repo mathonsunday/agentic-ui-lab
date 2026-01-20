@@ -79,7 +79,7 @@ export function createTimeoutAbortController(timeoutMs: number): AbortController
 /**
  * Timeout configuration for different operation types
  */
-export const TIMEOUT_CONFIG = {
+const TIMEOUT_CONFIG = {
   // Backend API call (non-streaming)
   backendCall: 10000, // 10 seconds
 

@@ -40,7 +40,7 @@ export interface ToolResult {
 /**
  * Get all available tools
  */
-export function listAvailableTools(): ToolSchema[] {
+function listAvailableTools(): ToolSchema[] {
   return getAllToolSchemas();
 }
 

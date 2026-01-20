@@ -1,6 +1,6 @@
 import './ToolButton.css';
 
-export interface ToolButtonProps {
+interface ToolButtonProps {
   name: string;
   onToolClick: () => void;
   disabled?: boolean;

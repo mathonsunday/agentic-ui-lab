@@ -109,7 +109,7 @@ export const zoomOutSchema: ToolSchema = {
 /**
  * All available tool schemas indexed by tool name
  */
-export const ALL_TOOL_SCHEMAS: Record<string, ToolSchema> = {
+const ALL_TOOL_SCHEMAS: Record<string, ToolSchema> = {
   zoom_in: zoomInSchema,
   zoom_out: zoomOutSchema,
 };
@@ -117,7 +117,7 @@ export const ALL_TOOL_SCHEMAS: Record<string, ToolSchema> = {
 /**
  * Get schema for a specific tool
  */
-export function getToolSchema(toolName: string): ToolSchema | undefined {
+function getToolSchema(toolName: string): ToolSchema | undefined {
   return ALL_TOOL_SCHEMAS[toolName];
 }
 

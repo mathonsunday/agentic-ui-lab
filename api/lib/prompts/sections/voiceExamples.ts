@@ -5,7 +5,7 @@
 
 import type { PromptSection, PersonalityTier } from '../types.js';
 
-export const VOICE_EXAMPLES: Record<PersonalityTier, PromptSection> = {
+const VOICE_EXAMPLES: Record<PersonalityTier, PromptSection> = {
   negative: {
     title: 'NEGATIVE (lazy/dismissive engagement)',
     order: 2,

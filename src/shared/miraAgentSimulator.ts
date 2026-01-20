@@ -10,13 +10,10 @@
  * This preserves your artistic vision while adding Claude's intelligence for understanding users.
  */
 
-import { callMiraBackend } from '../services/miraBackendClient';
-import type { UserProfile, InteractionMemory, MiraState, AgentResponse, ResponseAssessment, InterruptMemory } from '../../api/lib/types';
-import { getPersonalityFromConfidence, type Personality } from './personalityHelper';
+import type { MiraState, ResponseAssessment, InterruptMemory } from '../../api/lib/types';
 
-// Re-export types for backward compatibility
-export type { UserProfile, InteractionMemory, MiraState, AgentResponse, Personality, InterruptMemory };
-export { getPersonalityFromConfidence };
+// Re-export types needed by frontend components
+export type { MiraState, InterruptMemory };
 
 /**
  * Initialize Mira's internal state at start of research phase
@@ -38,70 +35,6 @@ export function initializeMiraState(initialConfidence?: number): MiraState {
     hasFoundKindred: false,
     responseIndices: {}, // tracks which response index to use next per personality+depth
   };
-}
-
-/**
- * HYBRID EVALUATION WITH BACKEND:
- * 1. Frontend assesses response type/depth (word count, question detection)
- * 2. Backend: Claude analyzes user personality deeply + LangGraph selects response
- * 3. Frontend receives updated state + response to display
- * 4. User profile updated with Claude's analysis (replaces hardcoded metrics)
- */
-export async function evaluateUserResponseWithBackend(
-  miraState: MiraState,
-  userResponse: string,
-  interactionDuration: number
-): Promise<{ updatedState: MiraState; response: AgentResponse }> {
-  // Frontend assessment: type and basic depth from word count
-  const assessment = assessResponse(userResponse, interactionDuration, miraState);
-
-  // Call the backend to get Claude analysis + response generation
-  try {
-    console.log('Calling backend with assessment:', assessment);
-    const backendResult = await callMiraBackend(
-      userResponse,
-      miraState,
-      assessment,
-      interactionDuration
-    );
-    console.log('Backend returned result:', backendResult);
-
-    return backendResult;
-  } catch (error) {
-    // Graceful fallback: return neutral response without backend
-    console.error('Backend call failed, falling back to local response:', error);
-
-    // Clamp confidence to 0-100 range
-    const clampedConfidence = Math.max(
-      0,
-      Math.min(100, miraState.confidenceInUser)
-    );
-
-    // Add to memory
-    const newMemory: InteractionMemory = {
-      timestamp: Date.now(),
-      type: assessment.type,
-      content: userResponse,
-      duration: interactionDuration,
-      depth: assessment.depth,
-    };
-
-    const fallbackState: MiraState = {
-      ...miraState,
-      confidenceInUser: clampedConfidence,
-      memories: [...miraState.memories, newMemory],
-      responseIndices: { ...miraState.responseIndices },
-    };
-
-    return {
-      updatedState: fallbackState,
-      response: {
-        streaming: ['...connection to the depths lost... the abyss is unreachable at this moment...'],
-        observations: [],
-        confidenceDelta: 0,
-      },
-    };
-  }
 }
 
 /**

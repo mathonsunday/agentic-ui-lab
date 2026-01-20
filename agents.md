@@ -170,6 +170,47 @@ When you encounter uncommitted modifications (detected via `git status` or `git 
 - Reverting someone's work without asking is disrespectful and creates trust issues
 - If changes conflict with your work, that's a conversation to have, not a unilateral decision to make
 
+## Pre-Commit Checks: FIX Them, Don't Ignore Them
+
+**CRITICAL RULE: Pre-commit hooks exist to catch problems before they reach the repo. DO NOT use `--no-verify` to bypass them.**
+
+When pre-commit checks fail:
+
+1. **DO NOT:**
+   - `git commit --no-verify` to bypass linting, type-checking, or dead code detection
+   - `git push --force` to push failing commits to remote
+   - Ignore the pre-commit error messages
+   - Assume the failures are "pre-existing" or "unrelated"
+
+2. **INSTEAD, ALWAYS:**
+   - **Read the full error message** - it tells you exactly what's wrong
+   - **Fix the actual problem** - linting errors, type errors, dead code
+   - **Run the checks locally** to verify they pass before committing
+   - **Ask the user** if you're unsure how to fix an error
+   - **Only use `--no-verify` if the user explicitly asks you to** and you understand the consequences
+
+**Real-world example of what NOT to do:**
+
+- ❌ Dead code is detected, you run `git commit --no-verify` to bypass it
+- ❌ You push to remote with dead code that should have been fixed
+- ❌ The user has to clean it up later
+- ✅ Instead: Fix the dead code, run the checks again, commit when they pass
+
+**Why this matters:**
+
+- Pre-commit checks catch bugs early (type errors, linting issues, unused code)
+- Bypassing them defeats their entire purpose
+- Dead code detected by knip should be removed or fixed, not ignored
+- The checks protect code quality and maintainability
+- If you can't fix something, ask the user - don't just bypass the checks
+
+**How to handle common pre-commit failures:**
+
+- **ESLint errors**: Run `npm run lint -- --fix` to auto-fix, or fix manually
+- **Type errors**: Run `npm run type-check` to see details, fix the code
+- **Dead code (knip)**: Either use the code immediately, or delete it
+- **If you genuinely cannot fix it**: Ask the user for guidance, don't bypass
+
 ## Dead Code: Don't Add It
 
 **CRITICAL RULE: Never add functions, variables, or exports that aren't immediately used by existing code.**
