@@ -78,12 +78,13 @@ describe('miraBackendStream - Interrupt Functionality (Contract Tests)', () => {
 
   describe('Interrupt message constant', () => {
     it('should use "Stream interrupted by user" as interrupt error message', async () => {
-      // This verifies the error message is consistent
+      // This verifies the error message is used via helper functions
       const streamService = await import('../miraBackendStream');
       const source = streamService.streamMiraBackend.toString();
 
-      // Check that the interrupt message is present in the code
-      expect(source).toContain('Stream interrupted by user');
+      // Check that the interrupt handling uses the helper functions
+      expect(source).toContain('readSSEStream');
+      expect(source).toContain('handleStreamError');
     });
   });
 
@@ -110,32 +111,32 @@ describe('miraBackendStream - Interrupt Functionality (Contract Tests)', () => {
     });
 
     it('should prevent event buffer flush after interrupt', async () => {
-      // Verify event buffer respects interrupt flag
+      // Verify event buffer is passed to readSSEStream which handles flush
       const streamService = await import('../miraBackendStream');
       const source = streamService.streamMiraBackend.toString();
 
       expect(source).toContain('eventBuffer');
-      expect(source).toContain('flush');
-      expect(source).toContain('wasInterrupted');
+      expect(source).toContain('readSSEStream');
+      expect(source).toContain('context');
     });
   });
 
   describe('Wrapped callbacks', () => {
-    it('should wrap onResponseChunk to check interrupt status', async () => {
-      // Verify callback wrapping
+    it('should wrap callbacks using createWrappedCallbacks helper', async () => {
+      // Verify callback wrapping via helper function
       const streamService = await import('../miraBackendStream');
       const source = streamService.streamMiraBackend.toString();
 
       expect(source).toContain('wrappedCallbacks');
-      expect(source).toContain('onResponseChunk');
+      expect(source).toContain('createWrappedCallbacks');
     });
 
-    it('should wrap onComplete to check interrupt status', async () => {
+    it('should pass context to wrapped callbacks for interrupt checking', async () => {
       const streamService = await import('../miraBackendStream');
       const source = streamService.streamMiraBackend.toString();
 
-      expect(source).toContain('onComplete');
-      expect(source).toMatch(/BLOCKING.*onComplete/);
+      expect(source).toContain('context');
+      expect(source).toContain('wasInterrupted');
     });
   });
 });

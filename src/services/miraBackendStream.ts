@@ -127,6 +127,179 @@ class EventBuffer {
  */
 const activeStreams = new Map<string, AbortController>();
 
+// =============================================================================
+// Stream Processing Helpers
+// =============================================================================
+
+interface StreamContext {
+  wasInterrupted: boolean;
+  chunkCount: number;
+  lastConfidenceValue: number | null;
+  lastProfileValue: Partial<ProfileUpdate>;
+}
+
+/**
+ * Creates callbacks that deduplicate updates and respect interrupt state
+ */
+function createWrappedCallbacks(
+  callbacks: StreamCallbacks,
+  context: StreamContext
+): StreamCallbacks {
+  return {
+    onConfidence: (update) => {
+      if (context.lastConfidenceValue !== null && context.lastConfidenceValue === update.to) {
+        console.log(`[miraBackendStream] Deduplicated confidence update: ${update.to}%`);
+        return;
+      }
+      context.lastConfidenceValue = update.to;
+      callbacks.onConfidence?.(update);
+    },
+    onProfile: (update) => {
+      const isSame =
+        context.lastProfileValue.thoughtfulness === update.thoughtfulness &&
+        context.lastProfileValue.adventurousness === update.adventurousness &&
+        context.lastProfileValue.engagement === update.engagement &&
+        context.lastProfileValue.curiosity === update.curiosity &&
+        context.lastProfileValue.superficiality === update.superficiality;
+      if (isSame) {
+        console.log('[miraBackendStream] Deduplicated profile update');
+        return;
+      }
+      context.lastProfileValue = { ...update };
+      callbacks.onProfile?.(update);
+    },
+    onResponseChunk: (chunk) => {
+      context.chunkCount++;
+      if (context.wasInterrupted) {
+        console.log(`🛑 [miraBackendStream] BLOCKING chunk #${context.chunkCount} (${chunk.length} chars) - stream was interrupted`);
+        return;
+      }
+      console.log(`✓ [miraBackendStream] Processing chunk #${context.chunkCount} (${chunk.length} chars)`);
+      callbacks.onResponseChunk?.(chunk);
+    },
+    onResponseStart: (confidenceDelta, formattedBar) => {
+      if (context.wasInterrupted) return;
+      callbacks.onResponseStart?.(confidenceDelta, formattedBar);
+    },
+    onComplete: (data) => {
+      if (context.wasInterrupted) {
+        console.log('🛑 [miraBackendStream] BLOCKING onComplete - stream was interrupted');
+        return;
+      }
+      console.log('✓ [miraBackendStream] Processing onComplete');
+      callbacks.onComplete?.(data);
+    },
+    onMessageStart: callbacks.onMessageStart,
+    onAnalysis: callbacks.onAnalysis,
+    onError: callbacks.onError,
+  };
+}
+
+/**
+ * Parses and processes a single SSE line, returning events through the buffer
+ */
+function parseSSELine(line: string, eventBuffer: EventBuffer): EventEnvelope[] {
+  if (!line.startsWith('data: ')) return [];
+  try {
+    const parsed = JSON.parse(line.slice(6));
+    return eventBuffer.add(parsed as EventEnvelope);
+  } catch (e) {
+    console.error('Failed to parse event:', e);
+    return [];
+  }
+}
+
+/**
+ * Processes SSE lines from a chunk, respecting interrupt state
+ */
+function processSSELines(
+  lines: string[],
+  eventBuffer: EventBuffer,
+  wrappedCallbacks: StreamCallbacks,
+  context: StreamContext
+): void {
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (context.wasInterrupted) {
+      console.log('🛑 [miraBackendStream] wasInterrupted flag set, skipping remaining chunks');
+      break;
+    }
+    const ordered = parseSSELine(lines[i], eventBuffer);
+    for (const evt of ordered) {
+      handleEnvelopeEvent(evt, wrappedCallbacks);
+    }
+  }
+}
+
+interface ReadLoopParams {
+  reader: ReadableStreamDefaultReader<Uint8Array>;
+  abortController: AbortController;
+  eventBuffer: EventBuffer;
+  wrappedCallbacks: StreamCallbacks;
+  context: StreamContext;
+  callbacks: StreamCallbacks;
+}
+
+/**
+ * Reads and processes SSE stream data until completion or abort
+ */
+async function readSSEStream(params: ReadLoopParams): Promise<void> {
+  const { reader, abortController, eventBuffer, wrappedCallbacks, context, callbacks } = params;
+  const decoder = new TextDecoder();
+  let lineBuffer = '';
+
+  while (true) {
+    if (abortController.signal.aborted) {
+      console.log('🛑 [miraBackendStream] Abort signal detected, stopping read loop');
+      context.wasInterrupted = true;
+      callbacks.onError?.('Stream interrupted by user');
+      break;
+    }
+
+    try {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      lineBuffer += decoder.decode(value, { stream: true });
+      const lines = lineBuffer.split('\n');
+      lineBuffer = lines[lines.length - 1];
+
+      processSSELines(lines, eventBuffer, wrappedCallbacks, context);
+    } catch (readError) {
+      if (abortController.signal.aborted) {
+        context.wasInterrupted = true;
+        callbacks.onError?.('Stream interrupted by user');
+        break;
+      }
+      throw readError;
+    }
+  }
+
+  // Flush remaining buffered events if not interrupted
+  if (!context.wasInterrupted) {
+    const remaining = eventBuffer.flush();
+    for (const evt of remaining) {
+      handleEnvelopeEvent(evt, wrappedCallbacks);
+    }
+  }
+}
+
+/**
+ * Handles stream errors, distinguishing abort errors from other failures
+ */
+function handleStreamError(
+  error: unknown,
+  context: StreamContext,
+  callbacks: StreamCallbacks
+): void {
+  if (error instanceof Error && error.name === 'AbortError') {
+    context.wasInterrupted = true;
+    callbacks.onError?.('Stream interrupted by user');
+  } else {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Stream error:', message);
+    callbacks.onError?.(message);
+  }
+}
 
 /**
  * Stream user input or tool call to backend and receive real-time updates
@@ -141,72 +314,17 @@ export function streamMiraBackend(
   const streamId = generateStreamId();
   const abortController = new AbortController();
   activeStreams.set(streamId, abortController);
-  let wasInterrupted = false;
   let readerRef: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
-  let chunkCount = 0;
-
-  // Track last update values for deduplication (2025 best practice)
-  let lastConfidenceValue: number | null = null;
-  let lastProfileValue: Partial<ProfileUpdate> = {};
-
-  // Wrap callbacks to check interrupt flag and deduplicate updates
-  const wrappedCallbacks: StreamCallbacks = {
-    onConfidence: (update) => {
-      // Deduplicate identical confidence values
-      if (lastConfidenceValue !== null && lastConfidenceValue === update.to) {
-        console.log(`[miraBackendStream] Deduplicated confidence update: ${update.to}%`);
-        return;
-      }
-      lastConfidenceValue = update.to;
-      callbacks.onConfidence?.(update);
-    },
-    onProfile: (update) => {
-      // Deduplicate identical profile updates by comparing all fields
-      const isSame =
-        lastProfileValue.thoughtfulness === update.thoughtfulness &&
-        lastProfileValue.adventurousness === update.adventurousness &&
-        lastProfileValue.engagement === update.engagement &&
-        lastProfileValue.curiosity === update.curiosity &&
-        lastProfileValue.superficiality === update.superficiality;
-
-      if (isSame) {
-        console.log('[miraBackendStream] Deduplicated profile update');
-        return;
-      }
-      lastProfileValue = { ...update };
-      callbacks.onProfile?.(update);
-    },
-    onResponseChunk: (chunk) => {
-      chunkCount++;
-      // Don't process chunks after interrupt
-      if (wasInterrupted) {
-        console.log(`🛑 [miraBackendStream] BLOCKING chunk #${chunkCount} (${chunk.length} chars) - stream was interrupted`);
-        return;
-      }
-      console.log(`✓ [miraBackendStream] Processing chunk #${chunkCount} (${chunk.length} chars)`);
-      callbacks.onResponseChunk?.(chunk);
-    },
-    onResponseStart: (confidenceDelta, formattedBar) => {
-      // Don't process response start after interrupt
-      if (wasInterrupted) {
-        return;
-      }
-      callbacks.onResponseStart?.(confidenceDelta, formattedBar);
-    },
-    onComplete: (data) => {
-      // Don't process completion after interrupt
-      if (wasInterrupted) {
-        console.log('🛑 [miraBackendStream] BLOCKING onComplete - stream was interrupted');
-        return;
-      }
-      console.log('✓ [miraBackendStream] Processing onComplete');
-      callbacks.onComplete?.(data);
-    },
-    onMessageStart: callbacks.onMessageStart,
-    onAnalysis: callbacks.onAnalysis,
-    onError: callbacks.onError,
+  // Shared state for deduplication and interrupt handling
+  const context: StreamContext = {
+    wasInterrupted: false,
+    chunkCount: 0,
+    lastConfidenceValue: null,
+    lastProfileValue: {},
   };
+
+  const wrappedCallbacks = createWrappedCallbacks(callbacks, context);
 
   const promise = (async () => {
     const apiUrl = getApiUrl();
@@ -214,9 +332,7 @@ export function streamMiraBackend(
     try {
       const response = await fetch(`${apiUrl}/api/analyze-user-stream`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userInput: userInput || undefined,
           miraState,
@@ -231,7 +347,6 @@ export function streamMiraBackend(
         return;
       }
 
-      // Read SSE stream
       if (!response.body) {
         callbacks.onError?.('No response body');
         return;
@@ -239,81 +354,17 @@ export function streamMiraBackend(
 
       const reader = response.body.getReader();
       readerRef = reader;
-      const decoder = new TextDecoder();
-      const eventBuffer = new EventBuffer();
-      let lineBuffer = '';
 
-      while (true) {
-        // Check abort signal at the start of each iteration
-        if (abortController.signal.aborted) {
-          console.log('🛑 [miraBackendStream] Abort signal detected, stopping read loop');
-          wasInterrupted = true;
-          callbacks.onError?.('Stream interrupted by user');
-          break;
-        }
-
-        try {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          lineBuffer += decoder.decode(value, { stream: true });
-          const lines = lineBuffer.split('\n');
-
-          // Keep last incomplete line in buffer
-          lineBuffer = lines[lines.length - 1];
-
-          for (let i = 0; i < lines.length - 1; i++) {
-            // Check for interrupt before processing each line
-            if (wasInterrupted) {
-              console.log('🛑 [miraBackendStream] wasInterrupted flag set, skipping remaining chunks');
-              break;
-            }
-
-            const line = lines[i];
-
-            if (line.startsWith('data: ')) {
-              try {
-                const parsed = JSON.parse(line.slice(6));
-                const envelope = parsed as EventEnvelope;
-                const ordered = eventBuffer.add(envelope);
-
-                // Process all ordered events using wrapped callbacks
-                for (const evt of ordered) {
-                  handleEnvelopeEvent(evt, wrappedCallbacks);
-                }
-              } catch (e) {
-                console.error('Failed to parse event:', e);
-              }
-            }
-          }
-        } catch (readError) {
-          // Check if abort was called
-          if (abortController.signal.aborted) {
-            wasInterrupted = true;
-            callbacks.onError?.('Stream interrupted by user');
-            break;
-          }
-          throw readError;
-        }
-      }
-
-      // Flush any remaining buffered events, but only if NOT interrupted
-      if (!wasInterrupted) {
-        const remaining = eventBuffer.flush();
-        for (const evt of remaining) {
-          handleEnvelopeEvent(evt, wrappedCallbacks);
-        }
-      }
+      await readSSEStream({
+        reader,
+        abortController,
+        eventBuffer: new EventBuffer(),
+        wrappedCallbacks,
+        context,
+        callbacks,
+      });
     } catch (error) {
-      // Check if this is an abort error
-      if (error instanceof Error && error.name === 'AbortError') {
-        wasInterrupted = true;
-        callbacks.onError?.('Stream interrupted by user');
-      } else {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Stream error:', message);
-        callbacks.onError?.(message);
-      }
+      handleStreamError(error, context, callbacks);
     } finally {
       activeStreams.delete(streamId);
     }
@@ -332,7 +383,7 @@ export function streamMiraBackend(
      */
     abort: () => {
       console.log('🛑 [miraBackendStream] Interrupt requested for', streamId);
-      wasInterrupted = true;
+      context.wasInterrupted = true;
       abortController.abort();
 
       // Actively cancel the reader to prevent buffered chunks from being processed
@@ -345,121 +396,113 @@ export function streamMiraBackend(
   };
 }
 
+// =============================================================================
+// Event Handlers - Individual handlers for each AG-UI event type
+// =============================================================================
+
+function handleTextMessageStart(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as { message_id: string; source?: string };
+  console.log('📥 [FRONTEND SERVICE] Received TEXT_MESSAGE_START', {
+    messageId: data.message_id,
+    source: data.source,
+    timestamp: Date.now(),
+  });
+  callbacks.onMessageStart?.(data.message_id, data.source);
+}
+
+function handleTextContent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as { chunk: string; chunk_index: number };
+  callbacks.onResponseChunk?.(data.chunk);
+}
+
+function handleResponseStart(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as {
+    confidenceDelta: number;
+    confidence: number;
+    metrics?: Record<string, number>;
+    hasAnalysisFollowing: boolean;
+  };
+  const rapportBar = generateConfidenceBar(data.confidence);
+  callbacks.onResponseStart?.(data.confidence, rapportBar);
+}
+
+function handleResponseComplete(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as {
+    updatedState: MiraState;
+    response: AgentResponse;
+    analysis?: {
+      reasoning: string;
+      confidenceDelta: number;
+      metrics: Record<string, number>;
+      suggested_creature_mood?: string;
+    };
+  };
+  callbacks.onComplete?.(data);
+}
+
+function handleStateDelta(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as {
+    version: number;
+    timestamp: number;
+    operations: Array<{ op: string; path: string; value?: unknown }>;
+  };
+  for (const op of data.operations) {
+    if (op.op === 'replace' && op.path === '/confidenceInUser') {
+      callbacks.onConfidence?.({ from: 0, to: op.value as number, delta: 0 });
+    }
+  }
+}
+
+function handleError(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as { code: string; message: string };
+  callbacks.onError?.(data.message);
+}
+
+function handleAnalysisComplete(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const data = envelope.data as {
+    reasoning: string;
+    metrics: Record<string, number>;
+    confidenceDelta: number;
+    suggested_creature_mood?: string;
+  };
+  console.log('📊 [miraBackendStream] ANALYSIS_COMPLETE event received:', {
+    reasoning: data.reasoning.substring(0, 50),
+    confidenceDelta: data.confidenceDelta,
+    suggestedMood: data.suggested_creature_mood,
+    hasCallback: !!callbacks.onAnalysis,
+  });
+  if (callbacks.onAnalysis) {
+    console.log('📊 [miraBackendStream] Invoking onAnalysis callback...');
+    callbacks.onAnalysis(data);
+  } else {
+    console.log('⚠️ [miraBackendStream] onAnalysis callback is undefined!');
+  }
+}
+
+type EventHandler = (envelope: EventEnvelope, callbacks: StreamCallbacks) => void;
+
+const EVENT_HANDLERS: Record<string, EventHandler> = {
+  TEXT_MESSAGE_START: handleTextMessageStart,
+  TEXT_CONTENT: handleTextContent,
+  TEXT_MESSAGE_END: () => {}, // Message streaming complete - no action needed
+  RESPONSE_START: handleResponseStart,
+  RESPONSE_COMPLETE: handleResponseComplete,
+  STATE_DELTA: handleStateDelta,
+  TOOL_CALL_START: () => {}, // Not yet implemented
+  TOOL_CALL_RESULT: () => {}, // Not yet implemented
+  TOOL_CALL_END: () => {}, // Not yet implemented
+  ERROR: handleError,
+  ACK: () => {}, // Acknowledgment - no action needed
+  ANALYSIS_COMPLETE: handleAnalysisComplete,
+};
+
 /**
- * Handle AG-UI event envelopes
+ * Handle AG-UI event envelopes by dispatching to the appropriate handler
  */
-function handleEnvelopeEvent(
-  envelope: EventEnvelope,
-  callbacks: StreamCallbacks
-): void {
-  switch (envelope.type) {
-    case 'TEXT_MESSAGE_START': {
-      const messageData = envelope.data as { message_id: string; source?: string };
-      console.log('📥 [FRONTEND SERVICE] Received TEXT_MESSAGE_START', {
-        messageId: messageData.message_id,
-        source: messageData.source,
-        timestamp: Date.now()
-      });
-      callbacks.onMessageStart?.(messageData.message_id, messageData.source);
-      break;
-    }
-
-    case 'TEXT_CONTENT': {
-      const contentData = envelope.data as { chunk: string; chunk_index: number };
-      callbacks.onResponseChunk?.(contentData.chunk);
-      break;
-    }
-
-    case 'TEXT_MESSAGE_END':
-      // Message streaming complete
-      break;
-
-    case 'RESPONSE_START': {
-      const startData = envelope.data as {
-        confidenceDelta: number;
-        confidence: number;
-        metrics?: Record<string, number>;
-        hasAnalysisFollowing: boolean;
-      };
-
-      const rapportBar = generateConfidenceBar(startData.confidence);
-      callbacks.onResponseStart?.(startData.confidence, rapportBar);
-      break;
-    }
-
-    case 'RESPONSE_COMPLETE': {
-      const completeData = envelope.data as {
-        updatedState: MiraState;
-        response: AgentResponse;
-        analysis?: {
-          reasoning: string;
-          confidenceDelta: number;
-          metrics: Record<string, number>;
-          suggested_creature_mood?: string;
-        };
-      };
-
-      callbacks.onComplete?.(completeData);
-      break;
-    }
-
-    case 'STATE_DELTA': {
-      const deltaData = envelope.data as {
-        version: number;
-        timestamp: number;
-        operations: Array<{ op: string; path: string; value?: unknown }>;
-      };
-
-      // Extract confidence updates from JSON Patch operations
-      for (const op of deltaData.operations) {
-        if (op.op === 'replace' && op.path === '/confidenceInUser') {
-          callbacks.onConfidence?.({
-            from: 0,
-            to: op.value as number,
-            delta: 0,
-          });
-        }
-      }
-      break;
-    }
-
-    case 'TOOL_CALL_START':
-    case 'TOOL_CALL_RESULT':
-    case 'TOOL_CALL_END':
-      // Tool events - not yet implemented for callbacks
-      break;
-
-    case 'ERROR': {
-      const errorData = envelope.data as { code: string; message: string };
-      callbacks.onError?.(errorData.message);
-      break;
-    }
-
-    case 'ACK':
-      // Acknowledgment - no action needed on client
-      break;
-
-    case 'ANALYSIS_COMPLETE': {
-      const analysisData = envelope.data as {
-        reasoning: string;
-        metrics: Record<string, number>;
-        confidenceDelta: number;
-        suggested_creature_mood?: string;
-      };
-      console.log('📊 [miraBackendStream] ANALYSIS_COMPLETE event received:', {
-        reasoning: analysisData.reasoning.substring(0, 50),
-        confidenceDelta: analysisData.confidenceDelta,
-        suggestedMood: analysisData.suggested_creature_mood,
-        hasCallback: !!callbacks.onAnalysis,
-      });
-      if (callbacks.onAnalysis) {
-        console.log('📊 [miraBackendStream] Invoking onAnalysis callback...');
-        callbacks.onAnalysis(analysisData);
-      } else {
-        console.log('⚠️ [miraBackendStream] onAnalysis callback is undefined!');
-      }
-      break;
-    }
+function handleEnvelopeEvent(envelope: EventEnvelope, callbacks: StreamCallbacks): void {
+  const handler = EVENT_HANDLERS[envelope.type];
+  if (handler) {
+    handler(envelope, callbacks);
   }
 }
 
