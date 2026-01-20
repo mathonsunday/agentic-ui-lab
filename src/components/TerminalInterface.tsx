@@ -4,6 +4,7 @@ import { MinimalInput } from './MinimalInput';
 import { settingsAtom } from '../stores/settings';
 import { createLogger } from '../utils/debugLogger';
 import { useTerminalLineZoomUpdate } from '../hooks/useTerminalLineZoomUpdate';
+import { useStreamingSession } from '../hooks/useStreamingSession';
 import {
   initializeMiraState,
   assessResponse,
@@ -85,6 +86,7 @@ const logger = createLogger('TerminalInterface');
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
   const [settings] = useAtom(settingsAtom);
   const { updateLastAsciiLine } = useTerminalLineZoomUpdate();
+  const streamingSession = useStreamingSession();
   const [miraState, setMiraState] = useState<MiraState>(() => {
     return initializeMiraState(initialConfidence);
   });
@@ -112,14 +114,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
   const [currentCreature, setCurrentCreature] = useState<CreatureName>('anglerFish');
   const [currentZoom, setCurrentZoom] = useState<ZoomLevel>('medium');
   const [interactionCount, setInteractionCount] = useState(0);
-  const [streamSource, setStreamSource] = useState<string | null>(null); // State to trigger re-renders when stream source changes
   const scrollRef = useRef<HTMLDivElement>(null);
   const lineCountRef = useRef(2);
-  const currentAnimatingLineIdRef = useRef<string | null>(null);
-  const currentRevealedLengthRef = useRef(0); // Track current animation position for interrupt
-  const currentAnimatingContentLengthRef = useRef(0); // Track total content length for animation completion
-  const currentStreamSourceRef = useRef<string | null>(null); // Track source for current line
-  const responseLineIdsRef = useRef<string[]>([]);
   const isStreamInterruptedRef = useRef(false); // Track interrupt status outside of React state
   const interruptedStreamIdRef = useRef<number | null>(null); // Track which stream was interrupted
 
@@ -148,23 +144,23 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
   // Update revealed length for streaming text
   useEffect(() => {
-    if (currentAnimatingLineIdRef.current) {
+    const currentLineId = streamingSession.getCurrentLineId();
+    if (currentLineId) {
       const animatingLine = terminalLines.find(
-        line => line.id === currentAnimatingLineIdRef.current
+        line => line.id === currentLineId
       );
       if (animatingLine) {
-        currentRevealedLengthRef.current = animatingLine.content.length;
+        streamingSession.setRevealedLength(animatingLine.content.length);
       }
     }
-  }, [terminalLines]);
+  }, [terminalLines, streamingSession]);
 
   // Reset stream source when stream ends
   useEffect(() => {
-    if (!streamState.isStreaming && streamSource !== null) {
-      setStreamSource(null);
-      currentStreamSourceRef.current = null;
+    if (!streamState.isStreaming && streamingSession.streamSource !== null) {
+      streamingSession.endSession();
     }
-  }, [streamState.isStreaming, streamSource]);
+  }, [streamState.isStreaming, streamingSession.streamSource, streamingSession]);
 
   const addTerminalLine = useCallback(
     (type: TerminalLine['type'], content: string, analysisData?: { reasoning: string; confidenceDelta: number }, source?: 'claude_streaming') => {
@@ -174,7 +170,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         content,
         timestamp: Date.now(),
         analysisData,
-        source: (source || currentStreamSourceRef.current) as 'claude_streaming' | undefined,
+        source: (source || streamingSession.streamSourceRef.current) as 'claude_streaming' | undefined,
       };
       console.log('📝 [TerminalInterface.addTerminalLine] Adding line:', {
         id: newLine.id,
@@ -191,7 +187,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         return [...prev, newLine];
       });
     },
-    []
+    [streamingSession]
   );
 
   // Update the most recent rapport bar with new confidence value
@@ -313,9 +309,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
       if (!userInput.trim()) return;
 
-      // Reset interrupt flag for new stream
-      isStreamInterruptedRef.current = false;
-      interruptedStreamIdRef.current = null;
+      // Reset interrupt tracking for new stream
+      streamingSession.clearInterruptState();
 
 
       // Add user input to terminal
@@ -352,21 +347,17 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
            
           onMessageStart: (_messageId: string, _source?: string) => {
             // Track the stream source to conditionally show INTERRUPT button
-            // Use both state (for re-renders) and ref (for accessing without recreating callbacks)
             console.log('🎯 [TERMINAL INTERFACE] onMessageStart called', {
               messageId: _messageId,
               source: _source,
-              refBeforeSet: currentStreamSourceRef.current,
               timestamp: Date.now()
             });
 
             const newSource = _source || null;
-            currentStreamSourceRef.current = newSource;
-            setStreamSource(newSource);
+            streamingSession.startSession(newSource || undefined);
 
-            console.log('🎯 [TERMINAL INTERFACE] onMessageStart updated both state and ref', {
-              refAfterSet: currentStreamSourceRef.current,
-              stateSetTo: newSource,
+            console.log('🎯 [TERMINAL INTERFACE] onMessageStart started session', {
+              source: newSource,
               timestamp: Date.now()
             });
           },
@@ -376,16 +367,19 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             if (isStreamInterruptedRef.current && interruptedStreamIdRef.current === streamNum) {
               return;
             }
+            if (streamingSession.wasInterrupted(streamNum)) {
+              return;
+            }
 
             // Accumulate chunks into a single terminal line (not one line per chunk)
             // CRITICAL: Use functional state update to ensure line exists before accumulating
             setTerminalLines((prev) => {
-              if (!currentAnimatingLineIdRef.current) {
+              if (!streamingSession.getCurrentLineId()) {
                 // First text chunk: create new line
                 const newLineId = String(lineCountRef.current++);
-                currentAnimatingLineIdRef.current = newLineId;
-                currentAnimatingContentLengthRef.current = chunk.length; // Track total content length
-                responseLineIdsRef.current.push(newLineId);
+                streamingSession.setCurrentLineId(newLineId);
+                streamingSession.trackResponseLine(newLineId);
+                streamingSession.setContentLength(chunk.length);
 
                 // Create and add the new line in the same state update
                 const newLine: TerminalLine = {
@@ -393,14 +387,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                   type: 'text',
                   content: chunk,
                   timestamp: Date.now(),
-                  source: (currentStreamSourceRef.current || undefined) as 'claude_streaming' | undefined,
+                  source: (streamingSession.streamSourceRef.current || undefined) as 'claude_streaming' | undefined,
                 };
                 return [...prev, newLine];
               } else {
                 // Subsequent chunks: accumulate into existing line
-                const index = prev.findIndex(l => l.id === currentAnimatingLineIdRef.current);
+                const currentLineId = streamingSession.getCurrentLineId();
+                const index = prev.findIndex(l => l.id === currentLineId);
                 if (index === -1) {
-                  console.warn(`⚠️ [TerminalInterface] Line not found! Current line ID: ${currentAnimatingLineIdRef.current}, available IDs:`, prev.map(l => l.id));
+                  console.warn(`⚠️ [TerminalInterface] Line not found! Current line ID: ${currentLineId}, available IDs:`, prev.map(l => l.id));
                   return prev;
                 }
 
@@ -410,7 +405,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                   content: updated[index].content + chunk
                 };
                 const newLength = updated[index].content.length;
-                currentAnimatingContentLengthRef.current = newLength; // Update total content length
+                streamingSession.setContentLength(newLength);
                 return updated;
               }
             });
@@ -462,8 +457,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
 
             // Reset response tracking on successful completion
-            currentAnimatingLineIdRef.current = null;
-            responseLineIdsRef.current = [];
+            streamingSession.clearCurrentLine();
+            streamingSession.clearResponseLines();
             dispatchStream({ type: 'END_STREAM' });
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -478,9 +473,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onError: (error: any) => {
-
             // Reset stream source on error
-            currentStreamSourceRef.current = null;
+            streamingSession.endSession();
 
             // Check if this is an interrupt (user explicitly stopped)
             const isInterrupt = error.includes('interrupted') || isStreamInterruptedRef.current;
@@ -493,8 +487,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             }
 
             // Reset response tracking
-            currentAnimatingLineIdRef.current = null;
-            responseLineIdsRef.current = [];
+            streamingSession.clearCurrentLine();
+            streamingSession.clearResponseLines();
             dispatchStream({ type: 'END_STREAM' });
           },
         };
@@ -516,8 +510,6 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           null,
           callbacksObject
         );
-        // Reset stream source before starting new stream
-        currentStreamSourceRef.current = null;
         dispatchStream({ type: 'START_STREAM', abort });
         console.log('🌊 [TerminalInterface.handleInput] Stream started, awaiting promise...');
         await promise;
@@ -538,7 +530,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [miraState, streamState.isStreaming, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar]
+    [miraState, streamState.isStreaming, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar, streamingSession]
   );
 
   /**
@@ -560,15 +552,15 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
     if (streamState.abortController) {
       try {
-        // Set interrupt flag FIRST to block any in-flight chunks
-        isStreamInterruptedRef.current = true;
-        interruptedStreamIdRef.current = streamState.streamId;
+        // Mark this stream as interrupted to block any in-flight chunks
+        streamingSession.markAsInterrupted(streamState.streamId);
 
         // Stop animating the current line and add consequence text
         setTerminalLines(prev => {
           // Find the index of the currently animating line
-          const animatingIndex = currentAnimatingLineIdRef.current
-            ? prev.findIndex(line => line.id === currentAnimatingLineIdRef.current)
+          const currentLineId = streamingSession.getCurrentLineId();
+          const animatingIndex = currentLineId
+            ? prev.findIndex(line => line.id === currentLineId)
             : prev.length - 1;
 
           const insertIndex = animatingIndex >= 0 ? animatingIndex + 1 : prev.length;
@@ -579,7 +571,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
           // Record interrupt in memory (Option A: fact only, B & C: raw data captured)
           const interruptCount = miraState.memories.filter(m => m.type === 'interrupt').length;
-          const revealedLength = currentRevealedLengthRef.current;
+          const revealedLength = streamingSession.getRevealedLength();
           const currentLine = prev[animatingIndex >= 0 ? animatingIndex : prev.length - 1];
           const truncatedText = currentLine?.content.substring(0, revealedLength) || '';
 
@@ -623,10 +615,10 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           updateRapportBar(newConfidence);
           onConfidenceChange?.(newConfidence);
 
-          // Stop animation on the currently animating line and truncate unrevea content
+          // Stop animation on the currently animating line and truncate unrevealed content
           const updated = [...prev];
           if (animatingIndex >= 0) {
-            const revealedLength = currentRevealedLengthRef.current;
+            const revealedLength = streamingSession.getRevealedLength();
             const currentLine = updated[animatingIndex];
             const truncatedContent = currentLine.content.substring(0, revealedLength);
             updated[animatingIndex] = {
@@ -646,10 +638,8 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
         });
 
         // Clear response tracking for next stream
-        // CRITICAL: Must clear currentAnimatingLineIdRef so next stream creates new line (not reuse old one)
-        responseLineIdsRef.current = [];
-        currentAnimatingLineIdRef.current = null;
-        currentAnimatingContentLengthRef.current = 0;
+        streamingSession.clearCurrentLine();
+        streamingSession.clearResponseLines();
 
         streamState.abortController();
         // Dispatch INTERRUPT_STREAM to ensure state is updated
@@ -674,19 +664,20 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       <div className="terminal-interface__content">
         <div className="terminal-interface__conversation" ref={scrollRef}>
           {terminalLines.map((line) => {
-            const isResponseLine = responseLineIdsRef.current.includes(line.id);
+            const responseLineIds = streamingSession.getResponseLineIds();
+            const isResponseLine = responseLineIds.includes(line.id);
 
             // VALIDATION: Warn if expected response line is missing from tracking
             if (import.meta.env.DEV) {
               const lineNum = parseInt(line.id);
-              const expectedResponseLineIds = responseLineIdsRef.current.map(id => parseInt(id));
+              const expectedResponseLineIds = responseLineIds.map(id => parseInt(id));
               if (!isNaN(lineNum) && expectedResponseLineIds.length > 0) {
                 const minExpected = Math.min(...expectedResponseLineIds);
                 const maxExpected = Math.max(...expectedResponseLineIds);
                 if (lineNum >= minExpected && lineNum <= maxExpected && !isResponseLine) {
                   logger.warn('ID MISMATCH:', {
                     lineId: line.id,
-                    trackedIds: responseLineIdsRef.current,
+                    trackedIds: responseLineIds,
                     message: 'Line ID falls within response range but not tracked!',
                   });
                 }
@@ -724,7 +715,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           {useMemo(() => {
             console.log('🔄 [TERMINAL INTERFACE] useMemo recalculating tools', {
               isStreaming: streamState.isStreaming,
-              streamSource,
+              streamSource: streamingSession.streamSource,
               timestamp: Date.now()
             });
 
@@ -734,12 +725,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
             ];
 
             const shouldShowInterrupt =
-              streamState.isStreaming && streamSource === 'claude_streaming';
+              streamState.isStreaming && streamingSession.streamSource === 'claude_streaming';
 
             console.log('🔄 [TERMINAL INTERFACE] shouldShowInterrupt calculated', {
               shouldShowInterrupt,
               isStreaming: streamState.isStreaming,
-              source: streamSource,
+              source: streamingSession.streamSource,
               timestamp: Date.now()
             });
 
@@ -763,7 +754,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
                 disabled={false}
               />
             );
-          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt, streamSource])}
+          }, [handleZoomIn, handleZoomOut, streamState.isStreaming, handleInterrupt, streamingSession.streamSource])}
         </div>
       </div>
 
