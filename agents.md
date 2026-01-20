@@ -285,3 +285,57 @@ The dead code analysis tool (`npm run dead-code`) catches unused exports. When i
    - Multiple conflicting versions of the same information
 
 **This is not about moving fast. It's about accuracy.** Code comments are kept in sync with code changes. Separate documentation files often lie.
+
+## Known Architectural Issues and Regression Patterns
+
+### React Refs + State: The INTERRUPT Button Regression (Specimen 47 Cleanup)
+
+**What happened:**
+- During specimen 47 cleanup, the INTERRUPT button stopped appearing for "research proposal" streaming
+- Root cause: Architecture used a React ref (`currentStreamSourceRef`) to track stream source
+- Refs don't trigger re-renders, so useMemo never recalculated after the ref was set
+- The button visibility calculation ran once when streaming started, before the source was set
+
+**Why this architectural flaw existed:**
+- Original design optimized for performance: use refs to avoid re-renders when tracking UI metadata
+- This worked fine with specimen_47 (hardcoded content delivered immediately)
+- Broke with claude_streaming features, where data flows asynchronously via EVENT callbacks
+- The flaw only became visible when code was reorganized during specimen 47 removal
+
+**The Pattern to Avoid:**
+```typescript
+// ❌ DON'T DO THIS:
+const sourceRef = useRef<string | null>(null);  // Ref doesn't trigger re-renders
+
+const tools = useMemo(() => {
+  const shouldShow = sourceRef.current === 'claude_streaming';  // Calculated once
+  // ...
+}, [handleZoom, isStreaming]);  // sourceRef not in dependencies!
+```
+
+**The Correct Pattern:**
+```typescript
+// ✅ DO THIS:
+const [streamSource, setStreamSource] = useState<string | null>(null);  // State triggers re-renders
+
+const tools = useMemo(() => {
+  const shouldShow = streamSource === 'claude_streaming';  // Recalculates when streamSource changes
+  // ...
+}, [handleZoom, isStreaming, streamSource]);  // Include state in dependencies
+```
+
+**Key Principle:**
+- If state (or value derived from state) is used in useMemo/useCallback/useEffect, it MUST be in the dependency array
+- Refs are only for imperative values that don't drive UI (DOM handles, timers, previous values)
+- When in doubt, use state - the performance difference is negligible for most UI updates
+- The dependency array is there to catch these bugs - if ESLint complains, it's right
+
+**How to Prevent Regressions Like This:**
+1. **During refactoring:** When removing code (like specimen_47), carefully trace all usages of related code
+2. **Look for hidden patterns:** Search for refs that are read in hooks - these are usually bugs waiting to happen
+3. **Test the feature you changed:** Don't just verify the deletion worked; verify remaining features still work
+4. **When a feature breaks after cleanup:** Use systematic debugging with logging before assuming and fixing
+   - Add logs at every step in the data flow
+   - Identify exactly where the flow breaks (backend, service, callback, or UI)
+   - Only then implement the fix
+   - This prevents assumption-based fixes that cause more regressions
