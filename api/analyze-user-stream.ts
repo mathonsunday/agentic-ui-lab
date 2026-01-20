@@ -474,13 +474,6 @@ async function streamClaudeResponse(
       source: feature.eventSource,
     }, startSequence);
 
-    console.log('📤 [BACKEND] Sent TEXT_MESSAGE_START', {
-      messageId,
-      source: feature.eventSource,
-      featureId: feature.id,
-      timestamp: Date.now()
-    });
-
     // Calculate new confidence for streaming response
     const newConfidence = Math.min(100, miraState.confidenceInUser + feature.confidenceDelta);
 
