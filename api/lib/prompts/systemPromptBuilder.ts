@@ -248,7 +248,9 @@ export function createAdvancedMiraPrompt(
   toolCallCount: number,
   provider: LLMProvider = 'claude'
 ): string {
-  return new MiraSystemPromptBuilder({ provider })
+  const interruptCount = miraState.memories.filter(m => m.type === 'interrupt').length;
+
+  const builder = new MiraSystemPromptBuilder({ provider })
     .addIntroduction()
     .addVoiceExamples('glowing')
     .addGlowingVoiceInstructions()
@@ -258,8 +260,24 @@ export function createAdvancedMiraPrompt(
     .addMindsetGuidance()
     .addCreatureMoodSelection()
     .addCreatureSelfAwareness()
-    .addResponseFormat()
-    .build();
+    .addResponseFormat();
+
+  const prompt = builder.build();
+
+  // Log what's being sent to Claude
+  if (interruptCount > 0) {
+    const contextSection = builder.getSections().find(s => s.key === 'context');
+    if (contextSection) {
+      console.log('📤 SYSTEM PROMPT - Context Injection Section', {
+        interruptCount,
+        messageCount,
+        toolCallCount,
+        contextContentPreview: contextSection.content.substring(0, 300),
+      });
+    }
+  }
+
+  return prompt;
 }
 
 /**

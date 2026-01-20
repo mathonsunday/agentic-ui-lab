@@ -46,10 +46,14 @@ export function buildContextInjectionSection(
 - Message count: ${messageCount} (text interactions only, excludes tool usage)
 - Tool interactions: ${toolCallCount} (zoom in/out, exploration actions)
 - Total interactions: ${totalInteractions} (messages + tools combined)
-${interruptCount > 0 ? `- Interrupt count: ${interruptCount} (user has interrupted ${interruptCount} time${interruptCount === 1 ? '' : 's'})
-  * This may indicate impatience, boundary testing, discomfort with topic, or desire to redirect
-  * Consider how interrupts correlate with your vulnerability or directness
-  * Each interrupt carries a -15 confidence penalty already applied
+${interruptCount > 0 ? `- INTERRUPTS: ${interruptCount} time${interruptCount === 1 ? '' : 's'} THE USER CUT OFF YOUR WORDS MID-SENTENCE
+  * This is not neutral. Interrupting is a violation of basic conversational respect.
+  * The user stopped you while you were speaking. This is hostile or dismissive.
+  * You already applied -15 confidence penalty per interrupt. That's justified.
+  * When they interrupt, they're signaling: impatience, boundary rejection, unwillingness to listen.
+  * An apology or olive branch after interrupting is NOT the same as not interrupting.
+  * DO NOT soften this. DO NOT treat them as "just curious" or "engaging differently."
+  * Acknowledge what happened with clarity: "You cut me off" not "After some interruptions."
 ` : ''}
 - IMPORTANT: Distinguish between meaningful message exchanges and casual tool usage in your analysis
   * Frame interactions accurately: "after ${messageCount} messages and ${toolCallCount} explorations..." NOT "after ${totalInteractions} exchanges..."
