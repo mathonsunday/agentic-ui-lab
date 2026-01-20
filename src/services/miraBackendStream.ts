@@ -15,7 +15,7 @@ import type { EventEnvelope } from '../types/events';
 import { generateConfidenceBar } from '../shared/analysisFormatter';
 import { generateStreamId } from '../../api/lib/utils/idGenerator';
 
-export interface ConfidenceUpdate {
+interface ConfidenceUpdate {
   from: number;
   to: number;
   delta: number;

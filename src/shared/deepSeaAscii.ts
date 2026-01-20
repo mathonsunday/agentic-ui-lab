@@ -56,6 +56,42 @@ const CREATURE_ID_MAP: Record<CreatureName, string> = {
 };
 
 /**
+ * Check if a toolkit piece has complete zoom support (all 3 levels)
+ */
+function hasCompleteZoomSupport(piece: { zoom?: { far?: string; medium?: string; close?: string } }): boolean {
+  return Boolean(piece.zoom?.far && piece.zoom?.medium && piece.zoom?.close);
+}
+
+/**
+ * Try to get a creature's zoom data from the toolkit
+ * Returns null if creature not found or incomplete zoom support
+ */
+function tryGetCreatureZoomData(
+  toolkitId: string
+): Record<ZoomLevel, string> | null {
+  const piece = library.getById(toolkitId);
+
+  if (!piece) {
+    console.warn(`Creature not found in library: ${toolkitId}`);
+    return null;
+  }
+
+  if (!hasCompleteZoomSupport(piece)) {
+    console.warn(
+      `[deepSeaAscii] Skipping ${toolkitId} - incomplete zoom support ` +
+      `(far: ${!!piece.zoom?.far}, medium: ${!!piece.zoom?.medium}, close: ${!!piece.zoom?.close})`
+    );
+    return null;
+  }
+
+  return {
+    far: piece.zoom!.far!,
+    medium: piece.zoom!.medium!,
+    close: piece.zoom!.close!,
+  };
+}
+
+/**
  * Build ZOOMABLE_CREATURES object from toolkit for backward compatibility
  *
  * Only includes creatures with COMPLETE zoom support (all 3 levels: far, medium, close).
@@ -63,36 +99,15 @@ const CREATURE_ID_MAP: Record<CreatureName, string> = {
  * This filters out environment pieces and incomplete structures from the toolkit.
  */
 const buildZoomableCreatures = () => {
-  const creatures: Record<
-    CreatureName,
-    Record<ZoomLevel, string>
-  > = {} as Record<CreatureName, Record<ZoomLevel, string>>;
+  const entries = Object.entries(CREATURE_ID_MAP) as Array<[CreatureName, string]>;
 
-  (Object.entries(CREATURE_ID_MAP) as Array<[CreatureName, string]>).forEach(
-    ([camelName, toolkitId]) => {
-      const piece = library.getById(toolkitId);
-      if (!piece) {
-        console.warn(`Creature not found in library: ${toolkitId}`);
-        return;
-      }
-
-      // CRITICAL: Only include creatures with COMPLETE zoom support
-      // Missing zoom levels = broken zoom button behavior
-      if (!piece.zoom?.far || !piece.zoom?.medium || !piece.zoom?.close) {
-        console.warn(
-          `[deepSeaAscii] Skipping ${toolkitId} - incomplete zoom support ` +
-          `(far: ${!!piece.zoom?.far}, medium: ${!!piece.zoom?.medium}, close: ${!!piece.zoom?.close})`
-        );
-        return;
-      }
-
-      creatures[camelName] = {
-        far: piece.zoom.far,
-        medium: piece.zoom.medium,
-        close: piece.zoom.close,
-      };
+  const creatures = entries.reduce((acc, [camelName, toolkitId]) => {
+    const zoomData = tryGetCreatureZoomData(toolkitId);
+    if (zoomData) {
+      acc[camelName] = zoomData;
     }
-  );
+    return acc;
+  }, {} as Record<CreatureName, Record<ZoomLevel, string>>);
 
   if (Object.keys(creatures).length === 0) {
     console.error('[deepSeaAscii] No creatures with complete zoom support found in toolkit!');
@@ -157,41 +172,52 @@ export function getRandomCreature(): { name: CreatureName; art: string } {
 }
 
 /**
- * Map of moods to creatures (based on ACTUAL toolkit metadata)
- * Each mood maps to creatures that have that mood in their tags.mood array
+ * Build reverse mapping from toolkit IDs to creature names
+ * Used to convert library data back to our internal naming convention
  */
-const MOOD_TO_CREATURES: Record<string, CreatureName[]> = {
-  // Creatures
-  predatory: ['anglerFish', 'shark'],
-  eerie: ['anglerFish'],
-  majestic: ['giantSquid'],
-  powerful: ['giantSquid'],
-  delicate: ['jellyfish'],
-  ethereal: ['jellyfish'],
-  curious: ['octopus', 'hermitCrab'],
-  intelligent: ['octopus'],
-  peaceful: ['seaTurtle', 'schoolOfFish'],
-  ancient: ['seaTurtle'],
-  aggressive: ['shark'],
-  armored: ['hermitCrab'],
-  magical: ['bioluminescentFish'],
-  alive: ['bioluminescentFish', 'coral'],
-  menacing: ['viperFish'],
-  alien: ['viperFish'],
+const TOOLKIT_ID_TO_CREATURE: Record<string, CreatureName> = Object.fromEntries(
+  Object.entries(CREATURE_ID_MAP).map(([name, id]) => [id, name as CreatureName])
+);
 
-  // Structures
-  valuable: ['treasureChest'],
-  mysterious: ['treasureChest'],
-  vintage: ['deepSeaDiver'],
-  brave: ['deepSeaDiver'],
-  technological: ['submarine'],
-  exploratory: ['submarine'],
+/**
+ * Build mood-to-creatures mapping dynamically from the library
+ * This ensures we stay in sync with the actual library metadata
+ * Only includes creatures that have complete zoom support (are in ZOOMABLE_CREATURES)
+ */
+function buildMoodToCreatures(): Record<string, CreatureName[]> {
+  const moodMap: Record<string, CreatureName[]> = {};
+  const zoomableCreatureNames = new Set(Object.keys(ZOOMABLE_CREATURES));
 
-  // Environment
-  diverse: ['coral'],
-  social: ['schoolOfFish'],
-  bioluminescent: ['deepSeaScene'],
-};
+  const pieces = library.getByTheme('deep-sea');
+
+  for (const piece of pieces) {
+    const creatureName = TOOLKIT_ID_TO_CREATURE[piece.id];
+
+    // Skip if we don't recognize this piece or it lacks zoom support
+    if (!creatureName || !zoomableCreatureNames.has(creatureName)) {
+      continue;
+    }
+
+    // Add this creature to each of its moods
+    const moods = piece.tags?.mood;
+    if (moods && Array.isArray(moods)) {
+      for (const mood of moods) {
+        if (!moodMap[mood]) {
+          moodMap[mood] = [];
+        }
+        moodMap[mood].push(creatureName);
+      }
+    }
+  }
+
+  return moodMap;
+}
+
+/**
+ * Map of moods to creatures - dynamically built from library metadata
+ * Only includes creatures with complete zoom support
+ */
+const MOOD_TO_CREATURES = buildMoodToCreatures();
 
 /**
  * Get a creature matching suggested mood
@@ -211,7 +237,7 @@ export function getCreatureByMood(mood?: string): { name: CreatureName; art: str
   const matchingCreatures = MOOD_TO_CREATURES[normalizedMood];
 
   if (!matchingCreatures || matchingCreatures.length === 0) {
-    console.warn(`[getCreatureByMood] No creatures found for mood "${mood}", using random`);
+    console.warn('[getCreatureByMood] Unrecognized mood from Claude:', { mood, normalized: normalizedMood });
     return getRandomCreature();
   }
 

@@ -135,17 +135,6 @@ export type ResponseAssessment = {
   traits?: Partial<UserProfile>;
 };
 
-/**
- * Extended assessment union including tool_call for streaming interactions
- * Used by streamMiraBackend to support both user responses and tool calls
- */
-export type StreamAssessment = ResponseAssessment | {
-  type: 'tool_call';
-  depth: 'surface' | 'moderate' | 'deep';
-  confidenceDelta: number;
-  traits?: Partial<UserProfile>;
-};
-
 export interface AgentResponse {
   streaming: string[];
   observations: string[];

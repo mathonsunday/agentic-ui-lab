@@ -363,6 +363,48 @@ describe('Deep Sea ASCII Art Utilities', () => {
     });
   });
 
+  describe('getCreatureAtZoom Fallback Behavior', () => {
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should return fallback art for unknown creature', () => {
+      const result = getCreatureAtZoom('unknownCreature' as any, 'medium');
+
+      expect(result).toBeTruthy();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Creature not found: unknownCreature, using fallback'
+      );
+    });
+
+    it('should return anglerFish art as fallback', () => {
+      const fallbackArt = getCreatureAtZoom('unknownCreature' as any, 'medium');
+      const anglerFishArt = getCreatureAtZoom('anglerFish', 'medium');
+
+      expect(fallbackArt).toBe(anglerFishArt);
+    });
+
+    it('should use correct zoom level in fallback', () => {
+      const fallbackFar = getCreatureAtZoom('unknownCreature' as any, 'far');
+      const fallbackMedium = getCreatureAtZoom('unknownCreature' as any, 'medium');
+      const fallbackClose = getCreatureAtZoom('unknownCreature' as any, 'close');
+
+      const anglerFar = getCreatureAtZoom('anglerFish', 'far');
+      const anglerMedium = getCreatureAtZoom('anglerFish', 'medium');
+      const anglerClose = getCreatureAtZoom('anglerFish', 'close');
+
+      expect(fallbackFar).toBe(anglerFar);
+      expect(fallbackMedium).toBe(anglerMedium);
+      expect(fallbackClose).toBe(anglerClose);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle rapid zoom changes', () => {
       let level: ZoomLevel = 'far';

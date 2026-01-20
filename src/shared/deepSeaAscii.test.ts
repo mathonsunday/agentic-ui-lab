@@ -103,7 +103,8 @@ describe('getCreatureByMood', () => {
       expect(result.name).toBeTruthy();
       expect(result.art).toBeTruthy();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('No creatures found for mood')
+        '[getCreatureByMood] Unrecognized mood from Claude:',
+        { mood: 'nonexistent_mood_12345', normalized: 'nonexistent_mood_12345' }
       );
     });
 
@@ -163,7 +164,8 @@ describe('getCreatureByMood', () => {
       getCreatureByMood('fake_mood');
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/No creatures found for mood/i)
+        '[getCreatureByMood] Unrecognized mood from Claude:',
+        { mood: 'fake_mood', normalized: 'fake_mood' }
       );
     });
 
@@ -217,6 +219,7 @@ describe('getCreatureByMood', () => {
   });
 
   describe('All supported moods', () => {
+    // All 25 moods from library (v0.2.0 - all creatures have zoom support)
     const supportedMoods = [
       'aggressive',
       'alien',

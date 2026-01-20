@@ -10,7 +10,7 @@ import { atomWithStorage } from 'jotai/utils';
 /**
  * Application settings that can be persisted
  */
-export interface AppSettings {
+interface AppSettings {
   typingSpeed: number; // characters per second (10-100)
   soundEnabled: boolean; // whether typing sounds play
 }
