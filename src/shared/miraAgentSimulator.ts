@@ -11,11 +11,11 @@
  */
 
 import { callMiraBackend } from '../services/miraBackendClient';
-import type { UserProfile, InteractionMemory, MiraState, AgentResponse, ResponseAssessment } from '../../api/lib/types';
+import type { UserProfile, InteractionMemory, MiraState, AgentResponse, ResponseAssessment, InterruptMemory } from '../../api/lib/types';
 import { getPersonalityFromConfidence, type Personality } from './personalityHelper';
 
 // Re-export types for backward compatibility
-export type { UserProfile, InteractionMemory, MiraState, AgentResponse, Personality };
+export type { UserProfile, InteractionMemory, MiraState, AgentResponse, Personality, InterruptMemory };
 export { getPersonalityFromConfidence };
 
 /**

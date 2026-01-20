@@ -9,6 +9,7 @@ import {
   initializeMiraState,
   assessResponse,
   type MiraState,
+  type InterruptMemory,
 } from '../shared/miraAgentSimulator';
 import { playStreamingSound, playHydrophoneStatic } from '../shared/audioEngine';
 import { getNextZoomLevel, getPrevZoomLevel, getCreatureAtZoom, getCreatureByMood, type ZoomLevel, type CreatureName } from '../shared/deepSeaAscii';
@@ -556,9 +557,39 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
 
           // Decrease rapport as penalty
           const newConfidence = Math.max(0, miraState.confidenceInUser - 15);
+
+          // Record interrupt in memory (Option A: fact only, B & C: raw data captured)
+          const interruptCount = miraState.memories.filter(m => m.type === 'interrupt').length;
+          const revealedLength = currentRevealedLengthRef.current;
+          const currentLine = prev[animatingIndex >= 0 ? animatingIndex : prev.length - 1];
+          const truncatedText = currentLine?.content.substring(0, revealedLength) || '';
+
+          const interruptMemory: InterruptMemory = {
+            timestamp: Date.now(),
+            type: 'interrupt',
+            interruptNumber: interruptCount + 1,
+
+            // Option B data: what was blocked (first 150 chars of visible text)
+            blockedResponseStart: truncatedText.substring(0, 150),
+            blockedResponseLength: revealedLength,
+
+            // Option C data: emotional context
+            // NOTE: Current response's analysis hasn't arrived yet (stream incomplete)
+            // We would need to store lastAnalysis in state to populate these
+            // For now, leave as undefined (Option A doesn't need them)
+            assessmentAtInterrupt: undefined,
+            creatureMoodAtInterrupt: undefined,
+
+            // Required fields to match InteractionMemory pattern
+            content: 'interrupt',
+            duration: 0,
+            depth: 'surface',
+          };
+
           setMiraState((prevState) => ({
             ...prevState,
             confidenceInUser: newConfidence,
+            memories: [...prevState.memories, interruptMemory],
           }));
           updateRapportBar(newConfidence);
           onConfidenceChange?.(newConfidence);

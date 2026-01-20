@@ -112,7 +112,10 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     });
 
     // Calculate separate counts for messages vs tool interactions
-    const messageCount = miraState.memories.filter(m => m.type !== 'tool_call').length;
+    // NOTE: Exclude both tool_call AND interrupt - interrupts are reactions, not conversational exchanges
+    const messageCount = miraState.memories.filter(m =>
+      m.type !== 'tool_call' && m.type !== 'interrupt'
+    ).length;
     const toolCallCount = miraState.memories.filter(m => m.type === 'tool_call').length;
 
     // Build system prompt using the structured prompt builder

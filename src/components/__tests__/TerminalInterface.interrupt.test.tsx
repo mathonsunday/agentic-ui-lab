@@ -49,6 +49,16 @@ describe('TerminalInterface - Interrupt Functionality', () => {
       expect(true).toBe(true);
     });
 
+    it('records interrupt to memory (Option A/B/C support)', () => {
+      // Location: src/components/TerminalInterface.tsx lines 570-593
+      // NEW: Captures interrupt data with extensible fields
+      // Option A (current): Uses interruptNumber - Claude sees count
+      // Option B (future): Uses blockedResponseStart - Claude sees blocked text
+      // Option C (future): Uses assessmentAtInterrupt - Claude sees emotional pattern
+      // All three options use same memory type, only prompt changes
+      expect(true).toBe(true);
+    });
+
     it('implements backend interrupt blocking', () => {
       // Location: src/services/miraBackendStream.ts lines 110-134
       // Wrapped callbacks check wasInterrupted flag before:

@@ -24,6 +24,49 @@ export interface ToolCallData {
 }
 
 /**
+ * Interrupt Memory
+ *
+ * Captures interrupt events with extensible data for future prompt iteration.
+ *
+ * OPTION A (Current implementation):
+ *   Uses: interruptNumber, timestamp
+ *   Claude sees: "User interrupted 3 times total"
+ *   Prompt shows only COUNT of interrupts
+ *
+ * OPTION B (Future - zero code changes):
+ *   Uses: blockedResponseStart, blockedResponseLength
+ *   Claude sees: "User interrupted when you were about to say X"
+ *   Prompt includes SNIPPETS of blocked responses
+ *
+ * OPTION C (Future - zero code changes):
+ *   Uses: assessmentAtInterrupt, creatureMoodAtInterrupt
+ *   Claude sees: "User interrupted when you were expressing vulnerability"
+ *   Prompt includes PATTERN ANALYSIS of emotional context
+ *
+ * All three options use the SAME memory data - only prompt interpretation changes.
+ */
+export interface InterruptMemory {
+  timestamp: number;
+  type: 'interrupt';  // Discriminator
+
+  // Option A: Core interrupt tracking (CURRENTLY USED)
+  interruptNumber: number;  // Sequential: 1st, 2nd, 3rd interrupt
+
+  // Option B: Blocked response data (FOR FUTURE PROMPT ITERATION)
+  blockedResponseStart?: string;      // First 150 chars of streaming text
+  blockedResponseLength?: number;     // Character position when interrupted
+
+  // Option C: Emotional context (FOR FUTURE PROMPT ITERATION)
+  assessmentAtInterrupt?: string;     // Copy of last analysis.reasoning
+  creatureMoodAtInterrupt?: string;   // Copy of last analysis.suggested_creature_mood
+
+  // Required fields to match InteractionMemory pattern
+  content: string;        // Always 'interrupt' for filtering
+  duration: number;       // Always 0 (interrupts are instantaneous)
+  depth: 'surface';       // Always 'surface' (interrupts aren't deep engagement)
+}
+
+/**
  * Discriminated union for interaction memory - discriminated by type field
  */
 export type InteractionMemory =
@@ -41,7 +84,8 @@ export type InteractionMemory =
       duration: number;
       depth: 'surface' | 'moderate' | 'deep';
       toolData: ToolCallData;
-    };
+    }
+  | InterruptMemory;
 
 export interface MiraState {
   confidenceInUser: number;
