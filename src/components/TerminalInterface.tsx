@@ -486,9 +486,14 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
           },
         };
 
+        const interruptCountAtRequest = miraState.memories.filter(m => m.type === 'interrupt').length;
+
         console.log('🌊 [TerminalInterface.handleInput] Calling streamMiraBackend with callbacks object', {
           hasOnResponseStart: !!callbacksObject.onResponseStart,
           callbacks: Object.keys(callbacksObject),
+          interruptsInState: interruptCountAtRequest,
+          totalMemories: miraState.memories.length,
+          memoryTypes: miraState.memories.map(m => m.type),
         });
 
         const { promise, abort } = streamMiraBackend(
