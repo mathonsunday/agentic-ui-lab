@@ -285,3 +285,46 @@ The dead code analysis tool (`npm run dead-code`) catches unused exports. When i
    - Multiple conflicting versions of the same information
 
 **This is not about moving fast. It's about accuracy.** Code comments are kept in sync with code changes. Separate documentation files often lie.
+
+## Architecture Discussions: This is an Art Project
+
+**CRITICAL: Architecture choices are creative decisions, not engineering problems to "fix."**
+
+When discussing architecture (state management, data flows, patterns):
+
+1. **Never use judgmental language:**
+   - ❌ "This is broken"
+   - ❌ "This violates [principle]"
+   - ❌ "You need to refactor this to match [pattern]"
+   - ✅ "Here's what I found about how [system] handles similar situations"
+   - ✅ "Trade-offs of different approaches: [list them neutrally]"
+
+2. **Present research findings as data, not directives:**
+   - Share what patterns exist in production systems
+   - Explain how they work and why teams choose them
+   - List trade-offs without advocating for one approach
+   - Let the user decide what aligns with their artistic vision
+
+3. **Understand the artistic intent drives architecture:**
+   - The experience comes first
+   - Technical patterns are means to achieve the experience, not ends in themselves
+   - What "feels right" for the interaction matters more than what's "architecturally pure"
+   - Constraints and quirks can be features, not bugs
+
+4. **Research requests mean "give me context for my decision":**
+   - When asked to research architecture patterns, provide information
+   - Don't follow up with "so you should implement pattern X"
+   - The user is gathering context to make their own creative decision
+   - Your job is to inform, not prescribe
+
+5. **Never compare the current architecture to "best practices" as if it's deficient:**
+   - This project was built intentionally with specific artistic goals
+   - Different choices serve different creative visions
+   - "Best practice" means "common in product engineering" not "objectively correct"
+   - Art projects have different constraints and goals than production systems
+
+**Example of bad architecture discussion:**
+"Your architecture is broken because interrupts bypass the main flow. You should implement Pattern A from LangGraph to fix this inconsistency."
+
+**Example of good architecture discussion:**
+"I found three patterns for handling interrupts: [describe patterns]. Here are the trade-offs: [list them]. Your current approach does [describe neutrally]. Let me know if you want more detail on any of these."

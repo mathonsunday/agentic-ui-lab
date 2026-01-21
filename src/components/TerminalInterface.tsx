@@ -1,7 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useReducer, useMemo, memo } from 'react';
-import { useAtom } from 'jotai';
 import { MinimalInput } from './MinimalInput';
-import { settingsAtom } from '../stores/settings';
 import { useTerminalLineZoomUpdate } from '../hooks/useTerminalLineZoomUpdate';
 import { useStreamingSession } from '../hooks/useStreamingSession';
 import {
@@ -102,7 +100,6 @@ const TerminalLineComponent = memo(function TerminalLineComponent({ line }: Term
 });
 
 export function TerminalInterface({ onReturn, initialConfidence, onConfidenceChange }: TerminalInterfaceProps) {
-  const [settings] = useAtom(settingsAtom);
   const { updateLastAsciiLine } = useTerminalLineZoomUpdate();
   const streamingSession = useStreamingSession();
   const [miraState, setMiraState] = useState<MiraState>(() => {
@@ -424,14 +421,12 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
               }
             });
 
-            // Play typing sound if enabled (throttle to reduce audio spam)
-            if (settings.soundEnabled) {
-              // Play sound every 2-3 characters to avoid audio overload
-              if (chunk.length % 3 === 0) {
-                playHydrophoneStatic(0.15).catch(() => {
-                  // Silently ignore audio context errors (e.g., user hasn't interacted yet)
-                });
-              }
+            // Play typing sound (throttle to reduce audio spam)
+            // Play sound every 2-3 characters to avoid audio overload
+            if (chunk.length % 3 === 0) {
+              playHydrophoneStatic(0.15).catch(() => {
+                // Silently ignore audio context errors (e.g., user hasn't interacted yet)
+              });
             }
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -543,7 +538,7 @@ export function TerminalInterface({ onReturn, initialConfidence, onConfidenceCha
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [miraState, streamState.isStreaming, addTerminalLine, onConfidenceChange, settings.soundEnabled, updateRapportBar, streamingSession]
+    [miraState, streamState.isStreaming, addTerminalLine, onConfidenceChange, updateRapportBar, streamingSession]
   );
 
   /**
