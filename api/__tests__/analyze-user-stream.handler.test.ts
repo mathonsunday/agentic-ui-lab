@@ -219,7 +219,7 @@ describe('analyze-user-stream handler', () => {
       expect(events.some(e => e.type === 'ERROR')).toBe(true);
 
       const errorEvent = events.find(e => e.type === 'ERROR');
-      expect((errorEvent?.data as { data: { code: string } }).data.code).toBe('MISSING_FIELDS');
+      expect((errorEvent?.data as { data: { code: string } }).data.code).toBe('INVALID_STATE');
     });
 
     it('should send ERROR event when userInput is missing (for non-tool calls)', async () => {

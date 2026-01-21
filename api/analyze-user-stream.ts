@@ -23,6 +23,7 @@ import { createAdvancedMiraPrompt } from './lib/prompts/systemPromptBuilder.js';
 import { StreamEventSequencer } from './lib/streamEventSequencer.js';
 import { getContentFeature, type ContentFeature } from './lib/contentLibrary.js';
 import { generateEventId } from './lib/utils/idGenerator.js';
+import { checkRateLimit, formatResetTime } from './lib/rateLimit.js';
 
 /**
  * Event tracking for session
@@ -44,6 +45,104 @@ class EventSequence {
   getFirstEventId(): string | undefined {
     return this.firstEventId;
   }
+}
+
+// =============================================================================
+// Input Validation - Prevents abuse and unexpected costs
+// =============================================================================
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  errorCode?: string;
+}
+
+/**
+ * Validate user input to prevent abuse
+ */
+function validateUserInput(userInput: string | undefined): ValidationResult {
+  // Check if input exists
+  if (!userInput) {
+    return { valid: true }; // Empty input is valid (might be a tool call)
+  }
+
+  // Check type
+  if (typeof userInput !== 'string') {
+    return {
+      valid: false,
+      error: 'Invalid input type',
+      errorCode: 'INVALID_TYPE',
+    };
+  }
+
+  // Check length (2000 chars = ~500 tokens, reasonable for art projects)
+  const MAX_LENGTH = 2000;
+  if (userInput.length > MAX_LENGTH) {
+    return {
+      valid: false,
+      error: `Input too long (max ${MAX_LENGTH} characters)`,
+      errorCode: 'INPUT_TOO_LONG',
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate miraState object structure
+ */
+function validateMiraState(miraState: unknown): ValidationResult {
+  if (!miraState || typeof miraState !== 'object') {
+    return {
+      valid: false,
+      error: 'Invalid miraState',
+      errorCode: 'INVALID_STATE',
+    };
+  }
+
+  // Basic structure check
+  const state = miraState as Record<string, unknown>;
+  if (typeof state.confidenceInUser !== 'number') {
+    return {
+      valid: false,
+      error: 'Invalid state structure',
+      errorCode: 'INVALID_STATE_STRUCTURE',
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate request body inputs
+ * Returns true if valid, sends error and returns false if invalid
+ */
+async function validateRequestInputs(
+  userInput: string | undefined,
+  miraState: MiraState,
+  sequencer: StreamEventSequencer
+): Promise<boolean> {
+  // Validate miraState
+  const stateValidation = validateMiraState(miraState);
+  if (!stateValidation.valid) {
+    await sequencer.sendError(
+      stateValidation.errorCode || 'VALIDATION_ERROR',
+      stateValidation.error || 'Validation failed'
+    );
+    return false;
+  }
+
+  // Validate userInput
+  const inputValidation = validateUserInput(userInput);
+  if (!inputValidation.valid) {
+    await sequencer.sendError(
+      inputValidation.errorCode || 'VALIDATION_ERROR',
+      inputValidation.error || 'Invalid input'
+    );
+    return false;
+  }
+
+  return true;
 }
 
 // =============================================================================
@@ -216,6 +315,20 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     return response.status(405).json({ error: 'Method not allowed' });
   }
 
+  // =============================================================================
+  // SECURITY: Rate Limiting Check
+  // =============================================================================
+  const rateCheck = await checkRateLimit(request);
+  if (!rateCheck.allowed) {
+    const resetTime = formatResetTime(rateCheck.reset);
+    return response.status(429).json({
+      error: 'Rate limit exceeded',
+      message: `Too many requests. Try again in ${resetTime}.`,
+      limit: rateCheck.limit,
+      reset: rateCheck.reset,
+    });
+  }
+
   // Set up SSE headers
   response.setHeader('Content-Type', 'text/event-stream');
   response.setHeader('Cache-Control', 'no-cache');
@@ -232,8 +345,11 @@ export default async (request: VercelRequest, response: VercelResponse) => {
       toolData?: ToolCallData;
     };
 
-    if (!miraState) {
-      await sequencer.sendError('MISSING_FIELDS', 'Missing required miraState');
+    // =============================================================================
+    // SECURITY: Input Validation
+    // =============================================================================
+    const isValid = await validateRequestInputs(userInput, miraState, sequencer);
+    if (!isValid) {
       return response.end();
     }
 

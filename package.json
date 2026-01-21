@@ -28,6 +28,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@mathonsunday/ascii-art-toolkit": "^0.2.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.1",
     "jotai": "^2.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
