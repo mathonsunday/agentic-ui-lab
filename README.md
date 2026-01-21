@@ -29,7 +29,6 @@ This is both a **working lab for emerging agent communication protocols** and a 
 
 - React 19.2.0 + TypeScript 5.9.3 (useState, useReducer for streaming FSM)
 - Vite 5.4.0 (fast builds and HMR)
-- Jotai 2.15.0 for global settings state
 - Vitest + React Testing Library (comprehensive integration tests)
 
 **Backend**
