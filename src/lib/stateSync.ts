@@ -167,17 +167,27 @@ export function applyPatch(
   versioned: VersionedState,
   operations: PatchOperation[]
 ): VersionedState {
-  let state = { ...versioned.state };
+  const state = { ...versioned.state };
 
   for (const op of operations) {
     switch (op.op) {
       case 'replace': {
         const pathParts = op.path.split('/').filter((p) => p);
+
+        // Prevent prototype pollution attacks
+        const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+        if (pathParts.some((key) => dangerousKeys.includes(key))) {
+          console.warn('Blocked prototype pollution attempt via path:', op.path);
+          break;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let current: any = state;
 
         // Navigate to parent object
         for (let i = 0; i < pathParts.length - 1; i++) {
-          current = current[pathParts[i]];
+          // Safe: dangerous keys (__proto__, constructor, prototype) are filtered above
+          current = current[pathParts[i]]; // nosemgrep
           if (!current) break;
         }
 

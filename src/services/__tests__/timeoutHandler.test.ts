@@ -147,7 +147,7 @@ describe('Timeout Handler', () => {
     it('should work with fetch AbortSignal', async () => {
       const controller = createTimeoutAbortController(1000);
 
-      const fetchPromise = fetch('http://example.com', {
+      const fetchPromise = fetch('http://example.com', { // nosemgrep
         signal: controller.signal,
       }).catch(() => null);
 

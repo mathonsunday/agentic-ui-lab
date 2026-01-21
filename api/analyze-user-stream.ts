@@ -77,14 +77,18 @@ async function parseClaudeAnalysis(
     }
   }
 
-  const jsonMatch = fullResponse.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  // Extract JSON safely without ReDoS vulnerability
+  const firstBrace = fullResponse.indexOf('{');
+  const lastBrace = fullResponse.lastIndexOf('}');
+
+  if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
     await sequencer.sendError('INVALID_RESPONSE', 'Invalid Claude response format');
     response.end();
     return null;
   }
 
-  const cleanedJson = jsonMatch[0].replace(/:\s*\+/g, ': ');
+  const jsonText = fullResponse.substring(firstBrace, lastBrace + 1);
+  const cleanedJson = jsonText.replace(/:\s*\+/g, ': ');
   try {
     return JSON.parse(cleanedJson) as ClaudeAnalysis;
   } catch (parseError) {

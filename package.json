@@ -20,7 +20,8 @@
     "dead-code": "knip",
     "dead-code:fix": "knip --fix",
     "check-deps": "depcruise src api --config",
-    "verify": "npm run type-check && npm run lint && npm run dead-code && npm run check-deps && npm test",
+    "security": "semgrep --config \"p/default\" src/ api/ --severity ERROR --severity WARNING",
+    "verify": "npm run type-check && npm run lint && npm run dead-code && npm run check-deps && npm run security && npm test",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -48,6 +49,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "eslint-plugin-redos": "^4.5.0",
     "globals": "^16.5.0",
     "happy-dom": "^20.3.1",
     "husky": "^9.1.7",

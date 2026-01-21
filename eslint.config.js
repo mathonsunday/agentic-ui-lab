@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import redos from 'eslint-plugin-redos'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -9,6 +10,9 @@ export default defineConfig([
   globalIgnores(['dist', 'node_modules', '**/__tests__', '**/*.test.ts', '**/*.test.tsx']),
   {
     files: ['src/**/*.{ts,tsx}'],
+    plugins: {
+      redos,
+    },
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
@@ -35,10 +39,15 @@ export default defineConfig([
       ],
       // Cyclomatic complexity limit
       'complexity': ['error', { max: 10 }],
+      // Prevent ReDoS vulnerabilities
+      'redos/no-vulnerable': 'error',
     },
   },
   {
     files: ['api/**/*.ts'],
+    plugins: {
+      redos,
+    },
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
@@ -60,6 +69,8 @@ export default defineConfig([
       ],
       // Cyclomatic complexity limit
       'complexity': ['error', { max: 10 }],
+      // Prevent ReDoS vulnerabilities
+      'redos/no-vulnerable': 'error',
     },
   },
 ])
