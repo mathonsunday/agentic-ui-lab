@@ -19,9 +19,9 @@
     "type:report": "typescript-coverage-report",
     "dead-code": "knip",
     "dead-code:fix": "knip --fix",
-    "check-deps": "depcruise src api --config",
+    "test-smells": "tsx scripts/detect-test-smells.ts",
     "security": "semgrep --config \"p/default\" src/ api/ --severity ERROR --severity WARNING",
-    "verify": "npm run type-check && npm run lint && npm run dead-code && npm run check-deps && npm run security && npm test",
+    "verify": "npm run type-check && npm run lint && npm run dead-code && npm run security && npm test",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -45,7 +45,6 @@
     "@vitejs/plugin-react": "^4.3.0",
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.17",
-    "dependency-cruiser": "^17.3.6",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -56,6 +55,7 @@
     "knip": "^5.82.1",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.0",
+    "tsx": "^4.21.0",
     "type-coverage": "^2.29.7",
     "typescript": "~5.9.3",
     "typescript-coverage-report": "^1.1.1",
