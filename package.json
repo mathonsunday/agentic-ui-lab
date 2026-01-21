@@ -20,6 +20,7 @@
     "dead-code": "knip",
     "dead-code:fix": "knip --fix",
     "test-smells": "tsx scripts/detect-test-smells.ts",
+    "adr:create": "node scripts/create-adr.js",
     "security": "semgrep --config \"p/default\" src/ api/ --severity ERROR --severity WARNING",
     "verify": "npm run type-check && npm run lint && npm run dead-code && npm run security && npm test",
     "prepare": "husky install"
