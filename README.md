@@ -17,11 +17,11 @@ This is both a **working lab for emerging agent communication protocols** and a 
 - **AG-UI Event Streaming**: Structured event envelopes with correlation IDs, sequence numbers, and parent-event tracking for proper causality (TEXT_MESSAGE_START → TEXT_CONTENT → TEXT_MESSAGE_END → RESPONSE_COMPLETE → ANALYSIS_COMPLETE)
 - **Server-Sent Events (SSE)**: Real-time streaming from Vercel serverless functions via `/api/analyze-user-stream` endpoint with event sequencing and out-of-order reordering via sequence numbers
 - **Single Source of Truth**: Confidence and state updates consolidated to RESPONSE_COMPLETE events via StreamEventSequencer (eliminates redundant updates)
-- **Interrupt Coordination**: 3-layer interrupt handling (UI layer truncates display, service layer aborts HTTP stream, state layer applies confidence penalty)
+- **Interrupt Coordination**: 3-layer interrupt handling (UI layer truncates display, service layer aborts HTTP stream, state layer applies confidence penalty) with interrupt memories persisted for context continuity
 - **Versioned State Sync**: Client-server state synchronization with version tracking and JSON Patch (RFC 6902) for delta updates
 - **State Machine Pattern**: Type-safe FSM with discriminated union types for streaming state (IDLE → STREAMING → ERROR)
 - **Event Buffering**: Out-of-order event reordering using sequence numbers and memory-bounded buffer (max 100 events, prevents unbounded growth)
-- **Hybrid Assessment**: Frontend quick assessment (word count, question detection) + backend Claude Haiku 4.5 analysis (personality traits via structured prompts with 5 dimensions: thoughtfulness, adventurousness, engagement, curiosity, superficiality)
+- **Backend-Driven Assessment**: Claude Haiku 4.5 analysis via structured prompts evaluates personality traits across 5 dimensions (thoughtfulness, adventurousness, engagement, curiosity, superficiality) with nuanced scoring rules
 
 ### Technology Stack
 
@@ -47,7 +47,7 @@ This is both a **working lab for emerging agent communication protocols** and a 
 - Real-time confidence tracking (0-100%) updated via RESPONSE_COMPLETE events
 - TypewriterLine component renders streaming text with character-by-character animation
 - Interactive tool buttons trigger backend state mutations and reputation point awards
-- 3-layer interrupt coordination: UI truncates display, service aborts HTTP stream, state applies confidence penalty
+- 3-layer interrupt coordination: UI truncates display, service aborts HTTP stream, state applies confidence penalty and persists interrupt to memory
 
 ## 🚀 Getting Started
 
