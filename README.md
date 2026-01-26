@@ -43,7 +43,7 @@ This is both a **working lab for emerging agent communication protocols** and a 
 
 **User Interface & Experience**
 
-- 15 zoomable ASCII art creatures from @mathonsunday/ascii-art-toolkit with 3 zoom levels (far/medium/close) and mood-based selection (curious, vulnerable, testing, excited, defensive)
+- 15 zoomable ASCII art creatures with 3 zoom levels (far/medium/close) and mood-based selection (curious, vulnerable, testing, excited, defensive)
 - Real-time confidence tracking (0-100%) updated via RESPONSE_COMPLETE events
 - TypewriterLine component renders streaming text with character-by-character animation
 - Interactive tool buttons trigger backend state mutations and reputation point awards
